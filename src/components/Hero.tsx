@@ -8,6 +8,11 @@ export const Hero = () => {
     uploadSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  const scrollToTrending = () => {
+    const trendingSection = document.getElementById('trending-section');
+    trendingSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background Image with Overlay */}
@@ -52,6 +57,7 @@ export const Hero = () => {
             variant="outline" 
             size="lg"
             className="text-lg px-8 py-6 h-auto backdrop-blur-sm"
+            onClick={scrollToTrending}
           >
             View Trending Styles
           </Button>
