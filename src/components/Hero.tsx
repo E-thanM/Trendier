@@ -3,6 +3,11 @@ import { Sparkles, TrendingUp } from "lucide-react";
 import heroImage from "@/assets/hero-fashion.jpg";
 
 export const Hero = () => {
+  const scrollToUpload = () => {
+    const uploadSection = document.getElementById('upload-section');
+    uploadSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background Image with Overlay */}
@@ -38,6 +43,7 @@ export const Hero = () => {
             variant="hero" 
             size="lg"
             className="text-lg px-8 py-6 h-auto"
+            onClick={scrollToUpload}
           >
             <Sparkles className="h-5 w-5" />
             Rate My Outfit
