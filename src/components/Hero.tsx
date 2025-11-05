@@ -14,68 +14,64 @@ export const Hero = () => {
   };
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Background Image with Overlay */}
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-background">
+      {/* Minimal Background */}
       <div className="absolute inset-0 z-0">
-        <img 
-          src={heroImage} 
-          alt="Fashion boutique showcasing trendy outfits"
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-br from-background/95 via-background/90 to-background/80" />
+        <div className="absolute inset-0 bg-gradient-to-b from-primary-light/10 via-background to-background" />
       </div>
 
-      {/* Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-hero z-0" />
-
       {/* Content */}
-      <div className="relative z-10 max-w-5xl mx-auto px-6 py-20 text-center">
-        <div className="inline-flex items-center gap-2 mb-6 px-4 py-2 rounded-full bg-muted/50 backdrop-blur-sm border border-border">
-          <TrendingUp className="h-4 w-4 text-primary" />
-          <span className="text-sm font-medium">AI-Powered Outfit Analysis</span>
+      <div className="relative z-10 max-w-4xl mx-auto px-6 py-20 text-center">
+        <div className="inline-flex items-center gap-2 mb-8 px-4 py-2 rounded-full bg-secondary border border-border">
+          <div className="w-2 h-2 rounded-full bg-gradient-story animate-pulse" />
+          <span className="text-sm font-medium text-foreground">AI-Powered Style Analysis</span>
         </div>
 
-        <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-primary bg-clip-text text-transparent">
-          Discover Your Style Score
+        <h1 className="text-6xl md:text-8xl font-bold mb-6 tracking-tight">
+          Rate Your
+          <br />
+          <span className="bg-gradient-primary bg-clip-text text-transparent">Style</span>
         </h1>
         
-        <p className="text-xl md:text-2xl text-muted-foreground mb-12 max-w-3xl mx-auto">
-          Trendify scans the internet for the hottest fashion trends and rates your outfit based on style, color coordination, and current fashion popularity.
+        <p className="text-lg md:text-xl text-muted-foreground mb-12 max-w-2xl mx-auto font-light">
+          Discover how trendy your outfit is with AI-powered analysis
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <Button 
-            variant="hero" 
+            variant="instagram" 
             size="lg"
-            className="text-lg px-8 py-6 h-auto"
+            className="text-base rounded-full px-8"
             onClick={scrollToUpload}
           >
-            <Sparkles className="h-5 w-5" />
+            <Sparkles className="h-4 w-4" />
             Rate My Outfit
           </Button>
           <Button 
             variant="outline" 
             size="lg"
-            className="text-lg px-8 py-6 h-auto backdrop-blur-sm"
+            className="text-base rounded-full px-8"
             onClick={scrollToTrending}
           >
-            View Trending Styles
+            View Trends
           </Button>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-8 mt-16 max-w-2xl mx-auto">
+        {/* Minimalist Stats */}
+        <div className="flex justify-center gap-12 mt-20">
           <div className="text-center">
-            <div className="text-3xl md:text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">500K+</div>
-            <div className="text-sm text-muted-foreground mt-2">Outfits Analyzed</div>
+            <div className="text-3xl font-bold">500K+</div>
+            <div className="text-sm text-muted-foreground font-light mt-1">Outfits</div>
           </div>
+          <div className="w-px bg-border" />
           <div className="text-center">
-            <div className="text-3xl md:text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">98%</div>
-            <div className="text-sm text-muted-foreground mt-2">Accuracy Rate</div>
+            <div className="text-3xl font-bold">98%</div>
+            <div className="text-sm text-muted-foreground font-light mt-1">Accuracy</div>
           </div>
+          <div className="w-px bg-border" />
           <div className="text-center">
-            <div className="text-3xl md:text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">24/7</div>
-            <div className="text-sm text-muted-foreground mt-2">AI Analysis</div>
+            <div className="text-3xl font-bold">24/7</div>
+            <div className="text-sm text-muted-foreground font-light mt-1">AI Ready</div>
           </div>
         </div>
       </div>

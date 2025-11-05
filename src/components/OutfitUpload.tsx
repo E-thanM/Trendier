@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Upload, Camera, Loader2 } from "lucide-react";
+import { Upload, Image, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export const OutfitUpload = () => {
@@ -11,72 +11,71 @@ export const OutfitUpload = () => {
   const handleUpload = () => {
     setIsAnalyzing(true);
     
-    // Simulate analysis
     setTimeout(() => {
       setIsAnalyzing(false);
       toast({
-        title: "Analysis Complete!",
-        description: "Your outfit has been rated. Scroll down to see results.",
+        title: "Analysis Complete",
+        description: "Your outfit has been rated",
       });
     }, 2000);
   };
 
   return (
-    <section id="upload-section" className="py-20 px-6">
-      <div className="max-w-4xl mx-auto">
+    <section id="upload-section" className="py-24 px-6">
+      <div className="max-w-2xl mx-auto">
         <div className="text-center mb-12">
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            Upload Your Outfit
+          <h2 className="text-4xl md:text-5xl font-bold mb-3 tracking-tight">
+            Upload Your Fit
           </h2>
-          <p className="text-xl text-muted-foreground">
-            Get instant AI-powered analysis and rating
+          <p className="text-lg text-muted-foreground font-light">
+            Get instant AI-powered style rating
           </p>
         </div>
 
-        <Card className="p-8 md:p-12 bg-gradient-card shadow-card border-2 border-border hover:shadow-glow transition-all duration-300">
-          <div className="border-2 border-dashed border-border rounded-lg p-12 text-center hover:border-primary transition-colors">
+        <Card className="p-8 bg-background shadow-soft border border-border rounded-3xl hover:shadow-medium transition-shadow">
+          <div className="border-2 border-dashed border-border rounded-2xl p-16 text-center hover:border-primary/50 transition-colors cursor-pointer">
             <div className="flex flex-col items-center gap-6">
               <div className="relative">
-                <div className="absolute inset-0 bg-gradient-primary opacity-20 blur-2xl rounded-full" />
-                <Upload className="h-16 w-16 text-primary relative z-10" />
+                <div className="w-20 h-20 rounded-full bg-gradient-story p-[2px]">
+                  <div className="w-full h-full rounded-full bg-background flex items-center justify-center">
+                    <Upload className="h-8 w-8 text-foreground" />
+                  </div>
+                </div>
               </div>
               
               <div>
-                <h3 className="text-xl font-semibold mb-2">
-                  Drop your outfit photo here
+                <h3 className="text-xl font-semibold mb-1">
+                  Drop your photo here
                 </h3>
-                <p className="text-muted-foreground">
-                  or click to browse your files
+                <p className="text-muted-foreground text-sm font-light">
+                  or tap to browse
                 </p>
               </div>
 
-              <div className="flex flex-wrap gap-4 justify-center">
+              <div className="flex gap-3">
                 <Button 
-                  variant="default" 
+                  variant="instagram" 
                   size="lg"
                   onClick={handleUpload}
                   disabled={isAnalyzing}
+                  className="rounded-full"
                 >
                   {isAnalyzing ? (
                     <>
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      Analyzing...
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Analyzing
                     </>
                   ) : (
                     <>
-                      <Upload className="h-5 w-5" />
+                      <Image className="h-4 w-4" />
                       Upload Photo
                     </>
                   )}
                 </Button>
-                <Button variant="secondary" size="lg">
-                  <Camera className="h-5 w-5" />
-                  Take Photo
-                </Button>
               </div>
 
-              <p className="text-sm text-muted-foreground">
-                Supported formats: JPG, PNG, WebP (Max 10MB)
+              <p className="text-xs text-muted-foreground font-light">
+                JPG, PNG, or WebP • Max 10MB
               </p>
             </div>
           </div>

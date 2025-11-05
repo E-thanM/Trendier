@@ -1,32 +1,31 @@
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
 import { TrendingUp, Palette, Sparkles, Star } from "lucide-react";
 
 const ratingFactors = [
   {
     icon: TrendingUp,
-    name: "Trend Alignment",
+    name: "Trend Score",
     score: 92,
-    description: "Your outfit matches current fashion trends",
+    description: "Matches current trends",
   },
   {
     icon: Palette,
-    name: "Color Harmony",
+    name: "Color Match",
     score: 88,
-    description: "Excellent color coordination",
+    description: "Great color harmony",
   },
   {
     icon: Sparkles,
-    name: "Style Originality",
+    name: "Originality",
     score: 95,
-    description: "Unique and creative combination",
+    description: "Unique style mix",
   },
   {
     icon: Star,
-    name: "Overall Appeal",
+    name: "Overall",
     score: 90,
-    description: "Strong visual impact",
+    description: "Strong visual appeal",
   },
 ];
 
@@ -36,56 +35,57 @@ export const RatingCard = () => {
   );
 
   return (
-    <section className="py-20 px-6 bg-muted/30">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-12">
-          <Badge className="mb-4 bg-gradient-primary text-primary-foreground px-4 py-2">
-            Analysis Results
-          </Badge>
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            Your Outfit Score
+    <section className="py-24 px-6 bg-muted/30">
+      <div className="max-w-5xl mx-auto">
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center gap-2 mb-4 px-4 py-1.5 rounded-full bg-primary-light/20 border border-primary/10">
+            <span className="text-sm font-medium text-primary">Results</span>
+          </div>
+          <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
+            Your Style Score
           </h2>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 items-start">
-          {/* Overall Score */}
-          <Card className="p-8 bg-gradient-card shadow-glow border-2 border-primary/20">
-            <div className="text-center">
-              <div className="relative inline-block mb-6">
-                <div className="absolute inset-0 bg-gradient-primary opacity-20 blur-3xl rounded-full" />
-                <div className="relative text-7xl md:text-8xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-                  {overallScore}
+        <div className="grid md:grid-cols-5 gap-6 items-start">
+          {/* Overall Score - Instagram story style */}
+          <div className="md:col-span-2">
+            <Card className="p-8 bg-background shadow-soft border border-border rounded-3xl text-center">
+              <div className="w-40 h-40 mx-auto mb-6 rounded-full bg-gradient-story p-[3px]">
+                <div className="w-full h-full rounded-full bg-background flex items-center justify-center">
+                  <div className="text-6xl font-bold">
+                    {overallScore}
+                  </div>
                 </div>
               </div>
-              <p className="text-xl font-semibold mb-2">Outstanding!</p>
-              <p className="text-muted-foreground">
-                Your outfit is trending in the top 10%
+              <p className="text-lg font-semibold mb-1">Outstanding</p>
+              <p className="text-sm text-muted-foreground font-light">
+                Top 10% trending
               </p>
-            </div>
-          </Card>
+            </Card>
+          </div>
 
           {/* Detailed Factors */}
-          <div className="space-y-4">
+          <div className="md:col-span-3 space-y-3">
             {ratingFactors.map((factor, index) => {
               const Icon = factor.icon;
               return (
                 <Card
                   key={index}
-                  className="p-6 bg-gradient-card shadow-card hover:shadow-glow transition-all duration-300"
+                  className="p-5 bg-background shadow-soft border border-border rounded-2xl hover:shadow-medium transition-shadow"
                 >
-                  <div className="flex items-start gap-4">
-                    <div className="p-3 rounded-lg bg-gradient-primary/10">
-                      <Icon className="h-6 w-6 text-primary" />
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-primary-light/20 flex items-center justify-center flex-shrink-0">
+                      <Icon className="h-5 w-5 text-primary" />
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold">{factor.name}</h3>
-                        <span className="text-lg font-bold text-primary">
-                          {factor.score}%
+                        <h3 className="font-semibold text-sm">{factor.name}</h3>
+                        <span className="text-base font-bold">
+                          {factor.score}
                         </span>
                       </div>
-                      <Progress value={factor.score} className="mb-2 h-2" />
-                      <p className="text-sm text-muted-foreground">
+                      <Progress value={factor.score} className="mb-1.5 h-1.5" />
+                      <p className="text-xs text-muted-foreground font-light">
                         {factor.description}
                       </p>
                     </div>
