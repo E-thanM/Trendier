@@ -6,7 +6,8 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, MessageSquare } from "lucide-react";
+import { Settings, MessageSquare, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { AccountSettings } from "@/components/AccountSettings";
 import { ContactUsForm } from "@/components/ContactUsForm";
 
@@ -19,8 +20,16 @@ export function SettingsSheet({ open, onOpenChange }: SettingsSheetProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
-        <SheetHeader>
+        <SheetHeader className="flex flex-row items-center justify-between">
           <SheetTitle>Settings & Support</SheetTitle>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden h-8 w-8"
+            onClick={() => onOpenChange(false)}
+          >
+            <X className="h-5 w-5" />
+          </Button>
         </SheetHeader>
 
         <Tabs defaultValue="settings" className="w-full mt-6">
