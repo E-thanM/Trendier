@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MessageCircle, Bell } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Sheet,
   SheetContent,
@@ -11,14 +12,13 @@ import {
 import { Card } from "@/components/ui/card";
 
 export function FeedHeader() {
-  const [messagesOpen, setMessagesOpen] = useState(false);
+  const navigate = useNavigate();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-
-  const notifications = [
+  const [notifications, setNotifications] = useState([
     { id: 1, text: "fashion_lover liked your post", time: "2h ago", unread: true },
     { id: 2, text: "style_icon started following you", time: "5h ago", unread: true },
     { id: 3, text: "Your post got 50 likes", time: "1d ago", unread: false },
-  ];
+  ]);
 
   const messages = [
     { id: 1, from: "fashion_lover", text: "Love your style!", time: "1h ago", unread: true },
@@ -27,6 +27,12 @@ export function FeedHeader() {
 
   const unreadNotifications = notifications.filter(n => n.unread).length;
   const unreadMessages = messages.filter(m => m.unread).length;
+
+  const handleNotificationClick = (notificationId: number) => {
+    setNotifications(prev => 
+      prev.map(n => n.id === notificationId ? { ...n, unread: false } : n)
+    );
+  };
 
   return (
     <>
@@ -41,7 +47,7 @@ export function FeedHeader() {
               variant="ghost"
               size="icon"
               className="relative"
-              onClick={() => setMessagesOpen(true)}
+              onClick={() => navigate('/messages')}
             >
               <MessageCircle className="h-5 w-5" />
               {unreadMessages > 0 && (
@@ -74,39 +80,6 @@ export function FeedHeader() {
         </div>
       </div>
 
-      {/* Messages Sheet */}
-      <Sheet open={messagesOpen} onOpenChange={setMessagesOpen}>
-        <SheetContent>
-          <SheetHeader>
-            <SheetTitle>Messages</SheetTitle>
-          </SheetHeader>
-          
-          <div className="mt-6 space-y-3">
-            {messages.length === 0 ? (
-              <Card className="p-8 text-center">
-                <MessageCircle className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">No messages yet</p>
-              </Card>
-            ) : (
-              messages.map((message) => (
-                <Card 
-                  key={message.id} 
-                  className={`p-4 cursor-pointer hover:bg-muted/50 transition-colors ${
-                    message.unread ? 'bg-primary/5 border-primary/20' : ''
-                  }`}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <p className="font-semibold text-sm">{message.from}</p>
-                    <span className="text-xs text-muted-foreground">{message.time}</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">{message.text}</p>
-                </Card>
-              ))
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
-
       {/* Notifications Sheet */}
       <Sheet open={notificationsOpen} onOpenChange={setNotificationsOpen}>
         <SheetContent>
@@ -127,6 +100,7 @@ export function FeedHeader() {
                   className={`p-4 cursor-pointer hover:bg-muted/50 transition-colors ${
                     notification.unread ? 'bg-primary/5 border-primary/20' : ''
                   }`}
+                  onClick={() => handleNotificationClick(notification.id)}
                 >
                   <div className="flex items-start justify-between">
                     <p className="text-sm flex-1">{notification.text}</p>
