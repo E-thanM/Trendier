@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { OutfitCard } from "@/components/OutfitCard";
 import { StoriesBar } from "@/components/StoriesBar";
+import { FeedHeader } from "@/components/FeedHeader";
 import { Loader2, Camera } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -103,6 +104,7 @@ export default function Feed() {
 
   return (
     <div className="h-full pb-24 md:pb-6">
+      <FeedHeader />
       <StoriesBar />
       
       {outfits.length === 0 ? (
