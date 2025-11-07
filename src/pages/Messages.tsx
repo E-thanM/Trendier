@@ -316,10 +316,22 @@ export default function Messages() {
           <div className="px-4 py-3 border-b">
             <div className="flex items-center justify-between mb-2">
               <h1 className="text-xl font-bold">Messages</h1>
-              <Button size="sm" onClick={() => setSearchDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                New
-              </Button>
+              <div className="flex gap-2">
+                {selectedConversation && isMobile && (
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => setSelectedConversation(null)}
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back
+                  </Button>
+                )}
+                <Button size="sm" onClick={() => setSearchDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  New
+                </Button>
+              </div>
             </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -359,15 +371,15 @@ export default function Messages() {
                     
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
-                        <button
+                        <p 
                           onClick={(e) => {
                             e.stopPropagation();
                             window.location.href = `/profile?user=${conversation.other_user.id}`;
                           }}
-                          className={`font-semibold truncate hover:underline ${conversation.unread_count > 0 ? "text-foreground" : ""}`}
+                          className={`font-semibold truncate hover:underline cursor-pointer ${conversation.unread_count > 0 ? "text-foreground" : ""}`}
                         >
                           {conversation.other_user.username}
-                        </button>
+                        </p>
                         <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
                           {new Date(conversation.last_message_at).toLocaleTimeString([], { 
                             hour: '2-digit', 
@@ -417,12 +429,12 @@ export default function Messages() {
                 </Avatar>
                 
                 <div className="flex-1">
-                  <button
+                  <p
                     onClick={() => window.location.href = `/profile?user=${selectedConversation.other_user.id}`}
                     className="font-semibold hover:underline cursor-pointer"
                   >
                     {selectedConversation.other_user.username}
-                  </button>
+                  </p>
                 </div>
                 
                 <MessageDropdown
