@@ -73,13 +73,16 @@ export default function Messages() {
 
   useEffect(() => {
     const conversationId = searchParams.get('conversation');
-    if (conversationId && conversations.length > 0) {
-      const conv = conversations.find(c => c.id === conversationId);
-      if (conv) {
-        handleSelectConversation(conv);
-      }
+    if (conversationId && currentUserId) {
+      // Refetch conversations and select the one from URL
+      fetchConversations().then((convData) => {
+        const conv = convData.find(c => c.id === conversationId);
+        if (conv) {
+          handleSelectConversation(conv);
+        }
+      });
     }
-  }, [searchParams, conversations]);
+  }, [searchParams, currentUserId]);
 
   const getCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -88,100 +91,98 @@ export default function Messages() {
 
   const fetchConversations = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!currentUserId) return;
 
-      // Get user's conversation participations
-      const { data: participations, error: partError } = await supabase
-        .from('conversation_participants')
-        .select('conversation_id, last_read_at')
-        .eq('user_id', user.id);
+      const { data: participantData, error: participantError } = await supabase
+        .from("conversation_participants")
+        .select("conversation_id")
+        .eq("user_id", currentUserId);
 
-      if (partError) throw partError;
+      if (participantError) throw participantError;
 
-      const conversationIds = participations?.map(p => p.conversation_id) || [];
+      const conversationIds = participantData.map((p) => p.conversation_id);
+
       if (conversationIds.length === 0) {
         setConversations([]);
         setLoading(false);
-        return;
+        return [];
       }
 
-      // Get other participants
-      const { data: otherParticipants, error: otherError } = await supabase
-        .from('conversation_participants')
-        .select('conversation_id, user_id')
-        .in('conversation_id', conversationIds)
-        .neq('user_id', user.id);
+      // Filter out conversations with missing participants first
+      const { data: participantsCheck } = await supabase
+        .from("conversation_participants")
+        .select("conversation_id, user_id")
+        .in("conversation_id", conversationIds)
+        .neq("user_id", currentUserId);
 
-      if (otherError) throw otherError;
-
-      // Filter out conversations without other participants
       const validConversationIds = conversationIds.filter(convId => 
-        otherParticipants?.some(p => p.conversation_id === convId)
+        participantsCheck?.some(p => p.conversation_id === convId)
       );
 
       if (validConversationIds.length === 0) {
         setConversations([]);
         setLoading(false);
-        return;
+        return [];
       }
 
-      // Get profiles for other users
-      const otherUserIds = otherParticipants?.map(p => p.user_id) || [];
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', otherUserIds);
+      const { data: otherParticipants, error: otherError } = await supabase
+        .from("conversation_participants")
+        .select("conversation_id, user_id")
+        .in("conversation_id", validConversationIds)
+        .neq("user_id", currentUserId);
 
-      if (profilesError) throw profilesError;
+      if (otherError) throw otherError;
 
-      // Get last messages
-      const { data: messages, error: messagesError } = await supabase
-        .from('messages')
-        .select('*')
-        .in('conversation_id', validConversationIds)
-        .order('created_at', { ascending: false });
+      const otherUserIds = otherParticipants.map((p) => p.user_id);
 
-      if (messagesError) throw messagesError;
+      const { data: profiles, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, username, avatar_url")
+        .in("id", otherUserIds);
 
-      // Build conversation data
-      const convData: ConversationData[] = validConversationIds.map(convId => {
-        const otherParticipant = otherParticipants?.find(p => p.conversation_id === convId);
-        const otherUser = profiles?.find(p => p.id === otherParticipant?.user_id);
-        const lastMsg = messages?.find(m => m.conversation_id === convId);
-        const userPart = participations?.find(p => p.conversation_id === convId);
-        const unreadCount = messages?.filter(m => 
-          m.conversation_id === convId && 
-          m.sender_id !== user.id && 
-          new Date(m.created_at) > new Date(userPart?.last_read_at || 0)
-        ).length || 0;
+      if (profileError) throw profileError;
+
+      const { data: lastMessages } = await supabase
+        .from("messages")
+        .select("conversation_id, content, created_at")
+        .in("conversation_id", validConversationIds)
+        .order("created_at", { ascending: false });
+
+      const lastMessageMap = new Map();
+      lastMessages?.forEach((msg) => {
+        if (!lastMessageMap.has(msg.conversation_id)) {
+          lastMessageMap.set(msg.conversation_id, msg);
+        }
+      });
+
+      const convData: ConversationData[] = validConversationIds.map((convId) => {
+        const participant = otherParticipants.find(
+          (p) => p.conversation_id === convId
+        );
+        const profile = profiles.find((p) => p.id === participant?.user_id);
+        const lastMsg = lastMessageMap.get(convId);
 
         return {
           id: convId,
-          last_message_at: lastMsg?.created_at || '',
           other_user: {
-            id: otherUser?.id || '',
-            username: otherUser?.username || 'Unknown',
-            avatar_url: otherUser?.avatar_url || null,
+            id: profile?.id || "",
+            username: profile?.username || "Unknown",
+            avatar_url: profile?.avatar_url || null,
           },
           last_message: lastMsg?.content || null,
-          unread_count: unreadCount,
+          last_message_at: lastMsg?.created_at || new Date().toISOString(),
+          unread_count: 0,
           messages: [],
         };
       }).filter(conv => conv.other_user.id); // Filter out any with missing users
 
-      setConversations(convData.sort((a, b) => 
-        new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime()
-      ));
-    } catch (error) {
-      console.error('Error fetching conversations:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load conversations",
-        variant: "destructive",
-      });
-    } finally {
+      setConversations(convData);
       setLoading(false);
+      return convData;
+    } catch (error) {
+      console.error("Error fetching conversations:", error);
+      setLoading(false);
+      return [];
     }
   };
 
