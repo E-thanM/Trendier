@@ -46,8 +46,8 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="hidden md:flex">
       <SidebarContent>
-        <div className="p-4 border-b">
-          <h1 className={`font-bold text-xl ${isCollapsed ? "text-center" : ""}`}>
+        <div className="h-14 px-4 border-b flex items-center">
+          <h1 className={`font-bold text-xl ${isCollapsed ? "text-center w-full" : ""}`}>
             {isCollapsed ? "T" : "trendier"}
           </h1>
         </div>
