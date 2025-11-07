@@ -1,7 +1,10 @@
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { StoryViewer } from "./StoryViewer";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 const mockStories = [
   { id: "1", username: "Your Story", hasStory: false, isUser: true },
@@ -34,15 +37,27 @@ const storyContent: Record<string, Array<{ id: string; username: string; imageUr
 
 export function StoriesBar() {
   const [viewerOpen, setViewerOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
   const [currentStories, setCurrentStories] = useState<Array<{ id: string; username: string; imageUrl: string; timestamp: string }>>([]);
 
   const handleStoryClick = (username: string) => {
-    if (username === "Your Story") return;
+    if (username === "Your Story") {
+      setUploadOpen(true);
+      return;
+    }
     
     const stories = storyContent[username] || [];
     if (stories.length > 0) {
       setCurrentStories(stories);
       setViewerOpen(true);
+    }
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      toast.success("Story uploaded successfully!");
+      setUploadOpen(false);
     }
   };
   return (
@@ -90,6 +105,32 @@ export function StoriesBar() {
       onClose={() => setViewerOpen(false)}
       stories={currentStories}
     />
+
+    <Dialog open={uploadOpen} onOpenChange={setUploadOpen}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Create Your Story</DialogTitle>
+        </DialogHeader>
+        <div className="flex flex-col items-center gap-4 py-4">
+          <div className="w-full h-64 border-2 border-dashed border-border rounded-lg flex items-center justify-center bg-muted/50">
+            <label htmlFor="story-upload" className="cursor-pointer flex flex-col items-center gap-2">
+              <Upload className="h-12 w-12 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Click to upload image</span>
+              <input
+                id="story-upload"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageUpload}
+              />
+            </label>
+          </div>
+          <Button variant="instagram" className="w-full" onClick={() => document.getElementById('story-upload')?.click()}>
+            Choose Image
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
     </>
   );
 }
