@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Search, MessageCircle, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 interface UserSearchDialogProps {
   open: boolean;
@@ -22,6 +23,7 @@ export function UserSearchDialog({ open, onOpenChange }: UserSearchDialogProps) 
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (searchQuery.trim()) {
@@ -52,24 +54,40 @@ export function UserSearchDialog({ open, onOpenChange }: UserSearchDialogProps) 
   const handleMessageUser = async (userId: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        console.error("No user found");
+        return;
+      }
+
+      console.log("Starting message flow for user:", userId);
 
       // Check if conversation already exists
-      const { data: existingConversations } = await supabase
+      const { data: existingConversations, error: convCheckError } = await supabase
         .from("conversation_participants")
         .select("conversation_id")
         .eq("user_id", user.id);
 
-      if (existingConversations) {
+      if (convCheckError) {
+        console.error("Error checking conversations:", convCheckError);
+        throw convCheckError;
+      }
+
+      if (existingConversations && existingConversations.length > 0) {
         for (const conv of existingConversations) {
-          const { data: otherParticipant } = await supabase
+          const { data: otherParticipant, error: partError } = await supabase
             .from("conversation_participants")
             .select("user_id")
             .eq("conversation_id", conv.conversation_id)
             .eq("user_id", userId)
-            .single();
+            .maybeSingle();
+
+          if (partError) {
+            console.error("Error checking participant:", partError);
+            continue;
+          }
 
           if (otherParticipant) {
+            console.log("Found existing conversation:", conv.conversation_id);
             navigate(`/messages?conversation=${conv.conversation_id}`);
             onOpenChange(false);
             return;
@@ -77,6 +95,7 @@ export function UserSearchDialog({ open, onOpenChange }: UserSearchDialogProps) 
         }
       }
 
+      console.log("Creating new conversation...");
       // Create new conversation
       const { data: newConversation, error: convError } = await supabase
         .from("conversations")
@@ -84,7 +103,12 @@ export function UserSearchDialog({ open, onOpenChange }: UserSearchDialogProps) 
         .select()
         .single();
 
-      if (convError) throw convError;
+      if (convError) {
+        console.error("Error creating conversation:", convError);
+        throw convError;
+      }
+
+      console.log("New conversation created:", newConversation.id);
 
       // Add both participants
       const { error: participantError } = await supabase
@@ -94,12 +118,21 @@ export function UserSearchDialog({ open, onOpenChange }: UserSearchDialogProps) 
           { conversation_id: newConversation.id, user_id: userId },
         ]);
 
-      if (participantError) throw participantError;
+      if (participantError) {
+        console.error("Error adding participants:", participantError);
+        throw participantError;
+      }
 
+      console.log("Participants added, navigating to conversation");
       navigate(`/messages?conversation=${newConversation.id}`);
       onOpenChange(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating conversation:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to start conversation. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
