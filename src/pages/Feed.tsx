@@ -102,7 +102,7 @@ export default function Feed() {
   }
 
   return (
-    <div className="max-w-lg mx-auto pb-24 md:pb-6">
+    <div className="h-full pb-24 md:pb-6">
       <StoriesBar />
       
       {outfits.length === 0 ? (
