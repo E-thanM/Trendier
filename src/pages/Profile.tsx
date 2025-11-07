@@ -408,75 +408,80 @@ export default function Profile() {
   return (
     <div className="max-w-4xl mx-auto p-4 pb-24 md:pb-6">
       <Card className="p-6 mb-6 border-border">
-        <div className="flex items-start gap-4 flex-wrap">
-          <div className="flex items-center gap-4 flex-1 min-w-0">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center ring-2 ring-primary/20 flex-shrink-0">
-              <span className="text-3xl font-bold text-primary">
-                {profile?.username?.charAt(0).toUpperCase() || "U"}
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-bold">{profile?.username || "User"}</h1>
-              {profile?.bio && (
-                <p className="text-sm text-muted-foreground mt-1">{profile.bio}</p>
-              )}
-              <div className="flex gap-6 mt-3 text-sm">
-                <div>
-                  <span className="font-bold text-foreground">{outfits.length}</span>{" "}
-                  <span className="text-muted-foreground">posts</span>
-                </div>
-                <button
-                  onClick={() => {
-                    setFollowersDialogTab("followers");
-                    setFollowersDialogOpen(true);
-                  }}
-                  className="hover:underline"
-                >
-                  <span className="font-bold text-foreground">{followersCount}</span>{" "}
-                  <span className="text-muted-foreground">followers</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setFollowersDialogTab("following");
-                    setFollowersDialogOpen(true);
-                  }}
-                  className="hover:underline"
-                >
-                  <span className="font-bold text-foreground">{followingCount}</span>{" "}
-                  <span className="text-muted-foreground">following</span>
-                </button>
+        <div className="flex gap-4">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center ring-2 ring-primary/20 flex-shrink-0">
+            <span className="text-3xl font-bold text-primary">
+              {profile?.username?.charAt(0).toUpperCase() || "U"}
+            </span>
+          </div>
+          
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl font-bold">{profile?.username || "User"}</h1>
+                {profile?.bio && (
+                  <p className="text-sm text-muted-foreground mt-1">{profile.bio}</p>
+                )}
+              </div>
+              
+              <div className="flex gap-2 flex-shrink-0">
+                {!isOwnProfile && (
+                  <>
+                    <Button 
+                      variant="outline" 
+                      size="icon"
+                      onClick={handleMessageUser}
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant={isFollowing ? "outline" : "default"}
+                      size="icon"
+                      onClick={handleFollowToggle}
+                    >
+                      {isFollowing ? <UserCheck className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
+                    </Button>
+                  </>
+                )}
+                {isOwnProfile && (
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    className="border-border"
+                    onClick={() => setSettingsOpen(true)}
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
-          </div>
-          <div className="flex gap-2 flex-shrink-0">
-            {!isOwnProfile && (
-              <>
-                <Button 
-                  variant="outline" 
-                  size="icon"
-                  onClick={handleMessageUser}
-                >
-                  <MessageCircle className="h-4 w-4" />
-                </Button>
-                <Button 
-                  variant={isFollowing ? "outline" : "default"}
-                  size="icon"
-                  onClick={handleFollowToggle}
-                >
-                  {isFollowing ? <UserCheck className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
-                </Button>
-              </>
-            )}
-            {isOwnProfile && (
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className="border-border"
-                onClick={() => setSettingsOpen(true)}
+            
+            <div className="flex gap-6 mt-3 text-sm">
+              <div>
+                <span className="font-bold text-foreground">{outfits.length}</span>{" "}
+                <span className="text-muted-foreground">posts</span>
+              </div>
+              <button
+                onClick={() => {
+                  setFollowersDialogTab("followers");
+                  setFollowersDialogOpen(true);
+                }}
+                className="hover:underline"
               >
-                <Settings className="h-4 w-4" />
-              </Button>
-            )}
+                <span className="font-bold text-foreground">{followersCount}</span>{" "}
+                <span className="text-muted-foreground">followers</span>
+              </button>
+              <button
+                onClick={() => {
+                  setFollowersDialogTab("following");
+                  setFollowersDialogOpen(true);
+                }}
+                className="hover:underline"
+              >
+                <span className="font-bold text-foreground">{followingCount}</span>{" "}
+                <span className="text-muted-foreground">following</span>
+              </button>
+            </div>
           </div>
         </div>
       </Card>
