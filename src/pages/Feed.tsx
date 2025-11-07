@@ -19,20 +19,38 @@ export default function Feed() {
   }, []);
 
   const fetchOutfits = async () => {
-    const { data, error } = await supabase
+    // Fetch outfits
+    const { data: outfitsData, error: outfitsError } = await supabase
       .from("outfits")
-      .select(`
-        *,
-        profiles (username, avatar_url)
-      `)
+      .select("*")
       .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Error fetching outfits:", error);
+    if (outfitsError) {
+      console.error("Error fetching outfits:", outfitsError);
       setOutfits([]);
-    } else {
-      setOutfits(data || []);
+      setLoading(false);
+      return;
     }
+
+    // Fetch profiles for all unique user_ids
+    const userIds = [...new Set(outfitsData?.map(o => o.user_id) || [])];
+    const { data: profilesData, error: profilesError } = await supabase
+      .from("profiles")
+      .select("id, username, avatar_url")
+      .in("id", userIds);
+
+    if (profilesError) {
+      console.error("Error fetching profiles:", profilesError);
+    }
+
+    // Merge profiles data with outfits
+    const profilesMap = new Map(profilesData?.map(p => [p.id, p]) || []);
+    const enrichedOutfits = outfitsData?.map(outfit => ({
+      ...outfit,
+      profiles: profilesMap.get(outfit.user_id) || null
+    })) || [];
+
+    setOutfits(enrichedOutfits);
     setLoading(false);
   };
 
