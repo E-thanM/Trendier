@@ -115,6 +115,17 @@ export default function Messages() {
 
       if (otherError) throw otherError;
 
+      // Filter out conversations without other participants
+      const validConversationIds = conversationIds.filter(convId => 
+        otherParticipants?.some(p => p.conversation_id === convId)
+      );
+
+      if (validConversationIds.length === 0) {
+        setConversations([]);
+        setLoading(false);
+        return;
+      }
+
       // Get profiles for other users
       const otherUserIds = otherParticipants?.map(p => p.user_id) || [];
       const { data: profiles, error: profilesError } = await supabase
@@ -128,13 +139,13 @@ export default function Messages() {
       const { data: messages, error: messagesError } = await supabase
         .from('messages')
         .select('*')
-        .in('conversation_id', conversationIds)
+        .in('conversation_id', validConversationIds)
         .order('created_at', { ascending: false });
 
       if (messagesError) throw messagesError;
 
       // Build conversation data
-      const convData: ConversationData[] = conversationIds.map(convId => {
+      const convData: ConversationData[] = validConversationIds.map(convId => {
         const otherParticipant = otherParticipants?.find(p => p.conversation_id === convId);
         const otherUser = profiles?.find(p => p.id === otherParticipant?.user_id);
         const lastMsg = messages?.find(m => m.conversation_id === convId);
@@ -157,7 +168,7 @@ export default function Messages() {
           unread_count: unreadCount,
           messages: [],
         };
-      });
+      }).filter(conv => conv.other_user.id); // Filter out any with missing users
 
       setConversations(convData.sort((a, b) => 
         new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime()
