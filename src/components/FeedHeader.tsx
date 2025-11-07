@@ -3,32 +3,14 @@ import { Badge } from "@/components/ui/badge";
 import { MessageCircle, Bell } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { Card } from "@/components/ui/card";
+import { SettingsSheet } from "@/components/SettingsSheet";
 import { useUnreadCounts } from "@/hooks/use-unread-counts";
 
 export function FeedHeader() {
   const navigate = useNavigate();
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [notifications, setNotifications] = useState([
-    { id: 1, text: "fashion_lover liked your post", time: "2h ago", unread: true },
-    { id: 2, text: "style_icon started following you", time: "5h ago", unread: true },
-    { id: 3, text: "Your post got 50 likes", time: "1d ago", unread: false },
-  ]);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
-  const { unreadMessages, unreadNotifications: unreadNotificationsCount } = useUnreadCounts();
-  const unreadNotifications = notifications.filter(n => n.unread).length || unreadNotificationsCount;
-
-  const handleNotificationClick = (notificationId: number) => {
-    setNotifications(prev => 
-      prev.map(n => n.id === notificationId ? { ...n, unread: false } : n)
-    );
-  };
+  const { unreadMessages, unreadNotifications } = useUnreadCounts();
 
   return (
     <>
@@ -60,7 +42,7 @@ export function FeedHeader() {
               variant="ghost"
               size="icon"
               className="relative"
-              onClick={() => setNotificationsOpen(true)}
+              onClick={() => setSettingsOpen(true)}
             >
               <Bell className="h-5 w-5" />
               {unreadNotifications > 0 && (
@@ -76,38 +58,11 @@ export function FeedHeader() {
         </div>
       </div>
 
-      {/* Notifications Sheet */}
-      <Sheet open={notificationsOpen} onOpenChange={setNotificationsOpen}>
-        <SheetContent>
-          <SheetHeader>
-            <SheetTitle>Notifications</SheetTitle>
-          </SheetHeader>
-          
-          <div className="mt-6 space-y-3">
-            {notifications.length === 0 ? (
-              <Card className="p-8 text-center">
-                <Bell className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">No notifications yet</p>
-              </Card>
-            ) : (
-              notifications.map((notification) => (
-                <Card 
-                  key={notification.id} 
-                  className={`p-4 cursor-pointer hover:bg-muted/50 transition-colors ${
-                    notification.unread ? 'bg-primary/5 border-primary/20' : ''
-                  }`}
-                  onClick={() => handleNotificationClick(notification.id)}
-                >
-                  <div className="flex items-start justify-between">
-                    <p className="text-sm flex-1">{notification.text}</p>
-                    <span className="text-xs text-muted-foreground ml-2">{notification.time}</span>
-                  </div>
-                </Card>
-              ))
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
+      <SettingsSheet 
+        open={settingsOpen} 
+        onOpenChange={setSettingsOpen}
+        defaultTab="notifications"
+      />
     </>
   );
 }
