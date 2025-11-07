@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, Loader2, TrendingUp, Star } from "lucide-react";
+import { Sparkles, Loader2, TrendingUp, Star, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export default function Analyzer() {
@@ -15,6 +15,7 @@ export default function Analyzer() {
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<any>(null);
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -117,14 +118,22 @@ export default function Analyzer() {
           <div className="space-y-2">
             <Label htmlFor="imageFile">Upload Outfit Image</Label>
             <Input
+              ref={fileInputRef}
               id="imageFile"
               type="file"
               accept="image/*"
               capture="environment"
               onChange={handleFileChange}
               required
-              className="cursor-pointer"
+              className="hidden"
             />
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full border-2 border-dashed border-border rounded-lg p-12 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-primary hover:bg-accent/50 transition-colors"
+            >
+              <Upload className="h-12 w-12 text-muted-foreground" />
+              <p className="text-sm font-medium text-muted-foreground">Upload</p>
+            </div>
             <p className="text-xs text-muted-foreground">
               Take a photo or select from gallery
             </p>
