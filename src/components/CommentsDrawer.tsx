@@ -125,37 +125,42 @@ export const CommentsDrawer = ({ outfitId, isOpen, onClose }: CommentsDrawerProp
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="bottom" className="h-[80vh] p-0 flex flex-col">
-        <SheetHeader className="p-4 border-b">
-          <div className="flex items-center justify-between">
-            <SheetTitle>Comments</SheetTitle>
-            <Button variant="ghost" size="icon" onClick={onClose}>
+      <SheetContent side="bottom" className="h-[60vh] p-0 flex flex-col">
+        <SheetHeader className="px-4 py-3 border-b">
+          <div className="flex items-center justify-center relative">
+            <SheetTitle className="text-base">Comments</SheetTitle>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={onClose}
+              className="absolute right-0 h-8 w-8"
+            >
               <X className="h-4 w-4" />
             </Button>
           </div>
         </SheetHeader>
 
-        <ScrollArea className="flex-1 p-4">
+        <ScrollArea className="flex-1 px-4">
           {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin" />
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-5 w-5 animate-spin" />
             </div>
           ) : comments.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>No comments yet</p>
-              <p className="text-sm mt-1">Be the first to comment!</p>
+            <div className="text-center py-6 text-muted-foreground">
+              <p className="text-sm">No comments yet</p>
+              <p className="text-xs mt-1">Be the first to comment!</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 py-3">
               {comments.map((comment) => (
-                <div key={comment.id} className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center ring-2 ring-primary/20 flex-shrink-0">
+                <div key={comment.id} className="flex gap-2.5">
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center ring-1 ring-primary/20 flex-shrink-0">
                     <span className="text-xs font-semibold text-primary">
                       {comment.profiles?.username?.charAt(0).toUpperCase() || "U"}
                     </span>
                   </div>
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-2 flex-wrap">
                       <span className="font-semibold text-sm">
                         {comment.profiles?.username || "Unknown"}
                       </span>
@@ -163,7 +168,7 @@ export const CommentsDrawer = ({ outfitId, isOpen, onClose }: CommentsDrawerProp
                         {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
                       </span>
                     </div>
-                    <p className="text-sm text-foreground/90">{comment.comment_text}</p>
+                    <p className="text-sm text-foreground/90 mt-0.5 break-words">{comment.comment_text}</p>
                   </div>
                 </div>
               ))}
@@ -171,16 +176,21 @@ export const CommentsDrawer = ({ outfitId, isOpen, onClose }: CommentsDrawerProp
           )}
         </ScrollArea>
 
-        <form onSubmit={handleSubmitComment} className="p-4 border-t bg-background">
+        <form onSubmit={handleSubmitComment} className="px-4 py-3 border-t bg-background">
           <div className="flex gap-2">
             <Input
               placeholder="Add a comment..."
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               disabled={submitting}
-              className="flex-1"
+              className="flex-1 h-9"
             />
-            <Button type="submit" disabled={submitting || !newComment.trim()} size="icon">
+            <Button 
+              type="submit" 
+              disabled={submitting || !newComment.trim()} 
+              size="icon"
+              className="h-9 w-9"
+            >
               {submitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
