@@ -457,7 +457,7 @@ export default function Profile() {
             </div>
             
             <div className="flex gap-4 sm:gap-6 mt-3 text-sm justify-center sm:justify-start">
-              <div>
+              <div className="text-left">
                 <span className="font-bold text-foreground">{outfits.length}</span>{" "}
                 <span className="text-muted-foreground">posts</span>
               </div>
@@ -466,7 +466,7 @@ export default function Profile() {
                   setFollowersDialogTab("followers");
                   setFollowersDialogOpen(true);
                 }}
-                className="hover:underline"
+                className="hover:underline text-left"
               >
                 <span className="font-bold text-foreground">{followersCount}</span>{" "}
                 <span className="text-muted-foreground">followers</span>
@@ -476,7 +476,7 @@ export default function Profile() {
                   setFollowersDialogTab("following");
                   setFollowersDialogOpen(true);
                 }}
-                className="hover:underline"
+                className="hover:underline text-left"
               >
                 <span className="font-bold text-foreground">{followingCount}</span>{" "}
                 <span className="text-muted-foreground">following</span>
