@@ -7,10 +7,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Loader2, Upload as UploadIcon, Settings } from "lucide-react";
+import { Loader2, Upload as UploadIcon, Settings, MessageCircle, UserPlus, UserCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { OutfitCard } from "@/components/OutfitCard";
 import { SettingsSheet } from "@/components/SettingsSheet";
+import { PreferencesSurvey } from "@/components/PreferencesSurvey";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 export default function Profile() {
   const [profile, setProfile] = useState<any>(null);
@@ -23,22 +25,152 @@ export default function Profile() {
   const [selectedOutfit, setSelectedOutfit] = useState<any>(null);
   const [likedOutfits, setLikedOutfits] = useState<Set<string>>(new Set());
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [isOwnProfile, setIsOwnProfile] = useState(true);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
+    initProfile();
     fetchProfile();
     fetchUserOutfits();
     fetchUserLikes();
-  }, []);
+  }, [searchParams]);
+
+  const initProfile = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      setCurrentUserId(user.id);
+      const userId = searchParams.get('user');
+      setIsOwnProfile(!userId || userId === user.id);
+      if (userId && userId !== user.id) {
+        checkFollowStatus(userId);
+      }
+    }
+  };
+
+  const checkFollowStatus = async (userId: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from('user_follows')
+      .select('*')
+      .eq('follower_id', user.id)
+      .eq('following_id', userId)
+      .single();
+
+    setIsFollowing(!!data);
+  };
+
+  const handleFollowToggle = async () => {
+    if (!profile) return;
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    try {
+      if (isFollowing) {
+        await supabase
+          .from('user_follows')
+          .delete()
+          .eq('follower_id', user.id)
+          .eq('following_id', profile.id);
+        
+        setIsFollowing(false);
+        toast({ title: "Unfollowed user" });
+      } else {
+        await supabase
+          .from('user_follows')
+          .insert({
+            follower_id: user.id,
+            following_id: profile.id,
+          });
+        
+        setIsFollowing(true);
+        toast({ title: "Following user" });
+      }
+    } catch (error) {
+      console.error('Error toggling follow:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update follow status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleMessageUser = async () => {
+    if (!profile) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Check if conversation already exists
+      const { data: existingConversations } = await supabase
+        .from("conversation_participants")
+        .select("conversation_id")
+        .eq("user_id", user.id);
+
+      if (existingConversations) {
+        for (const conv of existingConversations) {
+          const { data: otherParticipant } = await supabase
+            .from("conversation_participants")
+            .select("user_id")
+            .eq("conversation_id", conv.conversation_id)
+            .eq("user_id", profile.id)
+            .single();
+
+          if (otherParticipant) {
+            navigate(`/messages?conversation=${conv.conversation_id}`);
+            return;
+          }
+        }
+      }
+
+      // Create new conversation
+      const { data: newConversation, error: convError } = await supabase
+        .from("conversations")
+        .insert({})
+        .select()
+        .single();
+
+      if (convError) throw convError;
+
+      // Add both participants
+      const { error: participantError } = await supabase
+        .from("conversation_participants")
+        .insert([
+          { conversation_id: newConversation.id, user_id: user.id },
+          { conversation_id: newConversation.id, user_id: profile.id },
+        ]);
+
+      if (participantError) throw participantError;
+
+      navigate(`/messages?conversation=${newConversation.id}`);
+    } catch (error) {
+      console.error("Error creating conversation:", error);
+      toast({
+        title: "Error",
+        description: "Failed to start conversation",
+        variant: "destructive",
+      });
+    }
+  };
 
   const fetchProfile = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    const userId = searchParams.get('user') || user.id;
+
     const { data } = await supabase
       .from("profiles")
       .select("*")
-      .eq("id", user.id)
+      .eq("id", userId)
       .single();
 
     setProfile(data);
@@ -48,16 +180,18 @@ export default function Profile() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    const userId = searchParams.get('user') || user.id;
+
     const { data } = await supabase
       .from("outfits")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
     const { data: profileData } = await supabase
       .from("profiles")
       .select("*")
-      .eq("id", user.id)
+      .eq("id", userId)
       .single();
 
     const enrichedOutfits = data?.map(outfit => ({
@@ -200,21 +334,49 @@ export default function Profile() {
               </div>
             </div>
           </div>
-          <Button 
-            variant="outline" 
-            size="icon" 
-            className="border-border"
-            onClick={() => setSettingsOpen(true)}
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
+          <div className="flex gap-2">
+            {!isOwnProfile && (
+              <>
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={handleMessageUser}
+                >
+                  <MessageCircle className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant={isFollowing ? "outline" : "default"}
+                  size="icon"
+                  onClick={handleFollowToggle}
+                >
+                  {isFollowing ? <UserCheck className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
+                </Button>
+              </>
+            )}
+            {isOwnProfile && (
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="border-border"
+                onClick={() => setSettingsOpen(true)}
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </Card>
 
+      {isOwnProfile && (
+        <div className="mb-6">
+          <PreferencesSurvey />
+        </div>
+      )}
+
       <Tabs defaultValue="outfits" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-6">
-          <TabsTrigger value="outfits">Your Outfits</TabsTrigger>
-          <TabsTrigger value="upload">Upload</TabsTrigger>
+        <TabsList className={`grid w-full ${isOwnProfile ? 'grid-cols-2' : 'grid-cols-1'} mb-6`}>
+          <TabsTrigger value="outfits">{isOwnProfile ? 'Your Outfits' : 'Outfits'}</TabsTrigger>
+          {isOwnProfile && <TabsTrigger value="upload">Upload</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="outfits">

@@ -33,6 +33,26 @@ export const OutfitCard = ({ outfit, isLiked, onLikeToggle }: OutfitCardProps) =
   const [showShare, setShowShare] = useState(false);
   const { toast } = useToast();
 
+  const trackCommentInteraction = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      await supabase.from('user_interactions').insert({
+        user_id: user.id,
+        outfit_id: outfit.id,
+        interaction_type: 'comment',
+      });
+    } catch (error) {
+      console.error('Error tracking comment interaction:', error);
+    }
+  };
+
+  const handleCommentsOpen = () => {
+    setShowComments(true);
+    trackCommentInteraction();
+  };
+
   const handleLike = async () => {
     setIsLiking(true);
     try {
@@ -131,7 +151,7 @@ export const OutfitCard = ({ outfit, isLiked, onLikeToggle }: OutfitCardProps) =
             variant="ghost" 
             size="icon" 
             className="hover:scale-110 transition-transform"
-            onClick={() => setShowComments(true)}
+            onClick={handleCommentsOpen}
           >
             <MessageCircle className="h-7 w-7" />
           </Button>

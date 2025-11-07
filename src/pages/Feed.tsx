@@ -19,40 +19,143 @@ export default function Feed() {
     fetchUserLikes();
   }, []);
 
+  const trackInteraction = async (outfitId: string, type: 'view' | 'like' | 'comment') => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      await supabase.from('user_interactions').insert({
+        user_id: user.id,
+        outfit_id: outfitId,
+        interaction_type: type,
+      });
+    } catch (error) {
+      console.error('Error tracking interaction:', error);
+    }
+  };
+
+  const calculateRelevanceScore = (outfit: any, userPreferences: any, userInteractions: any[]) => {
+    let score = 0;
+
+    // Base recency score (newer posts get higher scores)
+    const ageInDays = (Date.now() - new Date(outfit.created_at).getTime()) / (1000 * 60 * 60 * 24);
+    score += Math.max(0, 10 - ageInDays); // Up to 10 points for recent posts
+
+    // Match style preferences
+    if (userPreferences?.style_preferences && outfit.style_tags) {
+      const matches = outfit.style_tags.filter((tag: string) =>
+        userPreferences.style_preferences.some((pref: string) =>
+          tag.toLowerCase().includes(pref.toLowerCase())
+        )
+      );
+      score += matches.length * 5; // 5 points per matching style
+    }
+
+    // Boost based on past interactions with similar content
+    const similarInteractions = userInteractions.filter((interaction: any) => {
+      const interactedOutfit = outfits.find(o => o.id === interaction.outfit_id);
+      if (!interactedOutfit) return false;
+
+      // Check if style tags overlap
+      const hasOverlap = interactedOutfit.style_tags?.some((tag: string) =>
+        outfit.style_tags?.includes(tag)
+      );
+      return hasOverlap;
+    });
+    score += similarInteractions.length * 2; // 2 points per similar interaction
+
+    // Boost popular content
+    score += (outfit.likes_count || 0) * 0.5; // 0.5 points per like
+
+    // Boost high-rated outfits
+    if (outfit.rating) {
+      score += outfit.rating * 0.3; // Up to 3 points for 10/10 rating
+    }
+
+    // Boost trending outfits
+    if (outfit.trend_match_score) {
+      score += outfit.trend_match_score * 0.2; // Up to 2 points for matching trends
+    }
+
+    return score;
+  };
+
   const fetchOutfits = async () => {
-    // Fetch outfits
-    const { data: outfitsData, error: outfitsError } = await supabase
-      .from("outfits")
-      .select("*")
-      .order("created_at", { ascending: false });
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
-    if (outfitsError) {
-      console.error("Error fetching outfits:", outfitsError);
-      setOutfits([]);
+      // Fetch user preferences
+      const { data: preferences } = await supabase
+        .from('user_preferences')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      // Fetch user's recent interactions
+      const { data: interactions } = await supabase
+        .from('user_interactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      // Fetch outfits
+      const { data: outfitsData, error: outfitsError } = await supabase
+        .from("outfits")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(100); // Get more outfits to sort by relevance
+
+      if (outfitsError) {
+        console.error("Error fetching outfits:", outfitsError);
+        setOutfits([]);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch profiles for all unique user_ids
+      const userIds = [...new Set(outfitsData?.map(o => o.user_id) || [])];
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, username, avatar_url")
+        .in("id", userIds);
+
+      if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
+      }
+
+      // Merge profiles data with outfits
+      const profilesMap = new Map(profilesData?.map(p => [p.id, p]) || []);
+      const enrichedOutfits = outfitsData?.map(outfit => ({
+        ...outfit,
+        profiles: profilesMap.get(outfit.user_id) || null
+      })) || [];
+
+      // Calculate relevance scores and sort
+      const scoredOutfits = enrichedOutfits.map(outfit => ({
+        ...outfit,
+        relevanceScore: calculateRelevanceScore(outfit, preferences, interactions || [])
+      }));
+
+      // Sort by relevance score (higher is better)
+      scoredOutfits.sort((a, b) => b.relevanceScore - a.relevanceScore);
+
+      setOutfits(scoredOutfits);
+
+      // Track view interactions for visible outfits (top 10)
+      scoredOutfits.slice(0, 10).forEach(outfit => {
+        trackInteraction(outfit.id, 'view');
+      });
+
       setLoading(false);
-      return;
+    } catch (error) {
+      console.error("Error in fetchOutfits:", error);
+      setLoading(false);
     }
-
-    // Fetch profiles for all unique user_ids
-    const userIds = [...new Set(outfitsData?.map(o => o.user_id) || [])];
-    const { data: profilesData, error: profilesError } = await supabase
-      .from("profiles")
-      .select("id, username, avatar_url")
-      .in("id", userIds);
-
-    if (profilesError) {
-      console.error("Error fetching profiles:", profilesError);
-    }
-
-    // Merge profiles data with outfits
-    const profilesMap = new Map(profilesData?.map(p => [p.id, p]) || []);
-    const enrichedOutfits = outfitsData?.map(outfit => ({
-      ...outfit,
-      profiles: profilesMap.get(outfit.user_id) || null
-    })) || [];
-
-    setOutfits(enrichedOutfits);
-    setLoading(false);
   };
 
   const fetchUserLikes = async () => {
@@ -69,7 +172,9 @@ export default function Feed() {
     }
   };
 
-  const handleLikeToggle = (outfitId: string) => {
+  const handleLikeToggle = async (outfitId: string) => {
+    const isCurrentlyLiked = likedOutfits.has(outfitId);
+
     setLikedOutfits((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(outfitId)) {
@@ -85,13 +190,18 @@ export default function Feed() {
         outfit.id === outfitId
           ? {
               ...outfit,
-              likes_count: likedOutfits.has(outfitId)
+              likes_count: isCurrentlyLiked
                 ? outfit.likes_count - 1
                 : outfit.likes_count + 1,
             }
           : outfit
       )
     );
+
+    // Track like interaction
+    if (!isCurrentlyLiked) {
+      await trackInteraction(outfitId, 'like');
+    }
   };
 
   if (loading) {
