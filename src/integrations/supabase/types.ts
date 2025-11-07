@@ -404,6 +404,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      test_conversation_creation: {
+        Args: never
+        Returns: {
+          conversation_id: string
+          error_message: string
+          success: boolean
+        }[]
+      }
       user_has_access_to_conversation: {
         Args: { conversation_uuid: string }
         Returns: boolean
