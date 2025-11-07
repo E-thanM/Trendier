@@ -21,10 +21,10 @@ import { SettingsSheet } from "@/components/SettingsSheet";
 
 const items = [
   { title: "Feed", url: "/", icon: Home },
-  { title: "Messages", url: "/messages", icon: MessageCircle },
   { title: "Analyzer", url: "/analyzer", icon: Sparkles },
   { title: "Trends", url: "/trends", icon: TrendingUp },
   { title: "Profile", url: "/profile", icon: User },
+  { title: "Messages", url: "/messages", icon: MessageCircle },
 ];
 
 export function AppSidebar() {
