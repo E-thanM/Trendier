@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Plus } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { StoryViewer } from "./StoryViewer";
 
 const mockStories = [
   { id: "1", username: "Your Story", hasStory: false, isUser: true },
@@ -10,16 +12,50 @@ const mockStories = [
   { id: "6", username: "chic_vibes", hasStory: true },
 ];
 
+const storyContent: Record<string, Array<{ id: string; username: string; imageUrl: string; timestamp: string }>> = {
+  "fashion_lover": [
+    { id: "1", username: "fashion_lover", imageUrl: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=600", timestamp: "2h ago" },
+    { id: "2", username: "fashion_lover", imageUrl: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=600", timestamp: "2h ago" },
+  ],
+  "style_icon": [
+    { id: "1", username: "style_icon", imageUrl: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600", timestamp: "4h ago" },
+  ],
+  "trendsetter": [
+    { id: "1", username: "trendsetter", imageUrl: "https://images.unsplash.com/photo-1487222477894-8943e31ef7b2?w=600", timestamp: "5h ago" },
+    { id: "2", username: "trendsetter", imageUrl: "https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=600", timestamp: "5h ago" },
+  ],
+  "outfit_daily": [
+    { id: "1", username: "outfit_daily", imageUrl: "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=600", timestamp: "8h ago" },
+  ],
+  "chic_vibes": [
+    { id: "1", username: "chic_vibes", imageUrl: "https://images.unsplash.com/photo-1509631179647-0177331693ae?w=600", timestamp: "12h ago" },
+  ],
+};
+
 export function StoriesBar() {
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [currentStories, setCurrentStories] = useState<Array<{ id: string; username: string; imageUrl: string; timestamp: string }>>([]);
+
+  const handleStoryClick = (username: string) => {
+    if (username === "Your Story") return;
+    
+    const stories = storyContent[username] || [];
+    if (stories.length > 0) {
+      setCurrentStories(stories);
+      setViewerOpen(true);
+    }
+  };
   return (
-    <div className="border-b border-border bg-background sticky top-0 z-10 md:top-14">
-      <ScrollArea className="w-full">
-        <div className="flex gap-4 p-4">
-          {mockStories.map((story) => (
-            <div
-              key={story.id}
-              className="flex flex-col items-center gap-1 min-w-[70px] cursor-pointer group"
-            >
+    <>
+      <div className="border-b border-border bg-background sticky top-0 z-10 md:top-14">
+        <ScrollArea className="w-full">
+          <div className="flex gap-4 p-4">
+            {mockStories.map((story) => (
+              <div
+                key={story.id}
+                onClick={() => handleStoryClick(story.username)}
+                className="flex flex-col items-center gap-1 min-w-[70px] cursor-pointer group"
+              >
               <div
                 className={`relative w-16 h-16 rounded-full flex items-center justify-center transition-transform group-hover:scale-105 ${
                   story.hasStory
@@ -48,5 +84,12 @@ export function StoriesBar() {
         <ScrollBar orientation="horizontal" className="invisible" />
       </ScrollArea>
     </div>
+
+    <StoryViewer
+      isOpen={viewerOpen}
+      onClose={() => setViewerOpen(false)}
+      stories={currentStories}
+    />
+    </>
   );
 }
