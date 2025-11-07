@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft, Search, Send, Plus, Loader2, Check, CheckCheck } from "lucide-react";
+import { ArrowLeft, Search, Send, Plus, Loader2, Check, CheckCheck, MessageCircle } from "lucide-react";
 import { MessageDropdown } from "@/components/MessageDropdown";
 import { UserSearchDialog } from "@/components/UserSearchDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -481,16 +481,11 @@ export default function Messages() {
               </div>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <Card className="p-8 text-center max-w-md">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center mx-auto mb-4">
-                  <Send className="h-8 w-8 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-semibold mb-2">Your Messages</h3>
-                <p className="text-sm text-muted-foreground">
-                  Select a conversation to start chatting
-                </p>
-              </Card>
+            <div className="flex-1 flex items-center justify-center p-8">
+              <div className="text-center text-muted-foreground">
+                <MessageCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p className="text-sm">Select a conversation</p>
+              </div>
             </div>
           )}
         </div>

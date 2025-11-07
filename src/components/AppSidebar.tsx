@@ -24,8 +24,8 @@ const items = [
   { title: "Feed", url: "/", icon: Home },
   { title: "Analyzer", url: "/analyzer", icon: Sparkles },
   { title: "Trends", url: "/trends", icon: TrendingUp },
-  { title: "Profile", url: "/profile", icon: User },
   { title: "Messages", url: "/messages", icon: MessageCircle },
+  { title: "Profile", url: "/profile", icon: User },
 ];
 
 export function AppSidebar() {
