@@ -456,7 +456,7 @@ export default function Profile() {
               </div>
             </div>
             
-            <div className="flex gap-6 mt-3 text-sm">
+            <div className="flex gap-4 sm:gap-6 mt-3 text-sm justify-center sm:justify-start">
               <div>
                 <span className="font-bold text-foreground">{outfits.length}</span>{" "}
                 <span className="text-muted-foreground">posts</span>
