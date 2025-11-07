@@ -408,14 +408,14 @@ export default function Profile() {
   return (
     <div className="max-w-4xl mx-auto p-4 pb-24 md:pb-6">
       <Card className="p-6 mb-6 border-border">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center ring-2 ring-primary/20">
+        <div className="flex items-start gap-4 flex-wrap">
+          <div className="flex items-center gap-4 flex-1 min-w-0">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center ring-2 ring-primary/20 flex-shrink-0">
               <span className="text-3xl font-bold text-primary">
                 {profile?.username?.charAt(0).toUpperCase() || "U"}
               </span>
             </div>
-            <div>
+            <div className="flex-1 min-w-0">
               <h1 className="text-xl font-bold">{profile?.username || "User"}</h1>
               {profile?.bio && (
                 <p className="text-sm text-muted-foreground mt-1">{profile.bio}</p>
@@ -448,7 +448,7 @@ export default function Profile() {
               </div>
             </div>
           </div>
-          <div className="flex gap-2 self-start">
+          <div className="flex gap-2 flex-shrink-0">
             {!isOwnProfile && (
               <>
                 <Button 
