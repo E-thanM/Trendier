@@ -94,8 +94,18 @@ export default function Analyzer() {
       // Upload image to storage
       const imageUrl = await uploadImageToStorage(imageFile);
 
+      // Get current session for authentication
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error("Not authenticated");
+      }
+
       const { data, error } = await supabase.functions.invoke('analyze-outfit', {
-        body: { imageUrl, targetStyle: validation.data.targetStyle }
+        body: { imageUrl, targetStyle: validation.data.targetStyle },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
       });
 
       if (error) throw error;
