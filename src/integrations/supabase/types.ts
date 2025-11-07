@@ -218,6 +218,7 @@ export type Database = {
           bio: string | null
           created_at: string
           id: string
+          public_followers: boolean | null
           username: string
         }
         Insert: {
@@ -225,6 +226,7 @@ export type Database = {
           bio?: string | null
           created_at?: string
           id: string
+          public_followers?: boolean | null
           username: string
         }
         Update: {
@@ -232,6 +234,7 @@ export type Database = {
           bio?: string | null
           created_at?: string
           id?: string
+          public_followers?: boolean | null
           username?: string
         }
         Relationships: []

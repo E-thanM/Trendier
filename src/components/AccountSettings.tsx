@@ -30,6 +30,7 @@ export function AccountSettings() {
   const [saving, setSaving] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [privateAccount, setPrivateAccount] = useState(false);
+  const [publicFollowers, setPublicFollowers] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -53,6 +54,7 @@ export function AccountSettings() {
       setProfile(profileData);
       setUsername(profileData.username || "");
       setBio(profileData.bio || "");
+      setPublicFollowers(profileData.public_followers ?? true);
     }
   };
 
@@ -64,6 +66,7 @@ export function AccountSettings() {
         .update({
           username: username.trim(),
           bio: bio.trim(),
+          public_followers: publicFollowers,
         })
         .eq("id", user.id);
 
@@ -198,6 +201,22 @@ export function AccountSettings() {
             <Switch
               checked={privateAccount}
               onCheckedChange={setPrivateAccount}
+            />
+          </div>
+
+          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+            <div className="flex items-center gap-3">
+              <Eye className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">Public Followers</p>
+                <p className="text-xs text-muted-foreground">
+                  Let others see who follows you
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={publicFollowers}
+              onCheckedChange={setPublicFollowers}
             />
           </div>
         </div>

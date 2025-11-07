@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { OutfitCard } from "@/components/OutfitCard";
 import { SettingsSheet } from "@/components/SettingsSheet";
 import { PreferencesSurvey } from "@/components/PreferencesSurvey";
+import { FollowersDialog } from "@/components/FollowersDialog";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 export default function Profile() {
@@ -28,6 +29,10 @@ export default function Profile() {
   const [isOwnProfile, setIsOwnProfile] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [followersDialogOpen, setFollowersDialogOpen] = useState(false);
+  const [followersDialogTab, setFollowersDialogTab] = useState<"followers" | "following">("followers");
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -37,6 +42,7 @@ export default function Profile() {
     fetchProfile();
     fetchUserOutfits();
     fetchUserLikes();
+    fetchFollowCounts();
   }, [searchParams]);
 
   const initProfile = async () => {
@@ -65,6 +71,28 @@ export default function Profile() {
     setIsFollowing(!!data);
   };
 
+  const fetchFollowCounts = async () => {
+    const userId = searchParams.get('user') || currentUserId;
+    if (!userId) return;
+
+    try {
+      const { count: followersCount } = await supabase
+        .from('user_follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('following_id', userId);
+
+      const { count: followingCount } = await supabase
+        .from('user_follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('follower_id', userId);
+
+      setFollowersCount(followersCount || 0);
+      setFollowingCount(followingCount || 0);
+    } catch (error) {
+      console.error('Error fetching follow counts:', error);
+    }
+  };
+
   const handleFollowToggle = async () => {
     if (!profile) return;
     
@@ -80,6 +108,7 @@ export default function Profile() {
           .eq('following_id', profile.id);
         
         setIsFollowing(false);
+        setFollowersCount(prev => Math.max(0, prev - 1));
         toast({ title: "Unfollowed user" });
       } else {
         await supabase
@@ -90,6 +119,7 @@ export default function Profile() {
           });
         
         setIsFollowing(true);
+        setFollowersCount(prev => prev + 1);
         toast({ title: "Following user" });
       }
     } catch (error) {
@@ -331,6 +361,26 @@ export default function Profile() {
                   <span className="font-bold text-foreground">{outfits.length}</span>{" "}
                   <span className="text-muted-foreground">posts</span>
                 </div>
+                <button
+                  onClick={() => {
+                    setFollowersDialogTab("followers");
+                    setFollowersDialogOpen(true);
+                  }}
+                  className="hover:underline"
+                >
+                  <span className="font-bold text-foreground">{followersCount}</span>{" "}
+                  <span className="text-muted-foreground">followers</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setFollowersDialogTab("following");
+                    setFollowersDialogOpen(true);
+                  }}
+                  className="hover:underline"
+                >
+                  <span className="font-bold text-foreground">{followingCount}</span>{" "}
+                  <span className="text-muted-foreground">following</span>
+                </button>
               </div>
             </div>
           </div>
@@ -490,6 +540,13 @@ export default function Profile() {
       </Tabs>
 
       <SettingsSheet open={settingsOpen} onOpenChange={setSettingsOpen} />
+      
+      <FollowersDialog
+        open={followersDialogOpen}
+        onOpenChange={setFollowersDialogOpen}
+        userId={profile?.id || ""}
+        defaultTab={followersDialogTab}
+      />
 
       <Dialog open={!!selectedOutfit} onOpenChange={() => setSelectedOutfit(null)}>
         <DialogContent className="max-w-lg p-0 gap-0 bg-transparent border-none shadow-none">
