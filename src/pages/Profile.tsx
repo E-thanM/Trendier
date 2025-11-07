@@ -408,15 +408,15 @@ export default function Profile() {
   return (
     <div className="max-w-4xl mx-auto p-4 pb-24 md:pb-6">
       <Card className="p-6 mb-6 border-border">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center ring-2 ring-primary/20 flex-shrink-0 mx-auto sm:mx-0">
+        <div className="flex gap-4">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center ring-2 ring-primary/20 flex-shrink-0">
             <span className="text-3xl font-bold text-primary">
               {profile?.username?.charAt(0).toUpperCase() || "U"}
             </span>
           </div>
           
-          <div className="flex-1 min-w-0 text-center sm:text-left">
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <h1 className="text-xl font-bold">{profile?.username || "User"}</h1>
                 {profile?.bio && (
@@ -424,7 +424,7 @@ export default function Profile() {
                 )}
               </div>
               
-              <div className="flex gap-2 justify-center sm:justify-start flex-shrink-0">
+              <div className="flex gap-2 flex-shrink-0">
                 {!isOwnProfile && (
                   <>
                     <Button 
@@ -456,7 +456,7 @@ export default function Profile() {
               </div>
             </div>
             
-            <div className="flex gap-4 sm:gap-6 mt-4 text-sm justify-center sm:justify-start">
+            <div className="flex gap-6 mt-3 text-sm">
               <div>
                 <span className="font-bold text-foreground">{outfits.length}</span>{" "}
                 <span className="text-muted-foreground">posts</span>
