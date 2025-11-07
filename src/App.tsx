@@ -8,6 +8,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { BottomNav } from "@/components/BottomNav";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Feed from "./pages/Feed";
+import Messages from "./pages/Messages";
 import Analyzer from "./pages/Analyzer";
 import Trends from "./pages/Trends";
 import Profile from "./pages/Profile";
@@ -47,6 +48,16 @@ const App = () => (
               <ProtectedRoute>
                 <AppLayout>
                   <Feed />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/messages"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <Messages />
                 </AppLayout>
               </ProtectedRoute>
             }

@@ -21,6 +21,7 @@ import { SettingsSheet } from "@/components/SettingsSheet";
 
 const items = [
   { title: "Feed", url: "/", icon: Home },
+  { title: "Messages", url: "/messages", icon: MessageCircle },
   { title: "Analyzer", url: "/analyzer", icon: Sparkles },
   { title: "Trends", url: "/trends", icon: TrendingUp },
   { title: "Profile", url: "/profile", icon: User },
@@ -68,41 +69,22 @@ export function AppSidebar() {
             </h1>
             
             {!isCollapsed && (
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="relative h-8 w-8 hover:bg-muted"
-                  onClick={() => openSettings("messages")}
-                >
-                  <MessageCircle className="h-4 w-4" />
-                  {unreadMessages > 0 && (
-                    <Badge 
-                      variant="destructive" 
-                      className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px]"
-                    >
-                      {unreadMessages}
-                    </Badge>
-                  )}
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="relative h-8 w-8 hover:bg-muted"
-                  onClick={() => openSettings("notifications")}
-                >
-                  <Bell className="h-4 w-4" />
-                  {unreadNotifications > 0 && (
-                    <Badge 
-                      variant="destructive" 
-                      className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px]"
-                    >
-                      {unreadNotifications}
-                    </Badge>
-                  )}
-                </Button>
-              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative h-8 w-8 hover:bg-muted"
+                onClick={() => openSettings("notifications")}
+              >
+                <Bell className="h-4 w-4" />
+                {unreadNotifications > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px]"
+                  >
+                    {unreadNotifications}
+                  </Badge>
+                )}
+              </Button>
             )}
           </div>
 
@@ -115,11 +97,19 @@ export function AppSidebar() {
                     <NavLink
                       to={item.url}
                       end
-                      className="hover:bg-muted/50"
+                      className="hover:bg-muted/50 relative"
                       activeClassName="bg-muted font-medium"
                     >
                       <item.icon className="h-5 w-5" />
                       {!isCollapsed && <span>{item.title}</span>}
+                      {item.title === "Messages" && unreadMessages > 0 && !isCollapsed && (
+                        <Badge 
+                          variant="destructive" 
+                          className="ml-auto h-5 w-5 p-0 flex items-center justify-center text-xs"
+                        >
+                          {unreadMessages}
+                        </Badge>
+                      )}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
