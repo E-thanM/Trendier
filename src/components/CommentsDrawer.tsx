@@ -215,7 +215,7 @@ export const CommentsDrawer = ({ outfitId, isOpen, onClose }: CommentsDrawerProp
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md h-[400px] p-0 flex flex-col gap-0">
+      <DialogContent className="max-w-md h-[400px] p-0 flex flex-col gap-0 bottom-4 top-auto translate-y-0 data-[state=open]:slide-in-from-bottom-4">
         <DialogHeader className="px-3 py-2 border-b">
           <DialogTitle className="text-sm">Comments</DialogTitle>
         </DialogHeader>
