@@ -9,19 +9,61 @@ import { Sparkles, Loader2, TrendingUp, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export default function Analyzer() {
-  const [imageUrl, setImageUrl] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
   const [targetStyle, setTargetStyle] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<any>(null);
   const { toast } = useToast();
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Invalid File",
+          description: "Please select an image file",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadImageToStorage = async (file: File): Promise<string> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not authenticated");
+
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('outfits')
+      .upload(fileName, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('outfits')
+      .getPublicUrl(fileName);
+
+    return publicUrl;
+  };
+
   const handleAnalyze = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!imageUrl || !targetStyle) {
+    if (!imageFile || !targetStyle) {
       toast({
         title: "Missing Information",
-        description: "Please provide both an image URL and target style",
+        description: "Please select an image and enter target style",
         variant: "destructive",
       });
       return;
@@ -31,6 +73,9 @@ export default function Analyzer() {
     setResult(null);
 
     try {
+      // Upload image to storage
+      const imageUrl = await uploadImageToStorage(imageFile);
+
       const { data, error } = await supabase.functions.invoke('analyze-outfit', {
         body: { imageUrl, targetStyle }
       });
@@ -70,30 +115,27 @@ export default function Analyzer() {
       <Card className="p-6 mb-6 border-border">
         <form onSubmit={handleAnalyze} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="imageUrl">Outfit Image URL</Label>
+            <Label htmlFor="imageFile">Upload Outfit Image</Label>
             <Input
-              id="imageUrl"
-              type="url"
-              placeholder="https://example.com/outfit.jpg"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
+              id="imageFile"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleFileChange}
               required
+              className="cursor-pointer"
             />
+            <p className="text-xs text-muted-foreground">
+              Take a photo or select from gallery
+            </p>
           </div>
 
-          {imageUrl && (
+          {imagePreview && (
             <div className="aspect-square max-w-md mx-auto bg-muted rounded-lg overflow-hidden">
               <img
-                src={imageUrl}
+                src={imagePreview}
                 alt="Outfit preview"
                 className="w-full h-full object-cover"
-                onError={() => {
-                  toast({
-                    title: "Invalid image",
-                    description: "Please check your image URL",
-                    variant: "destructive",
-                  });
-                }}
               />
             </div>
           )}

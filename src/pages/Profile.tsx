@@ -20,7 +20,8 @@ export default function Profile() {
   const [outfits, setOutfits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [caption, setCaption] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
   const [tags, setTags] = useState("");
   const [uploading, setUploading] = useState(false);
   const [selectedOutfit, setSelectedOutfit] = useState<any>(null);
@@ -272,13 +273,54 @@ export default function Profile() {
     );
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Invalid File",
+          description: "Please select an image file",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadImageToStorage = async (file: File): Promise<string> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not authenticated");
+
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('outfits')
+      .upload(fileName, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('outfits')
+      .getPublicUrl(fileName);
+
+    return publicUrl;
+  };
+
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!imageUrl) {
+
+    if (!imageFile) {
       toast({
         title: "Error",
-        description: "Please enter an image URL",
+        description: "Please select an image",
         variant: "destructive",
       });
       return;
@@ -297,6 +339,9 @@ export default function Profile() {
         });
         return;
       }
+
+      // Upload image to storage
+      const imageUrl = await uploadImageToStorage(imageFile);
 
       const styleTags = tags
         .split(",")
@@ -317,7 +362,8 @@ export default function Profile() {
         description: "Outfit uploaded successfully!",
       });
 
-      setImageUrl("");
+      setImageFile(null);
+      setImagePreview("");
       setCaption("");
       setTags("");
       fetchUserOutfits();
@@ -472,30 +518,27 @@ export default function Profile() {
           <Card className="p-6 border-border">
             <form onSubmit={handleUpload} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="imageUrl">Image URL</Label>
+                <Label htmlFor="imageFile">Upload Image</Label>
                 <Input
-                  id="imageUrl"
-                  type="url"
-                  placeholder="https://example.com/image.jpg"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
+                  id="imageFile"
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleFileChange}
                   required
+                  className="cursor-pointer"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Take a photo or select from gallery
+                </p>
               </div>
 
-              {imageUrl && (
+              {imagePreview && (
                 <div className="aspect-square bg-muted rounded-lg overflow-hidden">
                   <img
-                    src={imageUrl}
+                    src={imagePreview}
                     alt="Preview"
                     className="w-full h-full object-cover"
-                    onError={() => {
-                      toast({
-                        title: "Invalid image",
-                        description: "Please check your image URL",
-                        variant: "destructive",
-                      });
-                    }}
                   />
                 </div>
               )}
