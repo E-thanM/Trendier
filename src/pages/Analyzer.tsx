@@ -7,6 +7,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Sparkles, Loader2, TrendingUp, Star, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { z } from "zod";
+
+const targetStyleSchema = z.object({
+  targetStyle: z.string().trim().min(1, "Target style is required").max(100, "Target style must be less than 100 characters")
+});
 
 export default function Analyzer() {
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -74,11 +79,23 @@ export default function Analyzer() {
     setResult(null);
 
     try {
+      // Validate target style
+      const validation = targetStyleSchema.safeParse({ targetStyle });
+      if (!validation.success) {
+        toast({
+          title: "Invalid Target Style",
+          description: validation.error.errors[0].message,
+          variant: "destructive",
+        });
+        setAnalyzing(false);
+        return;
+      }
+
       // Upload image to storage
       const imageUrl = await uploadImageToStorage(imageFile);
 
       const { data, error } = await supabase.functions.invoke('analyze-outfit', {
-        body: { imageUrl, targetStyle }
+        body: { imageUrl, targetStyle: validation.data.targetStyle }
       });
 
       if (error) throw error;

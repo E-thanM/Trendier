@@ -9,6 +9,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { z } from "zod";
+
+const commentSchema = z.object({
+  comment_text: z.string().trim().min(1, "Comment cannot be empty").max(1000, "Comment must be less than 1000 characters")
+});
 
 interface Comment {
   id: string;
@@ -97,12 +102,24 @@ export const CommentsDrawer = ({ outfitId, isOpen, onClose }: CommentsDrawerProp
         return;
       }
 
+      // Validate comment
+      const validation = commentSchema.safeParse({ comment_text: newComment });
+      if (!validation.success) {
+        toast({
+          title: "Invalid Comment",
+          description: validation.error.errors[0].message,
+          variant: "destructive",
+        });
+        setSubmitting(false);
+        return;
+      }
+
       const { error } = await supabase
         .from("outfit_comments")
         .insert({
           outfit_id: outfitId,
           user_id: user.id,
-          comment_text: newComment.trim(),
+          comment_text: validation.data.comment_text,
         });
 
       if (error) throw error;

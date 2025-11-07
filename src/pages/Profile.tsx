@@ -14,6 +14,11 @@ import { SettingsSheet } from "@/components/SettingsSheet";
 import { PreferencesSurvey } from "@/components/PreferencesSurvey";
 import { FollowersDialog } from "@/components/FollowersDialog";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { z } from "zod";
+
+const captionSchema = z.object({
+  caption: z.string().trim().max(500, "Caption must be less than 500 characters").optional()
+});
 
 export default function Profile() {
   const [profile, setProfile] = useState<any>(null);
@@ -344,6 +349,18 @@ export default function Profile() {
       // Upload image to storage
       const imageUrl = await uploadImageToStorage(imageFile);
 
+      // Validate caption
+      const validation = captionSchema.safeParse({ caption });
+      if (!validation.success) {
+        toast({
+          title: "Invalid Caption",
+          description: validation.error.errors[0].message,
+          variant: "destructive",
+        });
+        setUploading(false);
+        return;
+      }
+
       const styleTags = tags
         .split(",")
         .map((tag) => tag.trim())
@@ -352,7 +369,7 @@ export default function Profile() {
       const { error } = await supabase.from("outfits").insert({
         user_id: user.id,
         image_url: imageUrl,
-        caption: caption || null,
+        caption: validation.data.caption || null,
         style_tags: styleTags.length > 0 ? styleTags : null,
       });
 

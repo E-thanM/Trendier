@@ -12,6 +12,11 @@ import { UserSearchDialog } from "@/components/UserSearchDialog";
 import { useToast } from "@/hooks/use-toast";
 import { useSearchParams } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { z } from "zod";
+
+const messageSchema = z.object({
+  content: z.string().trim().min(1, "Message cannot be empty").max(2000, "Message must be less than 2000 characters")
+});
 
 interface Message {
   id: string;
@@ -223,10 +228,21 @@ export default function Messages() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Validate message
+      const validation = messageSchema.safeParse({ content: messageInput });
+      if (!validation.success) {
+        toast({
+          title: "Invalid Message",
+          description: validation.error.errors[0].message,
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { error } = await supabase.from('messages').insert({
         conversation_id: selectedConversation.id,
         sender_id: user.id,
-        content: messageInput,
+        content: validation.data.content,
       });
 
       if (error) throw error;
