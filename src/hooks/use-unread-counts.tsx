@@ -8,10 +8,13 @@ export function useUnreadCounts() {
   useEffect(() => {
     fetchUnreadCounts();
 
-    // Set up realtime subscription for messages
+    // Set up realtime subscription for messages and notifications
     const messagesChannel = supabase
       .channel('unread-messages')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => {
+        fetchUnreadCounts();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
         fetchUnreadCounts();
       })
       .subscribe();
@@ -49,8 +52,14 @@ export function useUnreadCounts() {
         setUnreadMessages(totalUnread);
       }
 
-      // Placeholder for notifications - can be implemented later
-      setUnreadNotifications(0);
+      // Get unread notifications count
+      const { data: notifications } = await supabase
+        .from('notifications')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('read', false);
+
+      setUnreadNotifications(notifications?.length || 0);
     } catch (error) {
       console.error('Error fetching unread counts:', error);
     }
