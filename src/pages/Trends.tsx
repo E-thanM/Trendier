@@ -19,21 +19,8 @@ export default function Trends() {
 
   const scrapeTrends = async () => {
     try {
-      // Get current session for authentication
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        console.error("No active session");
-        setLoading(false);
-        return;
-      }
-
-      // First scrape/update trends with authentication
-      const { error: invokeError } = await supabase.functions.invoke('scrape-trends', {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
-        }
-      });
+      // First scrape/update trends (no authentication required)
+      const { error: invokeError } = await supabase.functions.invoke('scrape-trends');
 
       if (invokeError) {
         console.error("Error invoking scrape-trends:", invokeError);

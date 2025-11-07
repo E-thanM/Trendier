@@ -1,1 +1,4 @@
 project_id = "kfcinucmguijpvchehxe"
+
+[functions.scrape-trends]
+verify_jwt = false
