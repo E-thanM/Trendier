@@ -67,6 +67,8 @@ export const StoryViewer = ({ isOpen, onClose, stories, initialIndex = 0 }: Stor
 
   const currentStory = stories[currentIndex];
 
+  if (!currentStory) return null;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md h-[90vh] p-0 bg-black border-none">
