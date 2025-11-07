@@ -6,8 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Loader2, Settings, Upload as UploadIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { OutfitCard } from "@/components/OutfitCard";
 
 export default function Profile() {
   const [profile, setProfile] = useState<any>(null);
@@ -17,11 +19,14 @@ export default function Profile() {
   const [imageUrl, setImageUrl] = useState("");
   const [tags, setTags] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [selectedOutfit, setSelectedOutfit] = useState<any>(null);
+  const [likedOutfits, setLikedOutfits] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   useEffect(() => {
     fetchProfile();
     fetchUserOutfits();
+    fetchUserLikes();
   }, []);
 
   const fetchProfile = async () => {
@@ -47,8 +52,58 @@ export default function Profile() {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
-    setOutfits(data || []);
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+
+    const enrichedOutfits = data?.map(outfit => ({
+      ...outfit,
+      profiles: profileData
+    })) || [];
+
+    setOutfits(enrichedOutfits);
     setLoading(false);
+  };
+
+  const fetchUserLikes = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from("outfit_likes")
+      .select("outfit_id")
+      .eq("user_id", user.id);
+
+    if (data) {
+      setLikedOutfits(new Set(data.map((like) => like.outfit_id)));
+    }
+  };
+
+  const handleLikeToggle = (outfitId: string) => {
+    setLikedOutfits((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(outfitId)) {
+        newSet.delete(outfitId);
+      } else {
+        newSet.add(outfitId);
+      }
+      return newSet;
+    });
+
+    setOutfits((prev) =>
+      prev.map((outfit) =>
+        outfit.id === outfitId
+          ? {
+              ...outfit,
+              likes_count: likedOutfits.has(outfitId)
+                ? outfit.likes_count - 1
+                : outfit.likes_count + 1,
+            }
+          : outfit
+      )
+    );
   };
 
   const handleUpload = async (e: React.FormEvent) => {
@@ -164,28 +219,30 @@ export default function Profile() {
             </Card>
           ) : (
             <div className="grid grid-cols-3 gap-1">
-              {outfits.map((outfit) => (
+              {outfits.map((outfit, index) => (
                 <div
                   key={outfit.id}
-                  className="aspect-square bg-muted relative group cursor-pointer overflow-hidden rounded-sm"
+                  className="aspect-square bg-muted relative group cursor-pointer overflow-hidden rounded-sm hover-scale animate-fade-in"
+                  style={{ animationDelay: `${index * 0.05}s` }}
+                  onClick={() => setSelectedOutfit(outfit)}
                 >
                   <img
                     src={outfit.image_url}
                     alt={outfit.caption || "Outfit"}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                   />
-                  {outfit.rating && (
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-end pb-3">
-                      <div className="bg-primary/90 text-primary-foreground font-bold text-lg px-3 py-1 rounded-full mb-1">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-end pb-3">
+                    {outfit.rating && (
+                      <div className="bg-primary/90 text-primary-foreground font-bold text-lg px-3 py-1 rounded-full mb-1 animate-scale-in">
                         {outfit.rating}/10
                       </div>
-                      {outfit.trend_match_score > 0 && (
-                        <span className="text-white text-xs">
-                          {outfit.trend_match_score}% trend match
-                        </span>
-                      )}
-                    </div>
-                  )}
+                    )}
+                    {outfit.trend_match_score > 0 && (
+                      <span className="text-white text-xs animate-fade-in">
+                        {outfit.trend_match_score}% trend match
+                      </span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -262,6 +319,18 @@ export default function Profile() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={!!selectedOutfit} onOpenChange={() => setSelectedOutfit(null)}>
+        <DialogContent className="max-w-lg p-0 gap-0">
+          {selectedOutfit && (
+            <OutfitCard
+              outfit={selectedOutfit}
+              isLiked={likedOutfits.has(selectedOutfit.id)}
+              onLikeToggle={() => handleLikeToggle(selectedOutfit.id)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
