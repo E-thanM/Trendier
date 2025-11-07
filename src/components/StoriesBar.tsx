@@ -111,7 +111,7 @@ export function StoriesBar() {
         <DialogHeader>
           <DialogTitle>Create Your Story</DialogTitle>
         </DialogHeader>
-        <div className="flex flex-col items-center gap-4 py-4">
+        <div className="flex flex-col items-center gap-4 pt-4 pb-2">
           <div className="w-full h-64 border-2 border-dashed border-border rounded-lg flex items-center justify-center bg-muted/50">
             <label htmlFor="story-upload" className="cursor-pointer flex flex-col items-center gap-2">
               <Upload className="h-12 w-12 text-muted-foreground" />
