@@ -19,19 +19,19 @@ export function BottomNav() {
         </NavLink>
         
         <NavLink 
-          to="/analyzer" 
-          className="flex items-center justify-center p-3 rounded-lg transition-colors"
-          activeClassName="text-primary bg-primary/10"
-        >
-          <Sparkles className="h-5 w-5" />
-        </NavLink>
-        
-        <NavLink 
           to="/trends" 
           className="flex items-center justify-center p-3 rounded-lg transition-colors"
           activeClassName="text-primary bg-primary/10"
         >
           <TrendingUp className="h-5 w-5" />
+        </NavLink>
+        
+        <NavLink 
+          to="/analyzer" 
+          className="flex items-center justify-center p-3 rounded-lg transition-colors"
+          activeClassName="text-primary bg-primary/10"
+        >
+          <Sparkles className="h-5 w-5" />
         </NavLink>
         
         <NavLink 
