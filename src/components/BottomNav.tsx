@@ -1,0 +1,47 @@
+import { Home, Sparkles, TrendingUp, User } from "lucide-react";
+import { NavLink } from "./NavLink";
+
+export function BottomNav() {
+  return (
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-t border-border h-16">
+      <div className="flex items-center justify-around h-full px-2">
+        <NavLink 
+          to="/" 
+          end
+          className="flex flex-col items-center justify-center gap-1 px-4 py-2 rounded-lg transition-colors"
+          activeClassName="text-primary"
+        >
+          <Home className="h-6 w-6" />
+          <span className="text-xs font-medium">Feed</span>
+        </NavLink>
+        
+        <NavLink 
+          to="/analyzer" 
+          className="flex flex-col items-center justify-center gap-1 px-4 py-2 rounded-lg transition-colors"
+          activeClassName="text-primary"
+        >
+          <Sparkles className="h-6 w-6" />
+          <span className="text-xs font-medium">Analyze</span>
+        </NavLink>
+        
+        <NavLink 
+          to="/trends" 
+          className="flex flex-col items-center justify-center gap-1 px-4 py-2 rounded-lg transition-colors"
+          activeClassName="text-primary"
+        >
+          <TrendingUp className="h-6 w-6" />
+          <span className="text-xs font-medium">Trends</span>
+        </NavLink>
+        
+        <NavLink 
+          to="/profile" 
+          className="flex flex-col items-center justify-center gap-1 px-4 py-2 rounded-lg transition-colors"
+          activeClassName="text-primary"
+        >
+          <User className="h-6 w-6" />
+          <span className="text-xs font-medium">Profile</span>
+        </NavLink>
+      </div>
+    </nav>
+  );
+}

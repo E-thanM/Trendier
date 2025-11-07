@@ -13,10 +13,10 @@ serve(async (req) => {
   }
 
   try {
-    const { imageUrl, caption } = await req.json();
+    const { imageUrl, targetStyle } = await req.json();
     
-    if (!imageUrl) {
-      throw new Error('Image URL is required');
+    if (!imageUrl || !targetStyle) {
+      throw new Error('Image URL and target style are required');
     }
 
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
@@ -48,6 +48,20 @@ serve(async (req) => {
 
     console.log('Analyzing outfit with AI...');
 
+    const systemPrompt = `You are a professional fashion analyst. Analyze outfits based on the user's target style and compare against current trends. 
+
+Current trending styles:
+${trendsContext}
+
+Provide detailed analysis of how well the outfit matches the user's intended style and current trends.`;
+
+    const userPrompt = `The user wants to achieve a "${targetStyle}" style aesthetic. Analyze this outfit image and provide:
+1. Overall rating (1-10) for how well it achieves the "${targetStyle}" aesthetic
+2. Which current trends it matches from the list
+3. Style analysis and feedback
+4. Suggested tags
+5. Trend match score (0-100) indicating how trendy/current the outfit is`;
+
     // Analyze outfit using Lovable AI with vision
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -60,14 +74,14 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a professional fashion analyst. Analyze outfits and provide ratings based on current trends. Current trending styles:\n\n${trendsContext}\n\nProvide a rating from 1-10 and identify which trends the outfit matches.`
+            content: systemPrompt
           },
           {
             role: 'user',
             content: [
               {
                 type: 'text',
-                text: `Analyze this outfit${caption ? ` (caption: "${caption}")` : ''} and rate it based on current fashion trends. Provide:\n1. Overall rating (1-10)\n2. Which trends it matches\n3. Style analysis\n4. Suggested tags`
+                text: userPrompt
               },
               {
                 type: 'image_url',
@@ -147,13 +161,10 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        analysis: {
-          rating: analysis.rating,
-          matchedTrends: analysis.matchedTrends,
-          styleAnalysis: analysis.styleAnalysis,
-          suggestedTags: analysis.suggestedTags,
-          trendMatchScore: analysis.trendMatchScore
-        }
+        rating: analysis.rating,
+        trendMatch: analysis.trendMatchScore,
+        feedback: analysis.styleAnalysis,
+        matchingTrends: analysis.matchedTrends
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

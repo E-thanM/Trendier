@@ -5,9 +5,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { BottomNav } from "@/components/BottomNav";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Feed from "./pages/Feed";
-import Upload from "./pages/Upload";
+import Analyzer from "./pages/Analyzer";
 import Trends from "./pages/Trends";
 import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
@@ -20,11 +21,12 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => (
     <div className="min-h-screen flex w-full">
       <AppSidebar />
       <main className="flex-1 overflow-auto">
-        <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm border-b h-14 flex items-center px-4">
+        <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm border-b h-14 flex items-center px-4 md:flex hidden">
           <SidebarTrigger />
         </header>
         {children}
       </main>
+      <BottomNav />
     </div>
   </SidebarProvider>
 );
@@ -48,11 +50,11 @@ const App = () => (
             }
           />
           <Route
-            path="/upload"
+            path="/analyzer"
             element={
               <ProtectedRoute>
                 <AppLayout>
-                  <Upload />
+                  <Analyzer />
                 </AppLayout>
               </ProtectedRoute>
             }

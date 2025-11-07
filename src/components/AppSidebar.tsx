@@ -1,4 +1,4 @@
-import { Home, TrendingUp, Upload, User, LogOut } from "lucide-react";
+import { Home, TrendingUp, Sparkles, User, LogOut } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
@@ -17,8 +17,8 @@ import { useToast } from "@/hooks/use-toast";
 
 const items = [
   { title: "Feed", url: "/", icon: Home },
+  { title: "Analyzer", url: "/analyzer", icon: Sparkles },
   { title: "Trends", url: "/trends", icon: TrendingUp },
-  { title: "Upload", url: "/upload", icon: Upload },
   { title: "Profile", url: "/profile", icon: User },
 ];
 
@@ -44,7 +44,7 @@ export function AppSidebar() {
   const isCollapsed = state === "collapsed";
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" className="hidden md:flex">
       <SidebarContent>
         <div className="p-4 border-b">
           <h1 className={`font-bold text-xl ${isCollapsed ? "text-center" : ""}`}>
