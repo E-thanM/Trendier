@@ -36,6 +36,23 @@ export default function Auth() {
         });
         navigate("/");
       } else {
+        // Check if username already exists
+        const { data: existingProfile } = await supabase
+          .from("profiles")
+          .select("username")
+          .eq("username", username)
+          .single();
+
+        if (existingProfile) {
+          toast({
+            title: "Username taken",
+            description: "This username is already in use. Please choose another one.",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -47,7 +64,20 @@ export default function Auth() {
           },
         });
 
-        if (error) throw error;
+        if (error) {
+          // Check for duplicate email error
+          if (error.message.includes("already registered") || error.message.includes("User already registered")) {
+            toast({
+              title: "Email already exists",
+              description: "An account with this email already exists. Please sign in instead.",
+              variant: "destructive",
+            });
+          } else {
+            throw error;
+          }
+          setLoading(false);
+          return;
+        }
 
         toast({
           title: "Account created!",
