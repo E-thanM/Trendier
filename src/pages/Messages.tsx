@@ -78,7 +78,21 @@ export default function Messages() {
 
   const handleSendMessage = () => {
     if (!messageText.trim() || !selectedConversation) return;
-    // Add logic to send message
+    
+    const newMessage: Message = {
+      id: Date.now().toString(),
+      text: messageText,
+      sender: "me",
+      timestamp: "Just now",
+    };
+    
+    setSelectedConversation({
+      ...selectedConversation,
+      messages: [...selectedConversation.messages, newMessage],
+      lastMessage: messageText,
+      timestamp: "Just now",
+    });
+    
     setMessageText("");
   };
 
@@ -86,13 +100,13 @@ export default function Messages() {
   const showChat = !isMobile || selectedConversation;
 
   return (
-    <div className="h-[calc(100vh-3.5rem)] md:h-screen flex">
+    <div className="h-[calc(100vh-3.5rem)] md:h-[calc(100vh-3.5rem)] flex">
       {/* Conversations List */}
       {showList && (
         <div className={`${isMobile ? "w-full" : "w-full md:w-96 border-r"} flex flex-col`}>
           {/* Header */}
-          <div className="p-4 border-b">
-            <h1 className="text-2xl font-bold mb-3">Messages</h1>
+          <div className="px-4 py-3 border-b">
+            <h1 className="text-xl font-bold mb-2">Messages</h1>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -111,11 +125,11 @@ export default function Messages() {
                 <button
                   key={conversation.id}
                   onClick={() => setSelectedConversation(conversation)}
-                  className={`w-full p-4 flex items-start gap-3 hover:bg-muted/50 transition-colors text-left ${
+                  className={`w-full p-3 flex items-start gap-3 hover:bg-muted/50 transition-colors text-left ${
                     selectedConversation?.id === conversation.id ? "bg-muted" : ""
                   }`}
                 >
-                  <Avatar className="h-12 w-12">
+                  <Avatar className="h-10 w-10 flex-shrink-0">
                     <AvatarImage src={conversation.avatar} />
                     <AvatarFallback>{conversation.username[0].toUpperCase()}</AvatarFallback>
                   </Avatar>
@@ -151,7 +165,7 @@ export default function Messages() {
           {selectedConversation ? (
             <>
               {/* Chat Header */}
-              <div className="p-4 border-b flex items-center gap-3">
+              <div className="px-4 py-3 border-b flex items-center gap-3 flex-shrink-0">
                 {isMobile && (
                   <Button
                     variant="ghost"
@@ -177,8 +191,8 @@ export default function Messages() {
               </div>
 
               {/* Messages */}
-              <ScrollArea className="flex-1 p-4">
-                <div className="space-y-4">
+              <ScrollArea className="flex-1 px-4 py-3">
+                <div className="space-y-3">
                   {selectedConversation.messages.map((message) => (
                     <div
                       key={message.id}
@@ -204,7 +218,7 @@ export default function Messages() {
               </ScrollArea>
 
               {/* Message Input */}
-              <div className="p-4 border-t">
+              <div className="px-4 py-3 border-t flex-shrink-0">
                 <div className="flex items-center gap-2">
                   <Input
                     placeholder="Type a message..."
