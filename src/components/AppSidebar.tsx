@@ -1,6 +1,7 @@
 import { Home, TrendingUp, Sparkles, User, LogOut, MessageCircle, Bell } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
+import { useState } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -12,9 +13,11 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { SettingsSheet } from "@/components/SettingsSheet";
 
 const items = [
   { title: "Feed", url: "/", icon: Home },
@@ -28,6 +31,8 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [defaultTab, setDefaultTab] = useState("settings");
 
   // Mock data for unread counts
   const unreadMessages = 2;
@@ -46,44 +51,60 @@ export function AppSidebar() {
     }
   };
 
+  const openSettings = (tab: string) => {
+    setDefaultTab(tab);
+    setSettingsOpen(true);
+  };
+
   const isCollapsed = state === "collapsed";
 
   return (
-    <Sidebar collapsible="icon" className="hidden md:flex">
-      <SidebarContent>
-        <div className="h-14 px-4 border-b flex items-center justify-between">
-          <h1 className={`font-bold text-xl ${isCollapsed ? "text-center" : ""}`}>
-            {isCollapsed ? "T" : "trendier"}
-          </h1>
-          
-          {!isCollapsed && (
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <MessageCircle className="h-5 w-5 text-muted-foreground" />
-                {unreadMessages > 0 && (
-                  <Badge 
-                    variant="destructive" 
-                    className="absolute -top-2 -right-2 h-4 w-4 p-0 flex items-center justify-center text-xs"
-                  >
-                    {unreadMessages}
-                  </Badge>
-                )}
+    <>
+      <Sidebar collapsible="icon" className="hidden md:flex">
+        <SidebarContent>
+          <div className="h-14 px-4 border-b flex items-center justify-between gap-3">
+            <h1 className={`font-bold text-xl ${isCollapsed ? "text-center" : ""}`}>
+              {isCollapsed ? "T" : "trendier"}
+            </h1>
+            
+            {!isCollapsed && (
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative h-8 w-8 hover:bg-muted"
+                  onClick={() => openSettings("messages")}
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  {unreadMessages > 0 && (
+                    <Badge 
+                      variant="destructive" 
+                      className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px]"
+                    >
+                      {unreadMessages}
+                    </Badge>
+                  )}
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative h-8 w-8 hover:bg-muted"
+                  onClick={() => openSettings("notifications")}
+                >
+                  <Bell className="h-4 w-4" />
+                  {unreadNotifications > 0 && (
+                    <Badge 
+                      variant="destructive" 
+                      className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-[10px]"
+                    >
+                      {unreadNotifications}
+                    </Badge>
+                  )}
+                </Button>
               </div>
-              
-              <div className="relative">
-                <Bell className="h-5 w-5 text-muted-foreground" />
-                {unreadNotifications > 0 && (
-                  <Badge 
-                    variant="destructive" 
-                    className="absolute -top-2 -right-2 h-4 w-4 p-0 flex items-center justify-center text-xs"
-                  >
-                    {unreadNotifications}
-                  </Badge>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
 
         <SidebarGroup>
           <SidebarGroupContent>
@@ -114,5 +135,12 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
     </Sidebar>
+    
+    <SettingsSheet 
+      open={settingsOpen} 
+      onOpenChange={setSettingsOpen}
+      defaultTab={defaultTab}
+    />
+  </>
   );
 }

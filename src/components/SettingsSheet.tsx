@@ -16,9 +16,10 @@ import { ContactUsForm } from "@/components/ContactUsForm";
 interface SettingsSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  defaultTab?: string;
 }
 
-export function SettingsSheet({ open, onOpenChange }: SettingsSheetProps) {
+export function SettingsSheet({ open, onOpenChange, defaultTab = "settings" }: SettingsSheetProps) {
   const notifications = [
     { id: 1, text: "fashion_lover liked your post", time: "2h ago", unread: true },
     { id: 2, text: "style_icon started following you", time: "5h ago", unread: true },
@@ -48,7 +49,7 @@ export function SettingsSheet({ open, onOpenChange }: SettingsSheetProps) {
           </Button>
         </SheetHeader>
 
-        <Tabs defaultValue="settings" className="w-full mt-6">
+        <Tabs value={defaultTab} className="w-full mt-6">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="settings">
               <Settings className="h-4 w-4 mr-2" />
