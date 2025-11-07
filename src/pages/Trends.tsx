@@ -4,11 +4,14 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TrendingUp, Loader2, Search, BarChart3 } from "lucide-react";
+import { TrendDetailModal } from "@/components/TrendDetailModal";
 
 export default function Trends() {
   const [trends, setTrends] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTrend, setSelectedTrend] = useState<any>(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
     scrapeTrends();
@@ -45,6 +48,11 @@ export default function Trends() {
   );
 
   const popularTrends = [...trends].sort((a, b) => b.popularity_score - a.popularity_score).slice(0, 5);
+
+  const handleTrendClick = (trend: any) => {
+    setSelectedTrend(trend);
+    setModalOpen(true);
+  };
 
   if (loading) {
     return (
@@ -93,7 +101,11 @@ export default function Trends() {
           ) : (
             <div className="grid grid-cols-1 gap-3">
               {filteredTrends.map((trend) => (
-                <Card key={trend.id} className="p-5 border-border hover:border-primary/50 transition-all hover:shadow-md">
+                <Card 
+                  key={trend.id} 
+                  className="p-5 border-border hover:border-primary/50 transition-all hover:shadow-lg cursor-pointer hover-scale active:scale-95" 
+                  onClick={() => handleTrendClick(trend)}
+                >
                   <div className="flex items-start justify-between mb-3">
                     <h3 className="font-semibold text-base">{trend.name}</h3>
                     <div className="flex items-center gap-2">
@@ -151,7 +163,11 @@ export default function Trends() {
             </h2>
             <div className="space-y-4">
               {popularTrends.map((trend, index) => (
-                <Card key={trend.id} className="p-4 border-border">
+                <Card 
+                  key={trend.id} 
+                  className="p-4 border-border cursor-pointer hover:border-primary/50 transition-all hover:shadow-lg hover-scale active:scale-95"
+                  onClick={() => handleTrendClick(trend)}
+                >
                   <div className="flex items-center gap-4">
                     <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center font-bold text-lg">
                       {index + 1}
@@ -184,6 +200,12 @@ export default function Trends() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <TrendDetailModal 
+        trend={selectedTrend} 
+        open={modalOpen} 
+        onOpenChange={setModalOpen} 
+      />
     </div>
   );
 }
