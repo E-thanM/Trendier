@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Sheet,
   SheetContent,
@@ -6,7 +6,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, MessageSquare, X, MessageCircle, Bell } from "lucide-react";
+import { Settings, MessageSquare, X, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -19,14 +19,37 @@ interface SettingsSheetProps {
   defaultTab?: string;
 }
 
+interface Notification {
+  id: number;
+  text: string;
+  time: string;
+  unread: boolean;
+}
+
 export function SettingsSheet({ open, onOpenChange, defaultTab = "settings" }: SettingsSheetProps) {
   const [activeTab, setActiveTab] = useState(defaultTab);
-  
-  const notifications = [
+  const [notifications, setNotifications] = useState<Notification[]>([
     { id: 1, text: "fashion_lover liked your post", time: "2h ago", unread: true },
     { id: 2, text: "style_icon started following you", time: "5h ago", unread: true },
     { id: 3, text: "Your post got 50 likes", time: "1d ago", unread: false },
-  ];
+  ]);
+
+  // Update active tab when defaultTab changes
+  useEffect(() => {
+    if (defaultTab) {
+      setActiveTab(defaultTab);
+    }
+  }, [defaultTab, open]);
+
+  const handleNotificationClick = (notificationId: number) => {
+    setNotifications(prev => 
+      prev.map(n => n.id === notificationId ? { ...n, unread: false } : n)
+    );
+  };
+
+  const markAllAsRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
+  };
 
   const unreadNotifications = notifications.filter(n => n.unread).length;
 
@@ -78,6 +101,17 @@ export function SettingsSheet({ open, onOpenChange, defaultTab = "settings" }: S
           </TabsContent>
 
           <TabsContent value="notifications" className="mt-6 animate-fade-in">
+            {unreadNotifications > 0 && (
+              <div className="mb-4 flex justify-end">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={markAllAsRead}
+                >
+                  Mark all as read
+                </Button>
+              </div>
+            )}
             <div className="space-y-3">
               {notifications.length === 0 ? (
                 <Card className="p-8 text-center">
@@ -91,11 +125,17 @@ export function SettingsSheet({ open, onOpenChange, defaultTab = "settings" }: S
                     className={`p-4 cursor-pointer hover:bg-muted/50 transition-colors ${
                       notification.unread ? 'bg-primary/5 border-primary/20' : ''
                     }`}
+                    onClick={() => handleNotificationClick(notification.id)}
                   >
                     <div className="flex items-start justify-between">
                       <p className="text-sm flex-1">{notification.text}</p>
                       <span className="text-xs text-muted-foreground ml-2">{notification.time}</span>
                     </div>
+                    {notification.unread && (
+                      <div className="mt-2">
+                        <Badge variant="secondary" className="text-xs">New</Badge>
+                      </div>
+                    )}
                   </Card>
                 ))
               )}
