@@ -7,9 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Loader2, Settings, Upload as UploadIcon } from "lucide-react";
+import { Loader2, Upload as UploadIcon, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { OutfitCard } from "@/components/OutfitCard";
+import { AccountSettings } from "@/components/AccountSettings";
+import { ContactUsForm } from "@/components/ContactUsForm";
 
 export default function Profile() {
   const [profile, setProfile] = useState<any>(null);
@@ -198,16 +200,18 @@ export default function Profile() {
               </div>
             </div>
           </div>
-          <Button variant="outline" size="icon" className="border-border">
-            <Settings className="h-4 w-4" />
-          </Button>
         </div>
       </Card>
 
       <Tabs defaultValue="outfits" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-6">
-          <TabsTrigger value="outfits">Your Outfits</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4 mb-6">
+          <TabsTrigger value="outfits">Outfits</TabsTrigger>
           <TabsTrigger value="upload">Upload</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
+          <TabsTrigger value="contact">
+            <MessageSquare className="h-4 w-4 mr-1.5" />
+            Contact
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="outfits">
@@ -317,6 +321,14 @@ export default function Profile() {
               </Button>
             </form>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <AccountSettings />
+        </TabsContent>
+
+        <TabsContent value="contact">
+          <ContactUsForm />
         </TabsContent>
       </Tabs>
 
