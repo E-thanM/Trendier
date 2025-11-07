@@ -52,8 +52,12 @@ export default function Messages() {
   const isMobile = useIsMobile();
 
   useEffect(() => {
-    getCurrentUser();
-    fetchConversations();
+    const init = async () => {
+      await getCurrentUser();
+      await fetchConversations();
+    };
+    
+    init();
     
     // Set up realtime subscription
     const channel = supabase
@@ -86,17 +90,22 @@ export default function Messages() {
 
   const getCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (user) setCurrentUserId(user.id);
+    if (user) {
+      setCurrentUserId(user.id);
+      return user.id;
+    }
+    return null;
   };
 
   const fetchConversations = async () => {
     try {
-      if (!currentUserId) return;
+      const userId = currentUserId || await getCurrentUser();
+      if (!userId) return [];
 
       const { data: participantData, error: participantError } = await supabase
         .from("conversation_participants")
         .select("conversation_id")
-        .eq("user_id", currentUserId);
+        .eq("user_id", userId);
 
       if (participantError) throw participantError;
 
@@ -113,7 +122,7 @@ export default function Messages() {
         .from("conversation_participants")
         .select("conversation_id, user_id")
         .in("conversation_id", conversationIds)
-        .neq("user_id", currentUserId);
+        .neq("user_id", userId);
 
       const validConversationIds = conversationIds.filter(convId => 
         participantsCheck?.some(p => p.conversation_id === convId)
@@ -129,7 +138,7 @@ export default function Messages() {
         .from("conversation_participants")
         .select("conversation_id, user_id")
         .in("conversation_id", validConversationIds)
-        .neq("user_id", currentUserId);
+        .neq("user_id", userId);
 
       if (otherError) throw otherError;
 
