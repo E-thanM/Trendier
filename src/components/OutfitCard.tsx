@@ -109,7 +109,12 @@ export const OutfitCard = ({ outfit, isLiked, onLikeToggle }: OutfitCardProps) =
           </span>
         </div>
         <div className="flex-1">
-          <p className="font-semibold text-sm">{outfit.profiles?.username || "Unknown"}</p>
+          <button 
+            onClick={() => window.location.href = `/profile?user=${outfit.user_id}`}
+            className="font-semibold text-sm hover:underline cursor-pointer"
+          >
+            {outfit.profiles?.username || "Unknown"}
+          </button>
         </div>
       </div>
 
@@ -175,7 +180,12 @@ export const OutfitCard = ({ outfit, isLiked, onLikeToggle }: OutfitCardProps) =
           <p className="font-semibold text-sm">{outfit.likes_count} likes</p>
           {outfit.caption && (
             <p className="text-sm leading-relaxed">
-              <span className="font-semibold">{outfit.profiles?.username} </span>
+              <button 
+                onClick={() => window.location.href = `/profile?user=${outfit.user_id}`}
+                className="font-semibold hover:underline cursor-pointer"
+              >
+                {outfit.profiles?.username}
+              </button>{" "}
               <span className="text-foreground/90">{outfit.caption}</span>
             </p>
           )}

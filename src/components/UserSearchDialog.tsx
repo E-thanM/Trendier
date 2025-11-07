@@ -132,7 +132,13 @@ export function UserSearchDialog({ open, onOpenChange }: UserSearchDialogProps) 
                 key={user.id}
                 className="flex items-center justify-between p-3 hover:bg-accent rounded-lg"
               >
-                <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    navigate(`/profile?user=${user.id}`);
+                    onOpenChange(false);
+                  }}
+                  className="flex items-center gap-3 flex-1 text-left"
+                >
                   <Avatar>
                     <AvatarImage src={user.avatar_url} />
                     <AvatarFallback>
@@ -140,14 +146,14 @@ export function UserSearchDialog({ open, onOpenChange }: UserSearchDialogProps) 
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-medium">{user.username}</p>
+                    <p className="font-medium hover:underline">{user.username}</p>
                     {user.bio && (
                       <p className="text-sm text-muted-foreground line-clamp-1">
                         {user.bio}
                       </p>
                     )}
                   </div>
-                </div>
+                </button>
                 <Button
                   size="sm"
                   onClick={() => handleMessageUser(user.id)}

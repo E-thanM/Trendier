@@ -359,9 +359,15 @@ export default function Messages() {
                     
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
-                        <p className={`font-semibold truncate ${conversation.unread_count > 0 ? "text-foreground" : ""}`}>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.location.href = `/profile?user=${conversation.other_user.id}`;
+                          }}
+                          className={`font-semibold truncate hover:underline ${conversation.unread_count > 0 ? "text-foreground" : ""}`}
+                        >
                           {conversation.other_user.username}
-                        </p>
+                        </button>
                         <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
                           {new Date(conversation.last_message_at).toLocaleTimeString([], { 
                             hour: '2-digit', 
@@ -411,7 +417,12 @@ export default function Messages() {
                 </Avatar>
                 
                 <div className="flex-1">
-                  <p className="font-semibold">{selectedConversation.other_user.username}</p>
+                  <button
+                    onClick={() => window.location.href = `/profile?user=${selectedConversation.other_user.id}`}
+                    className="font-semibold hover:underline cursor-pointer"
+                  >
+                    {selectedConversation.other_user.username}
+                  </button>
                 </div>
                 
                 <MessageDropdown
