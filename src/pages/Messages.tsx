@@ -330,8 +330,8 @@ export default function Messages() {
                   <button
                     key={conversation.id}
                     onClick={() => handleSelectConversation(conversation)}
-                    className={`w-full p-3 flex items-start gap-3 hover:bg-muted/50 transition-colors text-left ${
-                      selectedConversation?.id === conversation.id ? "bg-muted" : ""
+                    className={`w-full p-3 flex items-start gap-3 text-left transition-colors ${
+                      selectedConversation?.id === conversation.id ? "bg-muted" : "hover:bg-muted/50"
                     }`}
                   >
                     <Avatar className="h-10 w-10 flex-shrink-0">

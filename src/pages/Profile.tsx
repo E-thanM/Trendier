@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,7 @@ export default function Profile() {
   const [followingCount, setFollowingCount] = useState(0);
   const [followersDialogOpen, setFollowersDialogOpen] = useState(false);
   const [followersDialogTab, setFollowersDialogTab] = useState<"followers" | "following">("followers");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -520,14 +521,22 @@ export default function Profile() {
               <div className="space-y-2">
                 <Label htmlFor="imageFile">Upload Image</Label>
                 <Input
+                  ref={fileInputRef}
                   id="imageFile"
                   type="file"
                   accept="image/*"
                   capture="environment"
                   onChange={handleFileChange}
                   required
-                  className="cursor-pointer"
+                  className="hidden"
                 />
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full border-2 border-dashed border-border rounded-lg p-12 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-primary hover:bg-accent/50 transition-colors"
+                >
+                  <UploadIcon className="h-12 w-12 text-muted-foreground" />
+                  <p className="text-sm font-medium text-muted-foreground">Upload</p>
+                </div>
                 <p className="text-xs text-muted-foreground">
                   Take a photo or select from gallery
                 </p>
