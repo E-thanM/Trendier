@@ -26,6 +26,7 @@ interface OutfitCardProps {
 
 export const OutfitCard = ({ outfit, isLiked, onLikeToggle }: OutfitCardProps) => {
   const [isLiking, setIsLiking] = useState(false);
+  const [showHeart, setShowHeart] = useState(false);
   const { toast } = useToast();
 
   const handleLike = async () => {
@@ -66,12 +67,20 @@ export const OutfitCard = ({ outfit, isLiked, onLikeToggle }: OutfitCardProps) =
     }
   };
 
+  const handleDoubleClick = () => {
+    if (!isLiked) {
+      setShowHeart(true);
+      handleLike();
+      setTimeout(() => setShowHeart(false), 1000);
+    }
+  };
+
   return (
-    <Card className="overflow-hidden border-0 shadow-none bg-background">
+    <Card className="overflow-hidden border-0 border-b border-border rounded-none shadow-none bg-background">
       {/* Header */}
-      <div className="flex items-center gap-3 p-4">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-          <span className="text-sm font-medium">
+      <div className="flex items-center gap-3 p-3">
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center ring-2 ring-primary/20">
+          <span className="text-xs font-semibold text-primary">
             {outfit.profiles?.username?.charAt(0).toUpperCase() || "U"}
           </span>
         </div>
@@ -81,59 +90,67 @@ export const OutfitCard = ({ outfit, isLiked, onLikeToggle }: OutfitCardProps) =
       </div>
 
       {/* Image */}
-      <div className="relative aspect-square bg-muted">
+      <div 
+        className="relative aspect-square bg-muted cursor-pointer select-none"
+        onDoubleClick={handleDoubleClick}
+      >
         <img
           src={outfit.image_url}
           alt={outfit.caption || "Outfit"}
           className="w-full h-full object-cover"
         />
         {outfit.rating && (
-          <div className="absolute top-3 right-3 bg-background/90 backdrop-blur-sm px-3 py-1.5 rounded-full">
-            <span className="font-bold text-lg">{outfit.rating}</span>
+          <div className="absolute top-3 right-3 bg-primary/90 backdrop-blur-sm px-3 py-1.5 rounded-full">
+            <span className="font-bold text-sm text-primary-foreground">{outfit.rating}/10</span>
+          </div>
+        )}
+        {showHeart && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <Heart className="w-24 h-24 text-white fill-white animate-scale-in opacity-80" />
           </div>
         )}
       </div>
 
       {/* Actions */}
-      <div className="p-4 space-y-3">
+      <div className="p-3 space-y-2">
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
             size="icon"
             onClick={handleLike}
             disabled={isLiking}
-            className={isLiked ? "text-red-500" : ""}
+            className={`hover:scale-110 transition-transform ${isLiked ? "text-red-500" : ""}`}
           >
-            <Heart className={`h-6 w-6 ${isLiked ? "fill-current" : ""}`} />
+            <Heart className={`h-7 w-7 ${isLiked ? "fill-current" : ""}`} />
           </Button>
-          <Button variant="ghost" size="icon">
-            <MessageCircle className="h-6 w-6" />
+          <Button variant="ghost" size="icon" className="hover:scale-110 transition-transform">
+            <MessageCircle className="h-7 w-7" />
           </Button>
-          <Button variant="ghost" size="icon">
-            <Share2 className="h-6 w-6" />
+          <Button variant="ghost" size="icon" className="hover:scale-110 transition-transform">
+            <Share2 className="h-7 w-7" />
           </Button>
           {outfit.trend_match_score && outfit.trend_match_score > 70 && (
-            <div className="ml-auto flex items-center gap-1 text-sm text-primary">
-              <TrendingUp className="h-4 w-4" />
-              <span>{outfit.trend_match_score}% trend match</span>
+            <div className="ml-auto flex items-center gap-1.5 bg-primary/10 text-primary px-3 py-1 rounded-full">
+              <TrendingUp className="h-3.5 w-3.5" />
+              <span className="text-xs font-semibold">{outfit.trend_match_score}%</span>
             </div>
           )}
         </div>
 
-        <div>
+        <div className="space-y-1">
           <p className="font-semibold text-sm">{outfit.likes_count} likes</p>
           {outfit.caption && (
-            <p className="text-sm mt-1">
+            <p className="text-sm leading-relaxed">
               <span className="font-semibold">{outfit.profiles?.username} </span>
-              {outfit.caption}
+              <span className="text-foreground/90">{outfit.caption}</span>
             </p>
           )}
           {outfit.style_tags && outfit.style_tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-2">
+            <div className="flex flex-wrap gap-1.5 pt-1">
               {outfit.style_tags.map((tag, index) => (
                 <span
                   key={index}
-                  className="text-xs bg-muted px-2 py-1 rounded-full text-muted-foreground"
+                  className="text-xs text-primary cursor-pointer hover:underline"
                 >
                   #{tag}
                 </span>
