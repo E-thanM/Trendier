@@ -53,13 +53,30 @@ export function UserSearchDialog({ open, onOpenChange }: UserSearchDialogProps) 
 
   const handleMessageUser = async (userId: string) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) {
+        console.error("Auth error:", userError);
+        toast({
+          title: "Authentication Error",
+          description: "Please log out and log back in",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       if (!user) {
-        console.error("No user found");
+        console.error("No authenticated user found");
+        toast({
+          title: "Not Authenticated",
+          description: "Please log in to send messages",
+          variant: "destructive",
+        });
         return;
       }
 
-      console.log("Starting message flow for user:", userId);
+      console.log("Authenticated user ID:", user.id);
+      console.log("Target user ID:", userId);
 
       // Check if conversation already exists
       const { data: existingConversations, error: convCheckError } = await supabase
@@ -71,6 +88,8 @@ export function UserSearchDialog({ open, onOpenChange }: UserSearchDialogProps) 
         console.error("Error checking conversations:", convCheckError);
         throw convCheckError;
       }
+
+      console.log("Existing conversations:", existingConversations);
 
       if (existingConversations && existingConversations.length > 0) {
         for (const conv of existingConversations) {
@@ -96,7 +115,8 @@ export function UserSearchDialog({ open, onOpenChange }: UserSearchDialogProps) 
       }
 
       console.log("Creating new conversation...");
-      // Create new conversation
+      
+      // Create new conversation with explicit error handling
       const { data: newConversation, error: convError } = await supabase
         .from("conversations")
         .insert({})
@@ -104,11 +124,22 @@ export function UserSearchDialog({ open, onOpenChange }: UserSearchDialogProps) 
         .single();
 
       if (convError) {
-        console.error("Error creating conversation:", convError);
-        throw convError;
+        console.error("Conversation creation error details:", {
+          message: convError.message,
+          details: convError.details,
+          hint: convError.hint,
+          code: convError.code
+        });
+        
+        toast({
+          title: "Failed to Create Conversation",
+          description: `Error: ${convError.message}. Code: ${convError.code}`,
+          variant: "destructive",
+        });
+        return;
       }
 
-      console.log("New conversation created:", newConversation.id);
+      console.log("New conversation created:", newConversation);
 
       // Add both participants
       const { error: participantError } = await supabase
@@ -123,11 +154,16 @@ export function UserSearchDialog({ open, onOpenChange }: UserSearchDialogProps) 
         throw participantError;
       }
 
-      console.log("Participants added, navigating to conversation");
+      console.log("Participants added successfully, navigating...");
       navigate(`/messages?conversation=${newConversation.id}`);
       onOpenChange(false);
+      
+      toast({
+        title: "Success",
+        description: "Conversation created!",
+      });
     } catch (error: any) {
-      console.error("Error creating conversation:", error);
+      console.error("Error in handleMessageUser:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to start conversation. Please try again.",
