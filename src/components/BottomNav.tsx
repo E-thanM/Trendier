@@ -1,9 +1,10 @@
 import { Home, MessageCircle, Sparkles, TrendingUp, User } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { Badge } from "@/components/ui/badge";
+import { useUnreadCounts } from "@/hooks/use-unread-counts";
 
 export function BottomNav() {
-  const unreadMessages = 2; // Mock data
+  const { unreadMessages } = useUnreadCounts();
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-t border-border h-16">

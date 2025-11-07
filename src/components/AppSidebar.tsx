@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { SettingsSheet } from "@/components/SettingsSheet";
+import { useUnreadCounts } from "@/hooks/use-unread-counts";
 
 const items = [
   { title: "Feed", url: "/", icon: Home },
@@ -34,10 +35,7 @@ export function AppSidebar() {
   const { toast } = useToast();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [defaultTab, setDefaultTab] = useState("settings");
-
-  // Mock data for unread counts
-  const unreadMessages = 2;
-  const unreadNotifications = 3;
+  const { unreadMessages, unreadNotifications } = useUnreadCounts();
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();

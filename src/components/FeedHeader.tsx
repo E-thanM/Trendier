@@ -10,6 +10,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Card } from "@/components/ui/card";
+import { useUnreadCounts } from "@/hooks/use-unread-counts";
 
 export function FeedHeader() {
   const navigate = useNavigate();
@@ -20,13 +21,8 @@ export function FeedHeader() {
     { id: 3, text: "Your post got 50 likes", time: "1d ago", unread: false },
   ]);
 
-  const messages = [
-    { id: 1, from: "fashion_lover", text: "Love your style!", time: "1h ago", unread: true },
-    { id: 2, from: "style_icon", text: "Where did you get that jacket?", time: "3h ago", unread: false },
-  ];
-
-  const unreadNotifications = notifications.filter(n => n.unread).length;
-  const unreadMessages = messages.filter(m => m.unread).length;
+  const { unreadMessages, unreadNotifications: unreadNotificationsCount } = useUnreadCounts();
+  const unreadNotifications = notifications.filter(n => n.unread).length || unreadNotificationsCount;
 
   const handleNotificationClick = (notificationId: number) => {
     setNotifications(prev => 
