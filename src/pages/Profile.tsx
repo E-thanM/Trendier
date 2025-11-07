@@ -321,7 +321,7 @@ export default function Profile() {
       </Tabs>
 
       <Dialog open={!!selectedOutfit} onOpenChange={() => setSelectedOutfit(null)}>
-        <DialogContent className="max-w-lg p-0 gap-0">
+        <DialogContent className="max-w-lg p-0 gap-0 bg-transparent border-none shadow-none">
           {selectedOutfit && (
             <OutfitCard
               outfit={selectedOutfit}

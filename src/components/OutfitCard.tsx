@@ -80,7 +80,7 @@ export const OutfitCard = ({ outfit, isLiked, onLikeToggle }: OutfitCardProps) =
   };
 
   return (
-    <Card className="overflow-hidden border-0 border-b border-border rounded-none shadow-none bg-background">
+    <Card className="overflow-hidden border border-border rounded-lg shadow-lg bg-background">
       {/* Header */}
       <div className="flex items-center gap-3 p-3">
         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center ring-2 ring-primary/20">
