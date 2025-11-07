@@ -404,6 +404,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_conversation_for_users: {
+        Args: { user_id_1: string; user_id_2: string }
+        Returns: string
+      }
       test_conversation_creation: {
         Args: never
         Returns: {

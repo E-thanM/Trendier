@@ -116,12 +116,12 @@ export function UserSearchDialog({ open, onOpenChange }: UserSearchDialogProps) 
 
       console.log("Creating new conversation...");
       
-      // Create new conversation with explicit error handling
-      const { data: newConversation, error: convError } = await supabase
-        .from("conversations")
-        .insert({})
-        .select()
-        .single();
+      // Use the security definer function to create conversation
+      const { data: conversationId, error: convError } = await supabase
+        .rpc('create_conversation_for_users', {
+          user_id_1: user.id,
+          user_id_2: userId
+        });
 
       if (convError) {
         console.error("Conversation creation error details:", {
@@ -133,29 +133,14 @@ export function UserSearchDialog({ open, onOpenChange }: UserSearchDialogProps) 
         
         toast({
           title: "Failed to Create Conversation",
-          description: `Error: ${convError.message}. Code: ${convError.code}`,
+          description: `Error: ${convError.message}`,
           variant: "destructive",
         });
         return;
       }
 
-      console.log("New conversation created:", newConversation);
-
-      // Add both participants
-      const { error: participantError } = await supabase
-        .from("conversation_participants")
-        .insert([
-          { conversation_id: newConversation.id, user_id: user.id },
-          { conversation_id: newConversation.id, user_id: userId },
-        ]);
-
-      if (participantError) {
-        console.error("Error adding participants:", participantError);
-        throw participantError;
-      }
-
-      console.log("Participants added successfully, navigating...");
-      navigate(`/messages?conversation=${newConversation.id}`);
+      console.log("New conversation created:", conversationId);
+      navigate(`/messages?conversation=${conversationId}`);
       onOpenChange(false);
       
       toast({
