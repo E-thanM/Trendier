@@ -103,7 +103,7 @@ export default function Feed() {
   }
 
   return (
-    <div className="h-full pb-24 md:pb-6">
+    <div className="pb-24 md:pb-6">
       <FeedHeader />
       <StoriesBar />
       

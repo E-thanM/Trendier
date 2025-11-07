@@ -30,7 +30,7 @@ export function FeedHeader() {
 
   return (
     <>
-      <div className="sticky top-14 md:top-0 z-20 bg-background/95 backdrop-blur-sm border-b px-4 py-3 md:hidden">
+      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b px-4 py-3 md:hidden">
         <div className="flex items-center justify-between max-w-lg mx-auto">
           <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
             trendier
