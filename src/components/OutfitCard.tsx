@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { CommentsDrawer } from "@/components/CommentsDrawer";
+import { ShareDialog } from "@/components/ShareDialog";
 
 interface OutfitCardProps {
   outfit: {
@@ -27,6 +29,8 @@ interface OutfitCardProps {
 export const OutfitCard = ({ outfit, isLiked, onLikeToggle }: OutfitCardProps) => {
   const [isLiking, setIsLiking] = useState(false);
   const [showHeart, setShowHeart] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  const [showShare, setShowShare] = useState(false);
   const { toast } = useToast();
 
   const handleLike = async () => {
@@ -123,10 +127,20 @@ export const OutfitCard = ({ outfit, isLiked, onLikeToggle }: OutfitCardProps) =
           >
             <Heart className={`h-7 w-7 ${isLiked ? "fill-current" : ""}`} />
           </Button>
-          <Button variant="ghost" size="icon" className="hover:scale-110 transition-transform">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="hover:scale-110 transition-transform"
+            onClick={() => setShowComments(true)}
+          >
             <MessageCircle className="h-7 w-7" />
           </Button>
-          <Button variant="ghost" size="icon" className="hover:scale-110 transition-transform">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="hover:scale-110 transition-transform"
+            onClick={() => setShowShare(true)}
+          >
             <Share2 className="h-7 w-7" />
           </Button>
           {outfit.trend_match_score && outfit.trend_match_score > 70 && (
@@ -159,6 +173,18 @@ export const OutfitCard = ({ outfit, isLiked, onLikeToggle }: OutfitCardProps) =
           )}
         </div>
       </div>
+
+      <CommentsDrawer 
+        outfitId={outfit.id}
+        isOpen={showComments}
+        onClose={() => setShowComments(false)}
+      />
+      
+      <ShareDialog
+        outfitId={outfit.id}
+        isOpen={showShare}
+        onClose={() => setShowShare(false)}
+      />
     </Card>
   );
 };
