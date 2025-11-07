@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { CommentsDrawer } from "@/components/CommentsDrawer";
 import { ShareDialog } from "@/components/ShareDialog";
+import { FullscreenImageViewer } from "@/components/FullscreenImageViewer";
 
 interface OutfitCardProps {
   outfit: {
@@ -31,6 +32,7 @@ export const OutfitCard = ({ outfit, isLiked, onLikeToggle }: OutfitCardProps) =
   const [showHeart, setShowHeart] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const [showFullscreen, setShowFullscreen] = useState(false);
   const { toast } = useToast();
 
   const trackCommentInteraction = async () => {
@@ -122,6 +124,7 @@ export const OutfitCard = ({ outfit, isLiked, onLikeToggle }: OutfitCardProps) =
       <div 
         className="relative aspect-square bg-muted cursor-pointer select-none"
         onDoubleClick={handleDoubleClick}
+        onClick={() => setShowFullscreen(true)}
       >
         <img
           src={outfit.image_url}
@@ -214,6 +217,12 @@ export const OutfitCard = ({ outfit, isLiked, onLikeToggle }: OutfitCardProps) =
         outfitId={outfit.id}
         isOpen={showShare}
         onClose={() => setShowShare(false)}
+      />
+
+      <FullscreenImageViewer
+        imageUrl={outfit.image_url}
+        isOpen={showFullscreen}
+        onClose={() => setShowFullscreen(false)}
       />
     </Card>
   );
