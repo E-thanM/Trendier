@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 export function PreferencesSurvey() {
   const [loading, setLoading] = useState(false);
@@ -14,6 +15,8 @@ export function PreferencesSurvey() {
   const [ageRange, setAgeRange] = useState("");
   const [gender, setGender] = useState("");
   const [stylePreferences, setStylePreferences] = useState<string[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [hasPreferences, setHasPreferences] = useState(false);
   const { toast } = useToast();
 
   const styleOptions = [
@@ -45,6 +48,7 @@ export function PreferencesSurvey() {
         setAgeRange(data.age_range || "");
         setGender(data.gender || "");
         setStylePreferences(data.style_preferences || []);
+        setHasPreferences(true);
       }
     } catch (error) {
       console.error("Error:", error);
@@ -91,6 +95,8 @@ export function PreferencesSurvey() {
         title: "Preferences Saved",
         description: "Your style preferences have been updated!",
       });
+      setHasPreferences(true);
+      setIsOpen(false);
     } catch (error) {
       console.error("Error saving preferences:", error);
       toast({
@@ -114,66 +120,81 @@ export function PreferencesSurvey() {
   }
 
   return (
-    <Card className="p-6 space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold mb-2">Style Preferences</h3>
-        <p className="text-sm text-muted-foreground">
-          Help us personalize your feed with better outfit recommendations
-        </p>
-      </div>
-
-      <div className="space-y-4">
-        <div>
-          <Label className="text-base mb-3 block">Age Range</Label>
-          <RadioGroup value={ageRange} onValueChange={setAgeRange}>
-            {["13-17", "18-24", "25-34", "35-44", "45-54", "55+"].map((range) => (
-              <div key={range} className="flex items-center space-x-2">
-                <RadioGroupItem value={range} id={range} />
-                <Label htmlFor={range} className="cursor-pointer">{range}</Label>
-              </div>
-            ))}
-          </RadioGroup>
-        </div>
-
-        <div>
-          <Label className="text-base mb-3 block">Gender</Label>
-          <RadioGroup value={gender} onValueChange={setGender}>
-            {["Male", "Female", "Non-binary", "Prefer not to say"].map((g) => (
-              <div key={g} className="flex items-center space-x-2">
-                <RadioGroupItem value={g} id={g} />
-                <Label htmlFor={g} className="cursor-pointer">{g}</Label>
-              </div>
-            ))}
-          </RadioGroup>
-        </div>
-
-        <div>
-          <Label className="text-base mb-3 block">Style Preferences (select all that apply)</Label>
-          <div className="grid grid-cols-2 gap-3">
-            {styleOptions.map((style) => (
-              <div key={style} className="flex items-center space-x-2">
-                <Checkbox
-                  id={style}
-                  checked={stylePreferences.includes(style)}
-                  onCheckedChange={() => handleStyleToggle(style)}
-                />
-                <Label htmlFor={style} className="cursor-pointer">{style}</Label>
-              </div>
-            ))}
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Card className="p-6">
+        <CollapsibleTrigger asChild>
+          <Button 
+            variant="outline" 
+            className="w-full flex items-center justify-between"
+          >
+            <span className="font-semibold">
+              {hasPreferences ? "Update Style Preferences" : "Complete Style Quiz"}
+            </span>
+            {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </Button>
+        </CollapsibleTrigger>
+        
+        <CollapsibleContent className="space-y-6 mt-6">
+          <div>
+            <p className="text-sm text-muted-foreground">
+              Help us personalize your feed with better outfit recommendations
+            </p>
           </div>
-        </div>
-      </div>
 
-      <Button onClick={handleSubmit} disabled={loading} className="w-full">
-        {loading ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Saving...
-          </>
-        ) : (
-          "Save Preferences"
-        )}
-      </Button>
-    </Card>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-base mb-3 block">Age Range</Label>
+              <RadioGroup value={ageRange} onValueChange={setAgeRange}>
+                {["13-17", "18-24", "25-34", "35-44", "45-54", "55+"].map((range) => (
+                  <div key={range} className="flex items-center space-x-2">
+                    <RadioGroupItem value={range} id={range} />
+                    <Label htmlFor={range} className="cursor-pointer">{range}</Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            </div>
+
+            <div>
+              <Label className="text-base mb-3 block">Gender</Label>
+              <RadioGroup value={gender} onValueChange={setGender}>
+                {["Male", "Female", "Non-binary", "Prefer not to say"].map((g) => (
+                  <div key={g} className="flex items-center space-x-2">
+                    <RadioGroupItem value={g} id={g} />
+                    <Label htmlFor={g} className="cursor-pointer">{g}</Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            </div>
+
+            <div>
+              <Label className="text-base mb-3 block">Style Preferences (select all that apply)</Label>
+              <div className="grid grid-cols-2 gap-3">
+                {styleOptions.map((style) => (
+                  <div key={style} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={style}
+                      checked={stylePreferences.includes(style)}
+                      onCheckedChange={() => handleStyleToggle(style)}
+                    />
+                    <Label htmlFor={style} className="cursor-pointer">{style}</Label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <Button onClick={handleSubmit} disabled={loading} className="w-full">
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save Preferences"
+            )}
+          </Button>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
   );
 }
