@@ -50,40 +50,41 @@ export default function Profile() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 pb-20">
-      <Card className="p-6 mb-6">
+    <div className="max-w-4xl mx-auto p-4 pb-20">
+      <Card className="p-6 mb-6 border-border">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-              <span className="text-3xl font-bold">
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center ring-2 ring-primary/20">
+              <span className="text-3xl font-bold text-primary">
                 {profile?.username?.charAt(0).toUpperCase() || "U"}
               </span>
             </div>
             <div>
-              <h1 className="text-2xl font-bold">{profile?.username || "User"}</h1>
+              <h1 className="text-xl font-bold">{profile?.username || "User"}</h1>
               {profile?.bio && (
-                <p className="text-muted-foreground mt-1">{profile.bio}</p>
+                <p className="text-sm text-muted-foreground mt-1">{profile.bio}</p>
               )}
               <div className="flex gap-6 mt-3 text-sm">
                 <div>
-                  <span className="font-bold">{outfits.length}</span> posts
+                  <span className="font-bold text-foreground">{outfits.length}</span>{" "}
+                  <span className="text-muted-foreground">posts</span>
                 </div>
               </div>
             </div>
           </div>
-          <Button variant="outline" size="icon">
+          <Button variant="outline" size="icon" className="border-border">
             <Settings className="h-4 w-4" />
           </Button>
         </div>
       </Card>
 
       <div className="mb-4">
-        <h2 className="text-xl font-bold">Your Outfits</h2>
+        <h2 className="text-lg font-bold">Your Outfits</h2>
       </div>
 
       {outfits.length === 0 ? (
-        <Card className="p-12 text-center">
-          <p className="text-muted-foreground">
+        <Card className="p-12 text-center border-border">
+          <p className="text-muted-foreground text-sm">
             You haven't uploaded any outfits yet
           </p>
         </Card>
@@ -92,7 +93,7 @@ export default function Profile() {
           {outfits.map((outfit) => (
             <div
               key={outfit.id}
-              className="aspect-square bg-muted relative group cursor-pointer"
+              className="aspect-square bg-muted relative group cursor-pointer overflow-hidden rounded-sm"
             >
               <img
                 src={outfit.image_url}
@@ -100,8 +101,15 @@ export default function Profile() {
                 className="w-full h-full object-cover"
               />
               {outfit.rating && (
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <span className="text-white font-bold text-2xl">{outfit.rating}</span>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-end pb-3">
+                  <div className="bg-primary/90 text-primary-foreground font-bold text-lg px-3 py-1 rounded-full mb-1">
+                    {outfit.rating}/10
+                  </div>
+                  {outfit.trend_match_score > 0 && (
+                    <span className="text-white text-xs">
+                      {outfit.trend_match_score}% trend match
+                    </span>
+                  )}
                 </div>
               )}
             </div>
