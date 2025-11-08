@@ -58,11 +58,13 @@ export default function Messages() {
     };
     
     init();
-    
+  }, []);
+
+  useEffect(() => {
     // Set up realtime subscription
     const channel = supabase
       .channel('messages-realtime')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
         fetchConversations();
         if (selectedConversation) {
           fetchMessages(selectedConversation.id);
@@ -73,7 +75,7 @@ export default function Messages() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [selectedConversation]);
 
   useEffect(() => {
     const conversationId = searchParams.get('conversation');

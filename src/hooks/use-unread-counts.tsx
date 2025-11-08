@@ -8,13 +8,16 @@ export function useUnreadCounts() {
   useEffect(() => {
     fetchUnreadCounts();
 
-    // Set up realtime subscription for messages and notifications
+    // Set up realtime subscription for messages, notifications, and participant updates
     const messagesChannel = supabase
       .channel('unread-messages')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => {
         fetchUnreadCounts();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
+        fetchUnreadCounts();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversation_participants' }, () => {
         fetchUnreadCounts();
       })
       .subscribe();
