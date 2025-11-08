@@ -20,72 +20,70 @@ interface TrendWithHistory {
   history?: { date: string; score: number }[];
 }
 
-interface ApifyTrendItem {
+interface TikTokTrendItem {
   hashtag?: string;
   description?: string;
   viewCount?: number;
+  videoCount?: number;
   tags?: string[];
 }
 
-async function scrapeTrendsFromApify(apiKey: string): Promise<any[]> {
+async function scrapeTrendsFromTikTok(): Promise<any[]> {
   try {
-    console.log('Starting Apify scrape...');
+    console.log('Starting TikTok scrape...');
     
-    // Start Apify actor run for TikTok/Instagram fashion trends
-    const actorRunResponse = await fetch('https://api.apify.com/v2/acts/apify~instagram-hashtag-scraper/runs', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        hashtags: ['fashion', 'ootd', 'style', 'fashiontrends', 'fashioninspo'],
-        resultsLimit: 50,
-      }),
-    });
-
-    if (!actorRunResponse.ok) {
-      throw new Error(`Apify actor start failed: ${actorRunResponse.statusText}`);
-    }
-
-    const runData = await actorRunResponse.json();
-    const runId = runData.data.id;
-    console.log(`Apify run started: ${runId}`);
-
-    // Wait for the run to complete (poll for status)
-    let isFinished = false;
-    let attempts = 0;
-    const maxAttempts = 30; // 30 seconds max wait
+    const fashionHashtags = ['fashion', 'ootd', 'style', 'fashiontrends', 'fashioninspo', 'styleinspo', 'outfitideas'];
+    const allResults: any[] = [];
     
-    while (!isFinished && attempts < maxAttempts) {
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
-      
-      const statusResponse = await fetch(`https://api.apify.com/v2/actor-runs/${runId}`, {
-        headers: { 'Authorization': `Bearer ${apiKey}` },
-      });
-      
-      const statusData = await statusResponse.json();
-      isFinished = statusData.data.status === 'SUCCEEDED' || statusData.data.status === 'FAILED';
-      attempts++;
-      
-      console.log(`Run status: ${statusData.data.status}, attempt ${attempts}`);
-    }
-
-    // Fetch the results
-    const resultsResponse = await fetch(`https://api.apify.com/v2/actor-runs/${runId}/dataset/items`, {
-      headers: { 'Authorization': `Bearer ${apiKey}` },
-    });
-
-    if (!resultsResponse.ok) {
-      throw new Error(`Failed to fetch results: ${resultsResponse.statusText}`);
-    }
-
-    const results = await resultsResponse.json();
-    console.log(`Retrieved ${results.length} items from Apify`);
+    // TikTok API headers to mimic browser requests
+    const headers = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Referer': 'https://www.tiktok.com/',
+      'Accept': 'application/json',
+    };
     
-    return results;
+    for (const hashtag of fashionHashtags) {
+      try {
+        // Use TikTok's unofficial API endpoint for hashtag search
+        const url = `https://www.tiktok.com/api/challenge/detail/?challengeName=${hashtag}`;
+        console.log(`Fetching TikTok data for hashtag: ${hashtag}`);
+        
+        const response = await fetch(url, { headers });
+        
+        if (response.ok) {
+          const data = await response.json();
+          
+          if (data.challengeInfo) {
+            const viewCount = data.challengeInfo.stats?.viewCount || 0;
+            const videoCount = data.challengeInfo.stats?.videoCount || 0;
+            
+            allResults.push({
+              hashtag: `#${hashtag}`,
+              description: data.challengeInfo.desc || `Trending fashion style featuring ${hashtag}`,
+              viewCount: viewCount,
+              videoCount: videoCount,
+              tags: [hashtag.toLowerCase(), 'fashion', 'tiktok'],
+            });
+            
+            console.log(`Successfully fetched ${hashtag}: ${viewCount} views`);
+          }
+        } else {
+          console.log(`Failed to fetch ${hashtag}: ${response.status}`);
+        }
+        
+        // Small delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+      } catch (error) {
+        console.error(`Error fetching hashtag ${hashtag}:`, error);
+      }
+    }
+    
+    console.log(`Retrieved ${allResults.length} hashtags from TikTok`);
+    return allResults;
+    
   } catch (error) {
-    console.error('Apify scraping error:', error);
+    console.error('TikTok scraping error:', error);
     throw error;
   }
 }
@@ -124,30 +122,26 @@ async function fetchGoogleTrends(keywords: string[]): Promise<Map<string, number
   return trendsMap;
 }
 
-function extractTrendsFromApifyData(apifyData: ApifyTrendItem[]): any[] {
-  // Group by hashtags and aggregate data
-  const trendMap = new Map<string, any>();
-  
-  apifyData.forEach((item: ApifyTrendItem) => {
-    const hashtag = item.hashtag || 'Unknown';
-    const views = item.viewCount || 0;
-    
-    if (trendMap.has(hashtag)) {
-      const existing = trendMap.get(hashtag);
-      existing.popularity_score += Math.min(views / 1000000, 10); // Scale views to score
-      existing.tags = [...new Set([...existing.tags, ...(item.tags || [])])];
-    } else {
-      trendMap.set(hashtag, {
-        name: hashtag.replace('#', '').replace(/([A-Z])/g, ' $1').trim(),
-        description: item.description || `Trending style featuring ${hashtag}`,
-        tags: item.tags || [hashtag.toLowerCase()],
-        source: 'Instagram',
-        popularity_score: Math.min(views / 1000000, 100),
-      });
-    }
-  });
-
-  return Array.from(trendMap.values())
+function extractTrendsFromTikTokData(tiktokData: any[]): any[] {
+  return tiktokData
+    .map((item: any) => {
+      const views = item.viewCount || 0;
+      const videos = item.videoCount || 0;
+      
+      // Calculate popularity score based on views and video count
+      // Scale: views in millions (max 100) + videos bonus
+      const viewScore = Math.min((views / 10000000) * 50, 50); // Max 50 points from views
+      const videoScore = Math.min((videos / 100000) * 50, 50); // Max 50 points from videos
+      const popularityScore = Math.round(viewScore + videoScore);
+      
+      return {
+        name: item.hashtag.replace('#', '').replace(/([A-Z])/g, ' $1').trim(),
+        description: item.description || `Trending TikTok style featuring ${item.hashtag}`,
+        tags: item.tags || [item.hashtag.toLowerCase()],
+        source: 'TikTok',
+        popularity_score: Math.min(popularityScore, 100),
+      };
+    })
     .sort((a, b) => b.popularity_score - a.popularity_score)
     .slice(0, 15); // Top 15 trends
 }
@@ -179,25 +173,18 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const apifyApiKey = Deno.env.get('APIFY_API_KEY');
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     let trendingStyles: any[];
 
-    if (apifyApiKey) {
-      console.log('Using Apify API to scrape real trends...');
-      try {
-        const apifyData = await scrapeTrendsFromApify(apifyApiKey);
-        let extractedTrends = extractTrendsFromApifyData(apifyData);
-        trendingStyles = await enrichTrendsWithGoogleData(extractedTrends);
-        console.log(`Extracted ${trendingStyles.length} trends from Apify + Google Trends`);
-      } catch (apifyError) {
-        console.error('Apify scraping failed, falling back to default trends:', apifyError);
-        const defaultTrends = getDefaultTrends();
-        trendingStyles = await enrichTrendsWithGoogleData(defaultTrends);
-      }
-    } else {
-      console.log('No Apify API key found, using default trends with Google Trends enrichment');
+    try {
+      console.log('Scraping real trends from TikTok...');
+      const tiktokData = await scrapeTrendsFromTikTok();
+      let extractedTrends = extractTrendsFromTikTokData(tiktokData);
+      trendingStyles = await enrichTrendsWithGoogleData(extractedTrends);
+      console.log(`Extracted ${trendingStyles.length} trends from TikTok + Google Trends`);
+    } catch (tiktokError) {
+      console.error('TikTok scraping failed, falling back to default trends:', tiktokError);
       const defaultTrends = getDefaultTrends();
       trendingStyles = await enrichTrendsWithGoogleData(defaultTrends);
     }
@@ -242,7 +229,7 @@ serve(async (req) => {
         success: true, 
         trendsCount: data?.length || 0,
         trends: data,
-        source: apifyApiKey ? 'apify' : 'default',
+        source: 'tiktok',
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
