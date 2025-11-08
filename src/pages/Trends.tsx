@@ -14,7 +14,7 @@ export default function Trends() {
   const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
-    scrapeTrends();
+    fetchTrends();
 
     // Subscribe to real-time updates for trends
     const channel = supabase
@@ -28,8 +28,20 @@ export default function Trends() {
         },
         (payload) => {
           console.log('Real-time trend update:', payload);
-          // Refresh trends when data changes
-          fetchTrends();
+          // Only update the specific trend that changed instead of refetching all
+          if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
+            setTrends(prev => {
+              const newTrend = payload.new as any;
+              const existingIndex = prev.findIndex(t => t.id === newTrend.id);
+              if (existingIndex >= 0) {
+                const updated = [...prev];
+                updated[existingIndex] = newTrend;
+                return updated;
+              } else {
+                return [newTrend, ...prev];
+              }
+            });
+          }
         }
       )
       .subscribe();
@@ -40,6 +52,7 @@ export default function Trends() {
   }, []);
 
   const fetchTrends = async () => {
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from("trends")
@@ -54,6 +67,8 @@ export default function Trends() {
       }
     } catch (error) {
       console.error("Error fetching trends:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
