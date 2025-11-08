@@ -83,25 +83,30 @@ export default function Feed() {
   const fetchOutfits = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
+      const isGuest = !user && localStorage.getItem("guestMode") === "true";
+
+      let preferences = null;
+      let interactions = null;
+
+      // Only fetch user-specific data if authenticated
+      if (user) {
+        // Fetch user preferences
+        const { data: preferencesData } = await supabase
+          .from('user_preferences')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+        preferences = preferencesData;
+
+        // Fetch user's recent interactions
+        const { data: interactionsData } = await supabase
+          .from('user_interactions')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(50);
+        interactions = interactionsData;
       }
-
-      // Fetch user preferences
-      const { data: preferences } = await supabase
-        .from('user_preferences')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      // Fetch user's recent interactions
-      const { data: interactions } = await supabase
-        .from('user_interactions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(50);
 
       // Fetch outfits
       const { data: outfitsData, error: outfitsError } = await supabase
@@ -146,10 +151,12 @@ export default function Feed() {
 
       setOutfits(scoredOutfits);
 
-      // Track view interactions for visible outfits (top 10)
-      scoredOutfits.slice(0, 10).forEach(outfit => {
-        trackInteraction(outfit.id, 'view');
-      });
+      // Track view interactions for visible outfits (top 10) - only if authenticated
+      if (user) {
+        scoredOutfits.slice(0, 10).forEach(outfit => {
+          trackInteraction(outfit.id, 'view');
+        });
+      }
 
       setLoading(false);
     } catch (error) {
@@ -173,6 +180,9 @@ export default function Feed() {
   };
 
   const handleLikeToggle = async (outfitId: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return; // Block guest interactions
+
     const isCurrentlyLiked = likedOutfits.has(outfitId);
 
     setLikedOutfits((prev) => {

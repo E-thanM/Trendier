@@ -46,8 +46,39 @@ export function AppSidebar() {
         variant: "destructive",
       });
     } else {
+      localStorage.removeItem("guestMode");
       navigate("/auth");
     }
+  };
+
+  const handleRestrictedNavigation = async (path: string, featureName: string, e: React.MouseEvent) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    const isGuest = localStorage.getItem("guestMode") === "true";
+    
+    if (!user || isGuest) {
+      e.preventDefault();
+      toast({
+        title: "Sign up required",
+        description: `Create an account to access ${featureName}`,
+        variant: "destructive",
+      });
+      return;
+    }
+  };
+
+  const handleNotifications = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    const isGuest = localStorage.getItem("guestMode") === "true";
+    
+    if (!user || isGuest) {
+      toast({
+        title: "Sign up required",
+        description: "Create an account to access notifications",
+        variant: "destructive",
+      });
+      return;
+    }
+    openSettings("notifications");
   };
 
   const openSettings = (tab: string) => {
@@ -71,7 +102,7 @@ export function AppSidebar() {
                 variant="ghost"
                 size="icon"
                 className="relative h-8 w-8 hover:bg-muted"
-                onClick={() => openSettings("notifications")}
+                onClick={handleNotifications}
               >
                 <Bell className="h-4 w-4" />
                 {unreadNotifications > 0 && (
@@ -89,29 +120,42 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      end
-                      className="hover:bg-muted/50 relative"
-                      activeClassName="bg-muted font-medium"
-                    >
-                      <item.icon className="h-5 w-5" />
-                      {!isCollapsed && <span>{item.title}</span>}
-                      {item.title === "Messages" && unreadMessages > 0 && !isCollapsed && (
-                        <Badge 
-                          variant="destructive" 
-                          className="ml-auto h-5 w-5 p-0 flex items-center justify-center text-xs"
+              {items.map((item) => {
+                const isRestricted = ["Analyzer", "Messages", "Profile"].includes(item.title);
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild={!isRestricted}>
+                      {isRestricted ? (
+                        <div
+                          onClick={(e) => handleRestrictedNavigation(item.url, item.title.toLowerCase(), e)}
+                          className="cursor-pointer hover:bg-muted/50 relative"
                         >
-                          {unreadMessages}
-                        </Badge>
+                          <item.icon className="h-5 w-5" />
+                          {!isCollapsed && <span>{item.title}</span>}
+                          {item.title === "Messages" && unreadMessages > 0 && !isCollapsed && (
+                            <Badge 
+                              variant="destructive" 
+                              className="ml-auto h-5 w-5 p-0 flex items-center justify-center text-xs"
+                            >
+                              {unreadMessages}
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <NavLink
+                          to={item.url}
+                          end
+                          className="hover:bg-muted/50 relative"
+                          activeClassName="bg-muted font-medium"
+                        >
+                          <item.icon className="h-5 w-5" />
+                          {!isCollapsed && <span>{item.title}</span>}
+                        </NavLink>
                       )}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
               <SidebarMenuItem>
                 <SidebarMenuButton onClick={handleLogout}>
                   <LogOut className="h-5 w-5" />

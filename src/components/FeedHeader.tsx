@@ -5,12 +5,45 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { SettingsSheet } from "@/components/SettingsSheet";
 import { useUnreadCounts } from "@/hooks/use-unread-counts";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 export function FeedHeader() {
   const navigate = useNavigate();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const { toast } = useToast();
 
   const { unreadMessages, unreadNotifications } = useUnreadCounts();
+
+  const handleMessagesClick = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    const isGuest = localStorage.getItem("guestMode") === "true";
+    
+    if (!user || isGuest) {
+      toast({
+        title: "Sign up required",
+        description: "Create an account to access messages",
+        variant: "destructive",
+      });
+      return;
+    }
+    navigate('/messages');
+  };
+
+  const handleNotificationsClick = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    const isGuest = localStorage.getItem("guestMode") === "true";
+    
+    if (!user || isGuest) {
+      toast({
+        title: "Sign up required",
+        description: "Create an account to access notifications",
+        variant: "destructive",
+      });
+      return;
+    }
+    setSettingsOpen(true);
+  };
 
   return (
     <>
@@ -25,7 +58,7 @@ export function FeedHeader() {
               variant="ghost"
               size="icon"
               className="relative"
-              onClick={() => navigate('/messages')}
+              onClick={handleMessagesClick}
             >
               <MessageCircle className="h-5 w-5" />
               {unreadMessages > 0 && (
@@ -42,7 +75,7 @@ export function FeedHeader() {
               variant="ghost"
               size="icon"
               className="relative"
-              onClick={() => setSettingsOpen(true)}
+              onClick={handleNotificationsClick}
             >
               <Bell className="h-5 w-5" />
               {unreadNotifications > 0 && (

@@ -50,7 +50,19 @@ export const OutfitCard = ({ outfit, isLiked, onLikeToggle }: OutfitCardProps) =
     }
   };
 
-  const handleCommentsOpen = () => {
+  const handleCommentsOpen = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    const isGuest = localStorage.getItem("guestMode") === "true";
+    
+    if (!user || isGuest) {
+      toast({
+        title: "Sign up required",
+        description: "Create an account to comment on outfits",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setShowComments(true);
     trackCommentInteraction();
   };
@@ -59,11 +71,12 @@ export const OutfitCard = ({ outfit, isLiked, onLikeToggle }: OutfitCardProps) =
     setIsLiking(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      const isGuest = localStorage.getItem("guestMode") === "true";
       
-      if (!user) {
+      if (!user || isGuest) {
         toast({
-          title: "Error",
-          description: "You must be logged in to like outfits",
+          title: "Sign up required",
+          description: "Create an account to like outfits",
           variant: "destructive",
         });
         return;
@@ -167,7 +180,20 @@ export const OutfitCard = ({ outfit, isLiked, onLikeToggle }: OutfitCardProps) =
             variant="ghost" 
             size="icon" 
             className="hover:scale-110 transition-transform"
-            onClick={() => setShowShare(true)}
+            onClick={async () => {
+              const { data: { user } } = await supabase.auth.getUser();
+              const isGuest = localStorage.getItem("guestMode") === "true";
+              
+              if (!user || isGuest) {
+                toast({
+                  title: "Sign up required",
+                  description: "Create an account to share outfits",
+                  variant: "destructive",
+                });
+                return;
+              }
+              setShowShare(true);
+            }}
           >
             <Share2 className="h-7 w-7" />
           </Button>
