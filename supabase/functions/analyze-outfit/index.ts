@@ -13,8 +13,10 @@ serve(async (req) => {
   }
 
   try {
-    // Verify authentication
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const authHeader = req.headers.get('Authorization');
+    
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: 'Authentication required' }),
@@ -22,17 +24,16 @@ serve(async (req) => {
       );
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    
-    const supabaseClient = createClient(
-      supabaseUrl,
-      supabaseAnonKey,
-      { global: { headers: { Authorization: authHeader } } }
-    );
+    // Create client with user's auth token for authentication
+    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
 
+    // Get authenticated user
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    
     if (authError || !user) {
+      console.error('Auth error:', authError);
       return new Response(
         JSON.stringify({ error: 'Invalid or expired token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -52,13 +53,10 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
     console.log('Fetching current trends...');
     
-    // Fetch current trends
-    const { data: trends, error: trendsError } = await supabase
+    // Fetch current trends using the authenticated client
+    const { data: trends, error: trendsError } = await supabaseClient
       .from('trends')
       .select('name, description, tags, popularity_score')
       .order('popularity_score', { ascending: false })
