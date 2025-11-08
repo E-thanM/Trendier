@@ -32,7 +32,48 @@ async function scrapeTrendsFromTikTok(): Promise<any[]> {
   try {
     console.log('Starting TikTok scrape...');
     
-    const fashionHashtags = ['fashion', 'ootd', 'style', 'fashiontrends', 'fashioninspo', 'styleinspo', 'outfitideas'];
+    const fashionHashtags = [
+      // Core fashion
+      'fashion', 'ootd', 'style', 'fashiontrends', 'fashioninspo', 'styleinspo', 'outfitideas',
+      // Aesthetics
+      'y2k', 'cottagecore', 'darkacademia', 'lightacademia', 'balletcore', 'barbiecore', 'gorpcore',
+      'cleangirlaesthetic', 'quietluxury', 'oldmoney', 'coastalgrandmother', 'tomboy', 'streetwear',
+      // Styles
+      'vintage', 'retro', 'boho', 'minimalist', 'maximalist', 'grunge', 'preppy', 'artsy',
+      'edgy', 'romantic', 'sporty', 'chic', 'elegant', 'casual', 'formal', 'alternative',
+      // Specific items
+      'denim', 'leather', 'oversized', 'croptop', 'widelegpants', 'cargopants', 'blazer',
+      'sneakers', 'boots', 'heels', 'accessories', 'jewelry', 'sunglasses', 'bags',
+      // Occasions
+      'workwear', 'datenight', 'brunch', 'party', 'vacation', 'wedding', 'gymwear',
+      // Seasons
+      'springfashion', 'summerfashion', 'fallfashion', 'winterfashion',
+      // Colors & patterns
+      'allblack', 'neutrals', 'pastels', 'neon', 'animalprint', 'florals', 'stripes',
+      // Brands & luxury
+      'luxury', 'designer', 'highfashion', 'streetstyle', 'thrift', 'sustainable',
+      // Body types
+      'petite', 'tall', 'curvy', 'plus', 'midsize',
+      // Trends
+      'microtrend', 'trending', 'viral', 'fyp', 'tiktokfashion', 'instafashion',
+      // Subcultures
+      'goth', 'emo', 'punk', 'kawaii', 'harajuku', 'kfashion', 'jfashion',
+      // Specific trends
+      'dopamine', 'normcore', 'athleisure', 'businesscasual', 'smartcasual',
+      'layering', 'monochrome', 'colorblocking', 'mixedprints', 'textures',
+      // Accessories
+      'hats', 'scarves', 'belts', 'watches', 'rings', 'necklaces', 'earrings',
+      // Footwear
+      'platformshoes', 'loafers', 'sandals', 'slippers', 'sneakerhead',
+      // Outerwear
+      'coats', 'jackets', 'trenchcoat', 'puffjacket', 'cardigan',
+      // Bottoms
+      'jeans', 'skirts', 'shorts', 'leggings', 'trousers',
+      // Tops
+      'tshirt', 'hoodie', 'sweater', 'blouse', 'tank', 'bodysuits',
+      // Dresses
+      'dresses', 'maxidress', 'minidress', 'midilength', 'slip',
+    ];
     const allResults: any[] = [];
     
     // TikTok API headers to mimic browser requests

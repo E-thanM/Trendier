@@ -15,7 +15,47 @@ export default function Trends() {
 
   useEffect(() => {
     scrapeTrends();
+
+    // Subscribe to real-time updates for trends
+    const channel = supabase
+      .channel('trends-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'trends'
+        },
+        (payload) => {
+          console.log('Real-time trend update:', payload);
+          // Refresh trends when data changes
+          fetchTrends();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
+
+  const fetchTrends = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("trends")
+        .select("*")
+        .order("popularity_score", { ascending: false })
+        .limit(100);
+
+      if (error) {
+        console.error("Error fetching trends:", error);
+      } else {
+        setTrends(data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching trends:", error);
+    }
+  };
 
   const scrapeTrends = async () => {
     try {
@@ -27,17 +67,7 @@ export default function Trends() {
       }
       
       // Then fetch them
-      const { data, error } = await supabase
-        .from("trends")
-        .select("*")
-        .order("popularity_score", { ascending: false })
-        .limit(20);
-
-      if (error) {
-        console.error("Error fetching trends:", error);
-      } else {
-        setTrends(data || []);
-      }
+      await fetchTrends();
     } catch (error) {
       console.error("Error scraping trends:", error);
     } finally {
