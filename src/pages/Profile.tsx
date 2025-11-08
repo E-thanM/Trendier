@@ -45,12 +45,21 @@ export default function Profile() {
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
+    checkGuestMode();
     initProfile();
     fetchProfile();
     fetchUserOutfits();
     fetchUserLikes();
     fetchFollowCounts();
   }, [searchParams]);
+
+  const checkGuestMode = () => {
+    const isGuest = localStorage.getItem("guestMode") === "true";
+    if (isGuest) {
+      // Guest users can view profiles but with limited features
+      return;
+    }
+  };
 
   const initProfile = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -60,6 +69,12 @@ export default function Profile() {
       setIsOwnProfile(!userId || userId === user.id);
       if (userId && userId !== user.id) {
         checkFollowStatus(userId);
+      }
+    } else {
+      // If not guest mode and no user, they need to log in
+      const isGuest = localStorage.getItem("guestMode") === "true";
+      if (!isGuest) {
+        setLoading(false);
       }
     }
   };
@@ -200,9 +215,12 @@ export default function Profile() {
 
   const fetchProfile = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    const isGuest = localStorage.getItem("guestMode") === "true";
+    
+    if (!user && !isGuest) return;
 
-    const userId = searchParams.get('user') || user.id;
+    const userId = searchParams.get('user') || (user?.id);
+    if (!userId) return;
 
     const { data } = await supabase
       .from("profiles")
@@ -401,6 +419,34 @@ export default function Profile() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  // Check if user is a guest and trying to access their own profile
+  const isGuest = localStorage.getItem("guestMode") === "true";
+  const isViewingOwnProfile = !searchParams.get('user');
+
+  if (isGuest && isViewingOwnProfile) {
+    return (
+      <div className="max-w-4xl mx-auto p-4 pb-24 md:pb-6">
+        <Card className="p-8 text-center">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center ring-2 ring-primary/20 mx-auto mb-4">
+            <span className="text-3xl font-bold text-primary">G</span>
+          </div>
+          <h2 className="text-2xl font-bold mb-2">Guest Mode</h2>
+          <p className="text-muted-foreground mb-6">
+            Create an account to upload outfits, interact with the community, and personalize your experience.
+          </p>
+          <div className="flex gap-3 justify-center">
+            <Button onClick={() => navigate('/auth')}>
+              Sign Up
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/auth')}>
+              Sign In
+            </Button>
+          </div>
+        </Card>
       </div>
     );
   }
