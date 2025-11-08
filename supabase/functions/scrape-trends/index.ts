@@ -123,42 +123,42 @@ async function fetchGoogleTrends(keywords: string[]): Promise<Map<string, number
 }
 
 function extractTrendsFromTikTokData(tiktokData: any[]): any[] {
-  return tiktokData
-    .map((item: any) => {
+  // First, sort by view count to get relative popularity
+  const sortedData = [...tiktokData].sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0));
+  
+  return sortedData
+    .map((item: any, index: any) => {
       const views = item.viewCount || 0;
-      const videos = item.videoCount || 0;
       
-      // Calculate popularity score based on views and video count
-      // Scale: views in millions (max 100) + videos bonus
-      const viewScore = Math.min((views / 10000000) * 50, 50); // Max 50 points from views
-      const videoScore = Math.min((videos / 100000) * 50, 50); // Max 50 points from videos
-      const popularityScore = Math.round(viewScore + videoScore);
+      // Calculate popularity score based on relative ranking and absolute metrics
+      // Top trend gets 100, scores decrease proportionally
+      const rankScore = Math.round(100 - (index * (100 / sortedData.length)));
+      
+      // Bonus points for extremely high engagement (billions of views)
+      let engagementBonus = 0;
+      if (views > 500000000000) engagementBonus = 10; // 500B+ views
+      else if (views > 100000000000) engagementBonus = 5; // 100B+ views
+      
+      const popularityScore = Math.min(rankScore + engagementBonus, 100);
       
       return {
         name: item.hashtag.replace('#', '').replace(/([A-Z])/g, ' $1').trim(),
         description: item.description || `Trending TikTok style featuring ${item.hashtag}`,
         tags: item.tags || [item.hashtag.toLowerCase()],
         source: 'TikTok',
-        popularity_score: Math.min(popularityScore, 100),
+        popularity_score: popularityScore,
       };
     })
-    .sort((a, b) => b.popularity_score - a.popularity_score)
     .slice(0, 15); // Top 15 trends
 }
 
 async function enrichTrendsWithGoogleData(trends: any[]): Promise<TrendWithHistory[]> {
-  const keywords = trends.map(t => t.name);
-  const googleScores = await fetchGoogleTrends(keywords);
-  
+  // Use TikTok data directly - Google Trends API requires paid access
+  // TikTok view counts are already a strong indicator of popularity
   return trends.map(trend => {
-    const googleScore = googleScores.get(trend.name) || 0;
-    // Combine Instagram and Google Trends scores
-    const combinedScore = Math.min(Math.round((trend.popularity_score + googleScore) / 2), 100);
-    
     return {
       ...trend,
-      popularity_score: combinedScore,
-      source: 'Instagram + Google Trends'
+      source: 'TikTok Real-time Data'
     };
   });
 }
@@ -189,7 +189,7 @@ serve(async (req) => {
       trendingStyles = await enrichTrendsWithGoogleData(defaultTrends);
     }
 
-    // Insert trends into database
+    // Insert trends into database (cleaned data only)
     const { data, error } = await supabase
       .from('trends')
       .upsert(trendingStyles, { 
@@ -200,6 +200,7 @@ serve(async (req) => {
 
     if (error) {
       console.error('Error inserting trends:', error);
+      console.error('Trends data:', JSON.stringify(trendingStyles, null, 2));
       throw error;
     }
 
