@@ -13,8 +13,6 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const authHeader = req.headers.get('Authorization');
     
     if (!authHeader) {
@@ -24,13 +22,17 @@ serve(async (req) => {
       );
     }
 
-    // Create client with user's auth token for authentication
-    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
+    // Extract JWT token from header
+    const token = authHeader.replace('Bearer ', '');
+    
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-    // Get authenticated user
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    // Create client with service role key
+    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Get authenticated user by passing the JWT token directly
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
     
     if (authError || !user) {
       console.error('Auth error:', authError);
