@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Sparkles, Loader2, TrendingUp, Star, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { z } from "zod";
+import { TrendDetailModal } from "@/components/TrendDetailModal";
 
 const targetStyleSchema = z.object({
   targetStyle: z.string().trim().min(1, "Target style is required").max(100, "Target style must be less than 100 characters")
@@ -19,6 +20,8 @@ export default function Analyzer() {
   const [targetStyle, setTargetStyle] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [selectedTrend, setSelectedTrend] = useState<any>(null);
+  const [modalOpen, setModalOpen] = useState(false);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -125,6 +128,35 @@ export default function Analyzer() {
       });
     } finally {
       setAnalyzing(false);
+    }
+  };
+
+  const handleTrendClick = async (trendName: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('trends')
+        .select('*')
+        .ilike('name', `%${trendName}%`)
+        .single();
+
+      if (error || !data) {
+        toast({
+          title: "Trend Not Found",
+          description: "Could not find detailed information for this trend",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setSelectedTrend(data);
+      setModalOpen(true);
+    } catch (error) {
+      console.error("Error fetching trend:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load trend details",
+        variant: "destructive",
+      });
     }
   };
 
@@ -243,7 +275,12 @@ export default function Analyzer() {
               </h3>
               <div className="flex flex-wrap gap-2">
                 {result.matchingTrends.map((trend: string, index: number) => (
-                  <Badge key={index} variant="secondary" className="text-xs">
+                  <Badge 
+                    key={index} 
+                    variant="secondary" 
+                    className="text-xs cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
+                    onClick={() => handleTrendClick(trend)}
+                  >
                     #{trend}
                   </Badge>
                 ))}
@@ -252,6 +289,12 @@ export default function Analyzer() {
           )}
         </Card>
       )}
+
+      <TrendDetailModal
+        trend={selectedTrend}
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+      />
     </div>
   );
 }
