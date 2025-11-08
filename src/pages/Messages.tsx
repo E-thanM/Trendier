@@ -64,10 +64,14 @@ export default function Messages() {
     // Set up realtime subscription
     const channel = supabase
       .channel('messages-realtime')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, async (payload) => {
         fetchConversations();
         if (selectedConversation) {
-          fetchMessages(selectedConversation.id);
+          const messages = await fetchMessages(selectedConversation.id);
+          setSelectedConversation(prev => prev ? {
+            ...prev,
+            messages: messages,
+          } : null);
         }
       })
       .subscribe();
@@ -207,20 +211,19 @@ export default function Messages() {
 
       if (error) throw error;
 
-      if (selectedConversation) {
-        setSelectedConversation({
-          ...selectedConversation,
-          messages: data || [],
-        });
-      }
+      return data || [];
     } catch (error) {
       console.error('Error fetching messages:', error);
+      return [];
     }
   };
 
   const handleSelectConversation = async (conversation: ConversationData) => {
-    setSelectedConversation(conversation);
-    await fetchMessages(conversation.id);
+    const messages = await fetchMessages(conversation.id);
+    setSelectedConversation({
+      ...conversation,
+      messages: messages,
+    });
     await markAsRead(conversation.id);
   };
 
@@ -277,7 +280,11 @@ export default function Messages() {
         .eq('id', selectedConversation.id);
 
       setMessageInput("");
-      await fetchMessages(selectedConversation.id);
+      const messages = await fetchMessages(selectedConversation.id);
+      setSelectedConversation(prev => prev ? {
+        ...prev,
+        messages: messages,
+      } : null);
       await fetchConversations();
     } catch (error) {
       console.error('Error sending message:', error);
