@@ -286,6 +286,38 @@ export type Database = {
         }
         Relationships: []
       }
+      trend_history: {
+        Row: {
+          created_at: string
+          id: string
+          popularity_score: number
+          recorded_at: string
+          trend_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          popularity_score?: number
+          recorded_at?: string
+          trend_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          popularity_score?: number
+          recorded_at?: string
+          trend_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trend_history_trend_id_fkey"
+            columns: ["trend_id"]
+            isOneToOne: false
+            referencedRelation: "trends"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trends: {
         Row: {
           created_at: string

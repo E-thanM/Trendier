@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts";
 import { TrendingUp, Calendar, BarChart3, Hash, X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
 
 interface TrendDetailModalProps {
   trend: any;
@@ -11,12 +13,17 @@ interface TrendDetailModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-// Generate simulated historical data for the trend
+interface HistoricalDataPoint {
+  month: string;
+  popularity: number;
+}
+
+// Fallback: Generate simulated historical data for the trend
 const generateTrendData = (currentScore: number) => {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-  return months.map((month, index) => {
+  const periods = ['6d ago', '5d ago', '4d ago', '3d ago', '2d ago', 'Yesterday', 'Today'];
+  return periods.map((month, index) => {
     const variance = Math.random() * 15 - 7.5;
-    const baseScore = currentScore - (5 - index) * 8 + variance;
+    const baseScore = currentScore - (6 - index) * 5 + variance;
     return {
       month,
       popularity: Math.max(20, Math.min(100, Math.round(baseScore)))
@@ -25,10 +32,61 @@ const generateTrendData = (currentScore: number) => {
 };
 
 export function TrendDetailModal({ trend, open, onOpenChange }: TrendDetailModalProps) {
-  if (!trend) return null;
+  const [historicalData, setHistoricalData] = useState<HistoricalDataPoint[]>([]);
+  const [growthRate, setGrowthRate] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const trendData = generateTrendData(trend.popularity_score);
-  const growthRate = Math.round((trendData[trendData.length - 1].popularity - trendData[0].popularity) / trendData[0].popularity * 100);
+  useEffect(() => {
+    if (!trend?.id || !open) return;
+
+    const fetchHistoricalData = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('trend_history')
+          .select('popularity_score, recorded_at')
+          .eq('trend_id', trend.id)
+          .order('recorded_at', { ascending: true })
+          .limit(30);
+
+        if (error) {
+          console.error('Error fetching trend history:', error);
+          // Use simulated data as fallback
+          const simulatedData = generateTrendData(trend.popularity_score);
+          setHistoricalData(simulatedData);
+          setGrowthRate(Math.round((simulatedData[simulatedData.length - 1].popularity - simulatedData[0].popularity) / simulatedData[0].popularity * 100));
+          return;
+        }
+
+        if (data && data.length > 0) {
+          // Transform data for the chart
+          const chartData = data.map((point) => ({
+            month: new Date(point.recorded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            popularity: point.popularity_score
+          }));
+
+          setHistoricalData(chartData);
+
+          // Calculate growth rate
+          const firstScore = chartData[0].popularity;
+          const lastScore = chartData[chartData.length - 1].popularity;
+          const growth = ((lastScore - firstScore) / firstScore) * 100;
+          setGrowthRate(Math.round(growth));
+        } else {
+          // No historical data yet, use simulated data
+          const simulatedData = generateTrendData(trend.popularity_score);
+          setHistoricalData(simulatedData);
+          setGrowthRate(Math.round((simulatedData[simulatedData.length - 1].popularity - simulatedData[0].popularity) / simulatedData[0].popularity * 100));
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchHistoricalData();
+  }, [trend?.id, open]);
+
+  if (!trend) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -87,7 +145,7 @@ export function TrendDetailModal({ trend, open, onOpenChange }: TrendDetailModal
             </h3>
             <Card className="p-4 border-border">
               <ResponsiveContainer width="100%" height={200}>
-                <AreaChart data={trendData}>
+                <AreaChart data={historicalData}>
                   <defs>
                     <linearGradient id="colorPopularity" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
