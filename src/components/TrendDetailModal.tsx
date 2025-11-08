@@ -1,8 +1,9 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from "recharts";
-import { TrendingUp, Calendar, BarChart3, Hash } from "lucide-react";
+import { TrendingUp, Calendar, BarChart3, Hash, X } from "lucide-react";
 
 interface TrendDetailModalProps {
   trend: any;
@@ -32,6 +33,14 @@ export function TrendDetailModal({ trend, open, onOpenChange }: TrendDetailModal
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto animate-scale-in">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => onOpenChange(false)}
+          className="absolute right-4 top-4 z-50 rounded-full hover:bg-accent"
+        >
+          <X className="h-4 w-4" />
+        </Button>
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold flex items-center gap-2">
             <TrendingUp className="h-6 w-6 text-primary" />
