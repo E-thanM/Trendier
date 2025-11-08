@@ -39,43 +39,55 @@ export default function Profile() {
   const [followingCount, setFollowingCount] = useState(0);
   const [followersDialogOpen, setFollowersDialogOpen] = useState(false);
   const [followersDialogTab, setFollowersDialogTab] = useState<"followers" | "following">("followers");
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    checkGuestMode();
     initProfile();
-    fetchProfile();
-    fetchUserOutfits();
-    fetchUserLikes();
-    fetchFollowCounts();
   }, [searchParams]);
-
-  const checkGuestMode = () => {
-    const isGuest = localStorage.getItem("guestMode") === "true";
-    if (isGuest) {
-      // Guest users can view profiles but with limited features
-      return;
-    }
-  };
 
   const initProfile = async () => {
     const { data: { user } } = await supabase.auth.getUser();
+    const isGuest = localStorage.getItem("guestMode") === "true";
+    
     if (user) {
+      setIsAuthenticated(true);
       setCurrentUserId(user.id);
       const userId = searchParams.get('user');
       setIsOwnProfile(!userId || userId === user.id);
+      
+      // Fetch all profile data
+      await Promise.all([
+        fetchProfile(),
+        fetchUserOutfits(),
+        fetchUserLikes(),
+        fetchFollowCounts()
+      ]);
+      
       if (userId && userId !== user.id) {
         checkFollowStatus(userId);
       }
-    } else {
-      // If not guest mode and no user, they need to log in
-      const isGuest = localStorage.getItem("guestMode") === "true";
-      if (!isGuest) {
+    } else if (isGuest) {
+      setIsAuthenticated(false);
+      const userId = searchParams.get('user');
+      
+      if (userId) {
+        // Guest viewing someone else's profile
+        await Promise.all([
+          fetchProfile(),
+          fetchUserOutfits()
+        ]);
+      } else {
+        // Guest trying to view their own profile - show auth prompt
         setLoading(false);
       }
+    } else {
+      // Not authenticated and not guest - show auth prompt
+      setIsAuthenticated(false);
+      setLoading(false);
     }
   };
 
@@ -423,29 +435,42 @@ export default function Profile() {
     );
   }
 
-  // Check if user is a guest and trying to access their own profile
-  const isGuest = localStorage.getItem("guestMode") === "true";
+  // Show auth prompt if not authenticated and trying to access own profile
   const isViewingOwnProfile = !searchParams.get('user');
 
-  if (isGuest && isViewingOwnProfile) {
+  if (!isAuthenticated && isViewingOwnProfile) {
     return (
       <div className="max-w-4xl mx-auto p-4 pb-24 md:pb-6">
-        <Card className="p-8 text-center">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center ring-2 ring-primary/20 mx-auto mb-4">
-            <span className="text-3xl font-bold text-primary">G</span>
+        <Card className="p-8 text-center border-border">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center ring-2 ring-primary/20 mx-auto mb-6">
+            <span className="text-3xl font-bold text-primary">
+              {localStorage.getItem("guestMode") === "true" ? "G" : "?"}
+            </span>
           </div>
-          <h2 className="text-2xl font-bold mb-2">Guest Mode</h2>
-          <p className="text-muted-foreground mb-6">
-            Create an account to upload outfits, interact with the community, and personalize your experience.
+          <h2 className="text-2xl font-bold mb-2">
+            {localStorage.getItem("guestMode") === "true" ? "Guest Mode" : "Sign In Required"}
+          </h2>
+          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+            Create an account to upload outfits, interact with the community, save your favorite styles, and personalize your fashion experience.
           </p>
-          <div className="flex gap-3 justify-center">
-            <Button onClick={() => navigate('/auth')}>
+          <div className="flex gap-3 justify-center flex-wrap">
+            <Button 
+              onClick={() => navigate('/auth')}
+              className="min-w-[120px]"
+            >
               Sign Up
             </Button>
-            <Button variant="outline" onClick={() => navigate('/auth')}>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/auth')}
+              className="min-w-[120px]"
+            >
               Sign In
             </Button>
           </div>
+          <p className="text-xs text-muted-foreground mt-6">
+            Already have an account? Sign in to access your profile
+          </p>
         </Card>
       </div>
     );
