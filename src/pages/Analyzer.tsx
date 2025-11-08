@@ -149,7 +149,6 @@ export default function Analyzer() {
               id="imageFile"
               type="file"
               accept="image/*"
-              capture="environment"
               onChange={handleFileChange}
               required
               className="hidden"
