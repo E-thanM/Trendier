@@ -163,6 +163,34 @@ async function fetchGoogleTrends(keywords: string[]): Promise<Map<string, number
   return trendsMap;
 }
 
+function getTrendDescription(hashtag: string, originalDesc: string): string {
+  const tag = hashtag.replace('#', '').toLowerCase();
+  
+  const descriptions: { [key: string]: string } = {
+    'y2k': 'Early 2000s fashion revival featuring low-rise jeans, baby tees, rhinestones, and butterfly accessories. Think Paris Hilton and Britney Spears era.',
+    'cottagecore': 'Romantic countryside aesthetic with flowy dresses, floral patterns, lace details, and nature-inspired accessories. Embraces a whimsical, pastoral lifestyle.',
+    'darkacademia': 'Scholarly aesthetic with tweed blazers, turtlenecks, leather oxford shoes, and vintage-inspired pieces. Inspired by classic literature and university life.',
+    'lightacademia': 'Softer academic style with cream and beige tones, linen fabrics, and romantic scholarly vibes. Less dark, more optimistic than dark academia.',
+    'balletcore': 'Ballet-inspired fashion featuring wrap cardigans, leg warmers, soft pink tones, and delicate, graceful silhouettes.',
+    'barbiecore': 'All-pink maximalist aesthetic with hot pink outfits, feminine silhouettes, playful accessories, and bold, confident styling.',
+    'gorpcore': 'Outdoor gear meets street style with technical fabrics, hiking boots, utility vests, and functional fashion pieces.',
+    'cleangirlaesthetic': 'Minimal, polished look with slicked-back hair, gold hoop earrings, dewy makeup, and neutral-toned outfits.',
+    'quietluxury': 'Understated wealth aesthetic featuring high-quality basics, neutral colors, perfect tailoring, and minimal branding.',
+    'oldmoney': 'Timeless, preppy style with polo shirts, tennis skirts, loafers, and classic pieces that suggest generational wealth.',
+    'streetwear': 'Urban fashion featuring oversized hoodies, sneakers, graphic tees, and influences from hip-hop and skateboarding culture.',
+    'grunge': '90s-inspired rebellious style with flannel shirts, ripped jeans, combat boots, and a deliberately disheveled aesthetic.',
+    'preppy': 'Classic collegiate style with polo shirts, cardigans, pleated skirts, loafers, and clean-cut, polished looks.',
+    'vintage': 'Retro fashion from past decades featuring thrifted pieces, nostalgic silhouettes, and timeless styling.',
+    'boho': 'Bohemian free-spirited style with flowing fabrics, earth tones, fringe details, and eclectic accessories.',
+    'minimalist': 'Less-is-more approach with clean lines, neutral colors, simple silhouettes, and curated wardrobes.',
+    'athleisure': 'Athletic wear styled for everyday life, blending comfort with fashion through leggings, sneakers, and sports-inspired pieces.',
+    'goth': 'Dark, dramatic aesthetic with all-black outfits, leather, lace, heavy boots, and gothic-inspired accessories.',
+    'kawaii': 'Japanese cute culture featuring pastel colors, playful prints, oversized bows, and adorable character-inspired fashion.',
+  };
+  
+  return descriptions[tag] || originalDesc || `Trending fashion style featuring ${hashtag}. Popular on TikTok with millions of views and creative outfit interpretations.`;
+}
+
 function extractTrendsFromTikTokData(tiktokData: any[]): any[] {
   // First, sort by view count to get relative popularity
   const sortedData = [...tiktokData].sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0));
@@ -182,9 +210,11 @@ function extractTrendsFromTikTokData(tiktokData: any[]): any[] {
       
       const popularityScore = Math.min(rankScore + engagementBonus, 100);
       
+      const trendName = item.hashtag.replace('#', '').replace(/([A-Z])/g, ' $1').trim();
+      
       return {
-        name: item.hashtag.replace('#', '').replace(/([A-Z])/g, ' $1').trim(),
-        description: item.description || `Trending TikTok style featuring ${item.hashtag}`,
+        name: trendName,
+        description: getTrendDescription(item.hashtag, item.description),
         tags: item.tags || [item.hashtag.toLowerCase()],
         source: 'TikTok',
         popularity_score: popularityScore,
@@ -297,56 +327,56 @@ function getDefaultTrends(): any[] {
   return [
     {
       name: "Y2K Revival",
-      description: "Low-rise jeans, baby tees, and butterfly clips making a comeback",
+      description: "Early 2000s fashion revival featuring low-rise jeans, baby tees, rhinestones, velour tracksuits, and butterfly accessories. Think Paris Hilton and Britney Spears era with platform shoes and tiny handbags.",
       tags: ["y2k", "vintage", "nostalgic", "2000s"],
       source: "TikTok",
       popularity_score: 95
     },
     {
       name: "Cottagecore Aesthetic",
-      description: "Flowy dresses, floral patterns, and romantic countryside vibes",
+      description: "Romantic countryside aesthetic with flowy dresses, floral patterns, lace details, puffed sleeves, and nature-inspired accessories. Embraces a whimsical, pastoral lifestyle with vintage-inspired pieces.",
       tags: ["cottagecore", "floral", "romantic", "vintage"],
       source: "Instagram",
       popularity_score: 88
     },
     {
       name: "Clean Girl Aesthetic",
-      description: "Minimal makeup, slicked-back bun, gold jewelry, and neutral tones",
+      description: "Minimal, polished look with slicked-back bun hairstyles, dewy makeup, gold hoop earrings, neutral-toned outfits, and an effortlessly chic vibe. Focus on groomed appearance and simple elegance.",
       tags: ["minimal", "clean", "elegant", "neutral"],
       source: "TikTok",
       popularity_score: 92
     },
     {
       name: "Gorpcore",
-      description: "Outdoor and hiking-inspired fashion with technical fabrics",
+      description: "Outdoor gear meets street style with technical fabrics, hiking boots, utility vests, cargo pants, and functional fashion pieces. Combines practicality with urban aesthetic.",
       tags: ["outdoor", "functional", "sporty", "technical"],
       source: "Instagram",
       popularity_score: 85
     },
     {
       name: "Barbiecore",
-      description: "All-pink outfits, feminine silhouettes, and playful accessories",
+      description: "All-pink maximalist aesthetic with hot pink outfits, feminine silhouettes, playful accessories, and bold, confident styling. Popularized by the Barbie movie trend.",
       tags: ["pink", "feminine", "playful", "bold"],
       source: "TikTok",
       popularity_score: 90
     },
     {
       name: "Quiet Luxury",
-      description: "Understated elegance with high-quality basics and neutral palette",
+      description: "Understated wealth aesthetic featuring high-quality basics, neutral colors, perfect tailoring, minimal branding, and timeless pieces. Emphasis on craftsmanship over logos.",
       tags: ["minimal", "luxury", "neutral", "timeless"],
       source: "Instagram",
       popularity_score: 87
     },
     {
       name: "Balletcore",
-      description: "Ballet-inspired fashion with wrap tops, leg warmers, and soft silhouettes",
+      description: "Ballet-inspired fashion featuring wrap cardigans, leg warmers, soft pink tones, delicate ribbons, and graceful silhouettes. Channels the elegance of ballet dancers.",
       tags: ["ballet", "feminine", "soft", "dance"],
       source: "TikTok",
       popularity_score: 83
     },
     {
       name: "Coastal Grandmother",
-      description: "Relaxed, sophisticated style inspired by beach house living",
+      description: "Relaxed, sophisticated style inspired by beach house living with linen fabrics, wide-leg pants, neutral tones, straw hats, and effortlessly elegant pieces.",
       tags: ["coastal", "relaxed", "linen", "sophisticated"],
       source: "Instagram",
       popularity_score: 80

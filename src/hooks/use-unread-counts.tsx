@@ -30,41 +30,59 @@ export function useUnreadCounts() {
   const fetchUnreadCounts = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        setUnreadMessages(0);
+        setUnreadNotifications(0);
+        return;
+      }
 
       // Get unread messages count
-      const { data: participations } = await supabase
+      const { data: participations, error: participationsError } = await supabase
         .from('conversation_participants')
         .select('conversation_id, last_read_at')
         .eq('user_id', user.id);
 
-      if (participations) {
+      if (participationsError) {
+        console.error('Error fetching participations:', participationsError);
+        setUnreadMessages(0);
+      } else if (participations && participations.length > 0) {
         let totalUnread = 0;
         
         for (const part of participations) {
-          const { data: messages } = await supabase
+          const { data: messages, error: messagesError } = await supabase
             .from('messages')
             .select('id')
             .eq('conversation_id', part.conversation_id)
             .neq('sender_id', user.id)
             .gt('created_at', part.last_read_at || '1970-01-01');
 
-          totalUnread += messages?.length || 0;
+          if (!messagesError) {
+            totalUnread += messages?.length || 0;
+          }
         }
 
         setUnreadMessages(totalUnread);
+      } else {
+        setUnreadMessages(0);
       }
 
       // Get unread notifications count
-      const { data: notifications } = await supabase
+      const { data: notifications, error: notificationsError } = await supabase
         .from('notifications')
         .select('id')
         .eq('user_id', user.id)
         .eq('read', false);
 
-      setUnreadNotifications(notifications?.length || 0);
+      if (notificationsError) {
+        console.error('Error fetching notifications:', notificationsError);
+        setUnreadNotifications(0);
+      } else {
+        setUnreadNotifications(notifications?.length || 0);
+      }
     } catch (error) {
       console.error('Error fetching unread counts:', error);
+      setUnreadMessages(0);
+      setUnreadNotifications(0);
     }
   };
 
