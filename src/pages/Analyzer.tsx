@@ -37,6 +37,17 @@ export default function Analyzer() {
         return;
       }
       
+      // Check for unsupported formats
+      const supportedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (!supportedTypes.includes(file.type)) {
+        toast({
+          title: "Unsupported Format",
+          description: "Please use JPG, PNG, WEBP, or GIF format. AVIF and HEIC are not supported.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       setImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -119,11 +130,12 @@ export default function Analyzer() {
         title: "Analysis Complete!",
         description: "Your outfit has been analyzed against current trends",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error analyzing outfit:", error);
+      const errorMessage = error?.message || error?.error || "Failed to analyze outfit. Please try again.";
       toast({
         title: "Analysis Failed",
-        description: "Failed to analyze outfit. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

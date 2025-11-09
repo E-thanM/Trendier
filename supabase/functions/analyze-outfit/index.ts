@@ -93,6 +93,22 @@ serve(async (req) => {
     
     const { imageUrl, targetStyle } = validation.data;
 
+    // Validate image format - Gemini doesn't support AVIF
+    const imageExtension = imageUrl.split('.').pop()?.toLowerCase();
+    const supportedFormats = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+    
+    if (!imageExtension || !supportedFormats.includes(imageExtension)) {
+      return new Response(
+        JSON.stringify({ 
+          error: `Unsupported image format: ${imageExtension}. Please use JPG, PNG, WEBP, or GIF.`
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
     if (!lovableApiKey) {
       throw new Error('LOVABLE_API_KEY is not configured');
