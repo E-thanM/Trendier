@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, Loader2, TrendingUp, Star, Upload } from "lucide-react";
+import { Sparkles, Loader2, TrendingUp, Star, Upload, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { z } from "zod";
 import { TrendDetailModal } from "@/components/TrendDetailModal";
@@ -84,6 +84,14 @@ export default function Analyzer() {
       .getPublicUrl(fileName);
 
     return publicUrl;
+  };
+
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleAnalyze = async (e: React.FormEvent) => {
@@ -219,12 +227,21 @@ export default function Analyzer() {
           </div>
 
           {imagePreview && (
-            <div className="aspect-square max-w-md mx-auto bg-muted rounded-lg overflow-hidden">
+            <div className="relative aspect-square max-w-md mx-auto bg-muted rounded-lg overflow-hidden group">
               <img
                 src={imagePreview}
                 alt="Outfit preview"
                 className="w-full h-full object-cover"
               />
+              <Button
+                type="button"
+                variant="destructive"
+                size="icon"
+                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={handleRemoveImage}
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
           )}
 
