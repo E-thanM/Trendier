@@ -185,7 +185,9 @@ Return 5-8 general search terms that would work well in Google Search.`;
     });
 
     if (!hashtagResponse.ok) {
-      throw new Error('Failed to extract search terms');
+      const errorText = await hashtagResponse.text();
+      console.error('Gemini API error for search terms:', hashtagResponse.status, errorText);
+      throw new Error(`Failed to extract search terms: ${hashtagResponse.status} - ${errorText}`);
     }
 
     const hashtagData = await hashtagResponse.json();
