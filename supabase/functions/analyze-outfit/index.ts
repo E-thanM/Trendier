@@ -116,12 +116,127 @@ serve(async (req) => {
       `${t.name} (${t.popularity_score}/100): ${t.description} - Tags: ${t.tags?.join(', ')}`
     ).join('\n') || 'No trends available';
 
-    console.log('Analyzing outfit with AI...');
+    console.log('Analyzing outfit with AI to extract hashtags...');
+
+    // Step 1: Extract fashion elements and convert to hashtags
+    const extractionPrompt = `Analyze this outfit image and extract fashion elements. For each element, provide a search-friendly hashtag.
+
+Focus on:
+- Clothing items (e.g., #croppedjacket, #widelegjeans)
+- Brands visible (e.g., #nike, #zara)
+- Colors (e.g., #allblack, #pastelcolors)
+- Styles/aesthetics (e.g., #streetwear, #y2k)
+- Patterns (e.g., #plaid, #florals)
+- Accessories (e.g., #sneakers, #sunglasses)
+
+Return 5-10 highly specific hashtags that would be used on TikTok/Instagram to search for similar fashion content.`;
+
+    const hashtagResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${lovableApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: extractionPrompt
+              },
+              {
+                type: 'image_url',
+                image_url: { url: imageUrl }
+              }
+            ]
+          }
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "extract_hashtags",
+              description: "Extract fashion hashtags from outfit",
+              parameters: {
+                type: "object",
+                properties: {
+                  hashtags: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "List of hashtags without # symbol"
+                  }
+                },
+                required: ["hashtags"],
+                additionalProperties: false
+              }
+            }
+          }
+        ],
+        tool_choice: { type: "function", function: { name: "extract_hashtags" } }
+      }),
+    });
+
+    if (!hashtagResponse.ok) {
+      throw new Error('Failed to extract hashtags');
+    }
+
+    const hashtagData = await hashtagResponse.json();
+    const hashtags = JSON.parse(hashtagData.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments || '{"hashtags":[]}').hashtags;
+    
+    console.log(`Extracted ${hashtags.length} hashtags:`, hashtags);
+
+    // Step 2: Search for trend data using Serper API (limited usage)
+    const SERPER_API_KEY = Deno.env.get('SERPER_API_KEY');
+    const trendSearchResults: any[] = [];
+
+    if (SERPER_API_KEY && hashtags.length > 0) {
+      console.log('Searching for trend data with Serper API...');
+      
+      // Search for top 3 hashtags to preserve API quota
+      for (const hashtag of hashtags.slice(0, 3)) {
+        try {
+          const searchQuery = `${hashtag} fashion trend tiktok`;
+          const response = await fetch('https://google.serper.dev/search', {
+            method: 'POST',
+            headers: {
+              'X-API-KEY': SERPER_API_KEY,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ q: searchQuery }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            const resultCount = data.searchInformation?.totalResults || 0;
+            
+            trendSearchResults.push({
+              hashtag,
+              resultCount: parseInt(resultCount),
+              topResult: data.organic?.[0]?.title || null,
+            });
+            
+            console.log(`Found ${resultCount} results for #${hashtag}`);
+          }
+          
+          // Small delay between requests
+          await new Promise(resolve => setTimeout(resolve, 300));
+        } catch (error) {
+          console.error(`Error searching for ${hashtag}:`, error);
+        }
+      }
+    }
+
+    console.log('Analyzing outfit against trends...');
 
     const systemPrompt = `You are a professional fashion analyst. Analyze outfits based on the user's target style and compare against current trends. 
 
 Current trending styles:
 ${trendsContext}
+
+Extracted outfit hashtags: ${hashtags.join(', ')}
 
 Provide detailed analysis of how well the outfit matches the user's intended style and current trends.`;
 
@@ -234,7 +349,10 @@ Provide detailed analysis of how well the outfit matches the user's intended sty
         rating: analysis.rating,
         trendMatch: analysis.trendMatchScore,
         feedback: analysis.styleAnalysis,
-        matchingTrends: analysis.matchedTrends
+        matchingTrends: analysis.matchedTrends,
+        extractedHashtags: hashtags,
+        trendSearchResults: trendSearchResults,
+        totalSearchResults: trendSearchResults.reduce((sum, r) => sum + r.resultCount, 0)
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

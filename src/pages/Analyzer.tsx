@@ -260,6 +260,66 @@ export default function Analyzer() {
             </Card>
           </div>
 
+          {result.extractedHashtags && result.extractedHashtags.length > 0 && (
+            <div className="mb-6">
+              <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm text-muted-foreground">
+                Extracted Fashion Elements
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {result.extractedHashtags.map((tag: string, index: number) => (
+                  <Badge 
+                    key={index} 
+                    variant="outline" 
+                    className="text-xs"
+                  >
+                    #{tag}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {result.trendSearchResults && result.trendSearchResults.length > 0 && (
+            <div className="mb-6">
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Trend Search Results
+              </h3>
+              <Card className="p-4 border-border bg-muted/30 mb-3">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-primary mb-1">
+                    {result.totalSearchResults?.toLocaleString() || 0}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Total search results found across all hashtags
+                  </div>
+                </div>
+              </Card>
+              <div className="space-y-2">
+                {result.trendSearchResults.map((searchResult: any, index: number) => (
+                  <Card key={index} className="p-3 border-border">
+                    <div className="flex items-center justify-between">
+                      <Badge variant="secondary" className="text-xs">
+                        #{searchResult.hashtag}
+                      </Badge>
+                      <div className="text-right">
+                        <div className="text-sm font-bold text-primary">
+                          {searchResult.resultCount?.toLocaleString() || 0}
+                        </div>
+                        <div className="text-xs text-muted-foreground">results</div>
+                      </div>
+                    </div>
+                    {searchResult.topResult && (
+                      <p className="text-xs text-muted-foreground mt-2 line-clamp-1">
+                        {searchResult.topResult}
+                      </p>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
           {result.feedback && (
             <div className="mb-4">
               <h3 className="font-semibold mb-2 text-sm text-muted-foreground">AI Feedback</h3>
