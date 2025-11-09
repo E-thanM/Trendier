@@ -124,43 +124,44 @@ export function AppSidebar() {
                   const isRestricted = ["Analyzer", "Messages", "Profile"].includes(item.title);
                   return (
                     <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild={!isRestricted} className="h-10">
-                        {isRestricted ? (
-                          <div
-                            onClick={(e) => handleRestrictedNavigation(item.url, item.title.toLowerCase(), e)}
-                            className="flex w-full h-10 items-center gap-2 rounded-md px-2 text-sm cursor-pointer hover:bg-muted transition-colors"
-                          >
-                            <item.icon className="h-4 w-4 shrink-0" />
-                            {!isCollapsed && <span className="truncate flex-1">{item.title}</span>}
-                            {item.title === "Messages" && unreadMessages > 0 && !isCollapsed && (
-                              <Badge 
-                                variant="destructive" 
-                                className="h-5 w-5 p-0 flex items-center justify-center text-xs shrink-0"
-                              >
-                                {unreadMessages}
-                              </Badge>
-                            )}
-                          </div>
-                        ) : (
-                          <NavLink
-                            to={item.url}
-                            end
-                            className="flex w-full h-10 items-center gap-2 rounded-md px-2 text-sm hover:bg-muted transition-colors"
-                            activeClassName="bg-muted font-medium"
-                          >
-                            <item.icon className="h-4 w-4 shrink-0" />
-                            {!isCollapsed && <span className="truncate flex-1">{item.title}</span>}
-                          </NavLink>
-                        )}
-                      </SidebarMenuButton>
+                      {isRestricted ? (
+                        <div
+                          onClick={(e) => handleRestrictedNavigation(item.url, item.title.toLowerCase(), e)}
+                          className="flex w-full h-10 items-center gap-2 rounded-md px-2 text-sm cursor-pointer hover:bg-muted transition-colors"
+                        >
+                          <item.icon className="h-4 w-4 shrink-0" />
+                          {!isCollapsed && <span className="truncate flex-1 leading-none">{item.title}</span>}
+                          {item.title === "Messages" && unreadMessages > 0 && !isCollapsed && (
+                            <Badge 
+                              variant="destructive" 
+                              className="h-5 w-5 p-0 flex items-center justify-center text-xs shrink-0"
+                            >
+                              {unreadMessages}
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <NavLink
+                          to={item.url}
+                          end
+                          className="flex w-full h-10 items-center gap-2 rounded-md px-2 text-sm hover:bg-muted transition-colors"
+                          activeClassName="bg-muted font-medium"
+                        >
+                          <item.icon className="h-4 w-4 shrink-0" />
+                          {!isCollapsed && <span className="truncate flex-1 leading-none">{item.title}</span>}
+                        </NavLink>
+                      )}
                     </SidebarMenuItem>
                   );
                 })}
                 <SidebarMenuItem>
-                  <SidebarMenuButton onClick={handleLogout} className="h-10">
+                  <button 
+                    onClick={handleLogout} 
+                    className="flex w-full h-10 items-center gap-2 rounded-md px-2 text-sm cursor-pointer hover:bg-muted transition-colors"
+                  >
                     <LogOut className="h-4 w-4 shrink-0" />
-                    {!isCollapsed && <span className="truncate flex-1">Logout</span>}
-                  </SidebarMenuButton>
+                    {!isCollapsed && <span className="truncate flex-1 leading-none">Logout</span>}
+                  </button>
                 </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
