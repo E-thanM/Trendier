@@ -290,7 +290,7 @@ export default function Analyzer() {
                   <Card key={index} className="p-3 border-border">
                     <div className="flex items-center justify-between mb-2">
                       <Badge variant="secondary" className="text-xs">
-                        #{estimate.hashtag}
+                        {estimate.searchTerm || estimate.hashtag}
                       </Badge>
                       <div className="text-right">
                         <div className="text-sm font-bold text-primary">
@@ -326,7 +326,7 @@ export default function Analyzer() {
               <Card className="p-4 border-primary/30 bg-gradient-to-br from-primary/5 to-secondary/5">
                 <div className="flex items-center justify-between mb-3">
                   <Badge className="text-sm">
-                    #{result.verifiedTopTrend.hashtag}
+                    {result.verifiedTopTrend.searchTerm || result.verifiedTopTrend.hashtag}
                   </Badge>
                   <div className="text-right">
                     <div className="text-2xl font-bold text-primary">

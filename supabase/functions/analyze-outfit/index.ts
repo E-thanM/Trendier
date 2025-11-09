@@ -118,18 +118,23 @@ serve(async (req) => {
 
     console.log('Analyzing outfit with AI to extract hashtags...');
 
-    // Step 1: Extract fashion elements and convert to hashtags
-    const extractionPrompt = `Analyze this outfit image and extract fashion elements. For each element, provide a search-friendly hashtag.
+    // Step 1: Extract fashion elements as general search terms (not specific hashtags)
+    const extractionPrompt = `Analyze this outfit image and extract BROAD fashion search terms that would yield the most search results on Google.
 
-Focus on:
-- Clothing items (e.g., #croppedjacket, #widelegjeans)
-- Brands visible (e.g., #nike, #zara)
-- Colors (e.g., #allblack, #pastelcolors)
-- Styles/aesthetics (e.g., #streetwear, #y2k)
-- Patterns (e.g., #plaid, #florals)
-- Accessories (e.g., #sneakers, #sunglasses)
+Focus on GENERAL categories, not specific hashtags:
+- Clothing items (e.g., "blazer", "jeans", "sneakers" - NOT specific styles)
+- Colors with item (e.g., "grey blazer", "red clothing", "black shoes")
+- Basic styles (e.g., "streetwear", "casual outfit", "formal wear")
+- General patterns (e.g., "striped shirt", "leather jacket")
 
-Return 5-10 highly specific hashtags that would be used on TikTok/Instagram to search for similar fashion content.`;
+Rules:
+1. Use 2-3 word phrases maximum
+2. Be BROAD not specific (e.g., "blazer" not "oversized cropped blazer")
+3. Include color + item combinations
+4. Avoid brand names unless extremely visible
+5. Focus on what would get most Google search volume
+
+Return 5-8 general search terms that would work well in Google Search.`;
 
     const hashtagResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -158,44 +163,44 @@ Return 5-10 highly specific hashtags that would be used on TikTok/Instagram to s
           {
             type: "function",
             function: {
-              name: "extract_hashtags",
-              description: "Extract fashion hashtags from outfit",
+              name: "extract_search_terms",
+              description: "Extract broad fashion search terms from outfit",
               parameters: {
                 type: "object",
                 properties: {
-                  hashtags: {
+                  searchTerms: {
                     type: "array",
                     items: { type: "string" },
-                    description: "List of hashtags without # symbol"
+                    description: "List of general search terms (2-3 words each)"
                   }
                 },
-                required: ["hashtags"],
+                required: ["searchTerms"],
                 additionalProperties: false
               }
             }
           }
         ],
-        tool_choice: { type: "function", function: { name: "extract_hashtags" } }
+        tool_choice: { type: "function", function: { name: "extract_search_terms" } }
       }),
     });
 
     if (!hashtagResponse.ok) {
-      throw new Error('Failed to extract hashtags');
+      throw new Error('Failed to extract search terms');
     }
 
     const hashtagData = await hashtagResponse.json();
-    const hashtags = JSON.parse(hashtagData.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments || '{"hashtags":[]}').hashtags;
+    const searchTerms = JSON.parse(hashtagData.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments || '{"searchTerms":[]}').searchTerms;
     
-    console.log(`Extracted ${hashtags.length} hashtags:`, hashtags);
+    console.log(`Extracted ${searchTerms.length} search terms:`, searchTerms);
 
     // Step 2: Use Gemini to estimate trend popularity (saves Serper API calls)
     console.log('Estimating trend popularity with Gemini...');
     
-    const trendEstimationPrompt = `Based on your knowledge of current fashion trends (as of your training data), estimate the popularity and relevance of these fashion hashtags on a scale of 0-100:
+    const trendEstimationPrompt = `Based on your knowledge of current fashion trends (as of your training data), estimate the popularity and relevance of these fashion search terms on a scale of 0-100:
 
-Hashtags: ${hashtags.join(', ')}
+Search terms: ${searchTerms.join(', ')}
 
-For each hashtag, provide:
+For each term, provide:
 1. Popularity score (0-100) - how trending is this term
 2. Brief context (why it's popular/not popular)
 3. Related trends
@@ -221,7 +226,7 @@ Use your knowledge of TikTok, Instagram fashion trends, runway shows, and street
             type: "function",
             function: {
               name: "estimate_trend_popularity",
-              description: "Estimate popularity of fashion hashtags",
+              description: "Estimate popularity of fashion search terms",
               parameters: {
                 type: "object",
                 properties: {
@@ -230,12 +235,12 @@ Use your knowledge of TikTok, Instagram fashion trends, runway shows, and street
                     items: {
                       type: "object",
                       properties: {
-                        hashtag: { type: "string" },
+                        searchTerm: { type: "string" },
                         popularityScore: { type: "number", minimum: 0, maximum: 100 },
                         context: { type: "string" },
                         relatedTrends: { type: "array", items: { type: "string" } }
                       },
-                      required: ["hashtag", "popularityScore", "context"]
+                      required: ["searchTerm", "popularityScore", "context"]
                     }
                   }
                 },
@@ -260,15 +265,15 @@ Use your knowledge of TikTok, Instagram fashion trends, runway shows, and street
     let verifiedTopTrend = null;
 
     if (SERPER_API_KEY && trendEstimates.length > 0) {
-      // Find highest scoring hashtag
+      // Find highest scoring search term
       const topEstimate = trendEstimates.reduce((max: any, curr: any) => 
         curr.popularityScore > max.popularityScore ? curr : max
       );
 
-      console.log(`Verifying top trend #${topEstimate.hashtag} with Serper API...`);
+      console.log(`Verifying top trend "${topEstimate.searchTerm}" with Serper API...`);
       
       try {
-        const searchQuery = `${topEstimate.hashtag} fashion trend tiktok 2025`;
+        const searchQuery = `${topEstimate.searchTerm} fashion trend 2025`;
         const response = await fetch('https://google.serper.dev/search', {
           method: 'POST',
           headers: {
@@ -283,13 +288,13 @@ Use your knowledge of TikTok, Instagram fashion trends, runway shows, and street
           const resultCount = data.searchInformation?.totalResults || 0;
           
           verifiedTopTrend = {
-            hashtag: topEstimate.hashtag,
+            searchTerm: topEstimate.searchTerm,
             resultCount: parseInt(resultCount),
             topResult: data.organic?.[0]?.title || null,
             estimatedScore: topEstimate.popularityScore
           };
           
-          console.log(`Verified: Found ${resultCount} results for #${topEstimate.hashtag}`);
+          console.log(`Verified: Found ${resultCount} results for "${topEstimate.searchTerm}"`);
         }
       } catch (error) {
         console.error('Error verifying top trend:', error);
@@ -303,7 +308,7 @@ Use your knowledge of TikTok, Instagram fashion trends, runway shows, and street
 Current trending styles:
 ${trendsContext}
 
-Extracted outfit hashtags: ${hashtags.join(', ')}
+Extracted outfit search terms: ${searchTerms.join(', ')}
 
 Provide detailed analysis of how well the outfit matches the user's intended style and current trends.`;
 
@@ -417,7 +422,7 @@ Provide detailed analysis of how well the outfit matches the user's intended sty
         trendMatch: analysis.trendMatchScore,
         feedback: analysis.styleAnalysis,
         matchingTrends: analysis.matchedTrends,
-        extractedHashtags: hashtags,
+        extractedHashtags: searchTerms,
         trendEstimates: trendEstimates,
         verifiedTopTrend: verifiedTopTrend
       }),
