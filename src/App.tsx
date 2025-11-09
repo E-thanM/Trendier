@@ -7,6 +7,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { BottomNav } from "@/components/BottomNav";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { useIsMobile } from "@/hooks/use-mobile";
 import Feed from "./pages/Feed";
 import Messages from "./pages/Messages";
 import Analyzer from "./pages/Analyzer";
@@ -17,22 +18,28 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const AppLayout = ({ children }: { children: React.ReactNode }) => (
-  <SidebarProvider>
-    <div className="min-h-screen flex w-full">
-      <AppSidebar />
-      <main className="flex-1 overflow-auto flex flex-col">
-        <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm border-b h-14 flex items-center px-4">
-          <SidebarTrigger />
-        </header>
-        <div className="flex-1">
-          {children}
-        </div>
-      </main>
-      <BottomNav />
-    </div>
-  </SidebarProvider>
-);
+const AppLayout = ({ children }: { children: React.ReactNode }) => {
+  const isMobile = useIsMobile();
+  
+  return (
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full">
+        {!isMobile && <AppSidebar />}
+        <main className="flex-1 overflow-auto flex flex-col">
+          {!isMobile && (
+            <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm border-b h-14 flex items-center px-4">
+              <SidebarTrigger />
+            </header>
+          )}
+          <div className="flex-1">
+            {children}
+          </div>
+        </main>
+        <BottomNav />
+      </div>
+    </SidebarProvider>
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
