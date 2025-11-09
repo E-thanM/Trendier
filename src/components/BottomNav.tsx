@@ -2,13 +2,15 @@ import { Home, MessageCircle, Sparkles, TrendingUp, User } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { Badge } from "@/components/ui/badge";
 import { useUnreadCounts } from "@/hooks/use-unread-counts";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 export function BottomNav() {
   const { unreadMessages } = useUnreadCounts();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
 
   const handleRestrictedNavigation = async (path: string, featureName: string) => {
@@ -48,14 +50,24 @@ export function BottomNav() {
         
         <button
           onClick={() => handleRestrictedNavigation("/analyzer", "the outfit analyzer")}
-          className="flex items-center justify-center p-3 rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+          className={cn(
+            "flex items-center justify-center p-3 rounded-lg transition-colors",
+            location.pathname === "/analyzer" 
+              ? "text-primary bg-primary/10" 
+              : "text-muted-foreground hover:text-foreground"
+          )}
         >
           <Sparkles className="h-5 w-5" />
         </button>
         
         <button
           onClick={() => handleRestrictedNavigation("/messages", "messages")}
-          className="flex items-center justify-center p-3 rounded-lg transition-colors text-muted-foreground hover:text-foreground relative"
+          className={cn(
+            "flex items-center justify-center p-3 rounded-lg transition-colors relative",
+            location.pathname === "/messages" 
+              ? "text-primary bg-primary/10" 
+              : "text-muted-foreground hover:text-foreground"
+          )}
         >
           <MessageCircle className="h-5 w-5" />
           {unreadMessages > 0 && (
@@ -70,7 +82,12 @@ export function BottomNav() {
         
         <button
           onClick={() => handleRestrictedNavigation("/profile", "your profile")}
-          className="flex items-center justify-center p-3 rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+          className={cn(
+            "flex items-center justify-center p-3 rounded-lg transition-colors",
+            location.pathname === "/profile" 
+              ? "text-primary bg-primary/10" 
+              : "text-muted-foreground hover:text-foreground"
+          )}
         >
           <User className="h-5 w-5" />
         </button>
