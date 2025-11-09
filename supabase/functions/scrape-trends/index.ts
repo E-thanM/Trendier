@@ -409,6 +409,45 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Check cache first - only scrape if trends are older than 7 days
+    const { data: cachedTrends, error: cacheError } = await supabase
+      .from('trends')
+      .select('created_at')
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    if (cachedTrends && cachedTrends.length > 0) {
+      const lastUpdate = new Date(cachedTrends[0].created_at);
+      
+      if (lastUpdate > sevenDaysAgo) {
+        console.log(`Using cached trends from ${lastUpdate.toISOString()} (less than 7 days old)`);
+        
+        const { data: existingTrends } = await supabase
+          .from('trends')
+          .select('*')
+          .order('popularity_score', { ascending: false });
+
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            trendsCount: existingTrends?.length || 0,
+            trends: existingTrends,
+            source: 'cache',
+            cached_since: lastUpdate.toISOString(),
+          }),
+          { 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200 
+          }
+        );
+      }
+    }
+
+    console.log('Cache expired or empty, scraping fresh trends...');
+
     let trendingStyles: any[];
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');

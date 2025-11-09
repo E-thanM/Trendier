@@ -3,15 +3,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TrendingUp, Loader2, Search, BarChart3 } from "lucide-react";
+import { TrendingUp, Loader2, Search, BarChart3, RefreshCw } from "lucide-react";
 import { TrendDetailModal } from "@/components/TrendDetailModal";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Trends() {
   const [trends, setTrends] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [scraping, setScraping] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTrend, setSelectedTrend] = useState<any>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchTrends();
@@ -73,20 +77,49 @@ export default function Trends() {
   };
 
   const scrapeTrends = async () => {
+    setScraping(true);
     try {
-      // First scrape/update trends (no authentication required)
-      const { error: invokeError } = await supabase.functions.invoke('scrape-trends');
+      toast({
+        title: "Refreshing trends...",
+        description: "Discovering latest fashion trends from TikTok and Google",
+      });
+
+      const { data, error: invokeError } = await supabase.functions.invoke('scrape-trends');
 
       if (invokeError) {
         console.error("Error invoking scrape-trends:", invokeError);
+        toast({
+          title: "Error refreshing trends",
+          description: invokeError.message,
+          variant: "destructive",
+        });
+      } else {
+        const source = data?.source || 'unknown';
+        const trendsCount = data?.trendsCount || 0;
+        
+        if (source === 'cache') {
+          toast({
+            title: "Using cached trends",
+            description: `${trendsCount} trends loaded from cache (less than 7 days old)`,
+          });
+        } else {
+          toast({
+            title: "Trends updated!",
+            description: `Successfully discovered ${trendsCount} fresh trends`,
+          });
+        }
       }
       
-      // Then fetch them
       await fetchTrends();
     } catch (error) {
       console.error("Error scraping trends:", error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh trends",
+        variant: "destructive",
+      });
     } finally {
-      setLoading(false);
+      setScraping(false);
     }
   };
 
@@ -113,14 +146,26 @@ export default function Trends() {
 
   return (
     <div className="max-w-4xl mx-auto p-4 pb-24 md:pb-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-1 flex items-center gap-2">
-          <TrendingUp className="h-6 w-6 text-primary" />
-          Fashion Trends
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Latest trends from TikTok & Instagram
-        </p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold mb-1 flex items-center gap-2">
+            <TrendingUp className="h-6 w-6 text-primary" />
+            Fashion Trends
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Latest trends from TikTok & Google
+          </p>
+        </div>
+        <Button 
+          onClick={scrapeTrends} 
+          disabled={scraping}
+          variant="outline"
+          size="sm"
+          className="gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${scraping ? 'animate-spin' : ''}`} />
+          {scraping ? 'Refreshing...' : 'Refresh'}
+        </Button>
       </div>
 
       <Tabs defaultValue="all" className="w-full">
