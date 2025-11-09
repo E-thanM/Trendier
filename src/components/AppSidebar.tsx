@@ -91,9 +91,9 @@ export function AppSidebar() {
   return (
     <>
       <Sidebar collapsible="icon" className="hidden md:flex">
-        <SidebarContent>
-          <div className="h-14 px-4 border-b flex items-center justify-between gap-3">
-            <h1 className={`font-bold text-xl ${isCollapsed ? "text-center" : ""}`}>
+        <SidebarContent className="flex flex-col h-full">
+          <div className="h-14 px-4 border-b flex items-center justify-between gap-2 shrink-0">
+            <h1 className={`font-bold text-xl transition-all ${isCollapsed ? "w-full text-center" : ""}`}>
               {isCollapsed ? "T" : "trendier"}
             </h1>
             
@@ -101,7 +101,7 @@ export function AppSidebar() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative h-8 w-8 hover:bg-muted"
+                className="relative h-8 w-8 hover:bg-muted shrink-0"
                 onClick={handleNotifications}
               >
                 <Bell className="h-4 w-4" />
@@ -117,62 +117,62 @@ export function AppSidebar() {
             )}
           </div>
 
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {items.map((item) => {
-                const isRestricted = ["Analyzer", "Messages", "Profile"].includes(item.title);
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild={!isRestricted}>
-                      {isRestricted ? (
-                        <div
-                          onClick={(e) => handleRestrictedNavigation(item.url, item.title.toLowerCase(), e)}
-                          className="cursor-pointer hover:bg-muted/50 relative"
-                        >
-                          <item.icon className="h-5 w-5" />
-                          {!isCollapsed && <span>{item.title}</span>}
-                          {item.title === "Messages" && unreadMessages > 0 && !isCollapsed && (
-                            <Badge 
-                              variant="destructive" 
-                              className="ml-auto h-5 w-5 p-0 flex items-center justify-center text-xs"
-                            >
-                              {unreadMessages}
-                            </Badge>
-                          )}
-                        </div>
-                      ) : (
-                        <NavLink
-                          to={item.url}
-                          end
-                          className="hover:bg-muted/50 relative"
-                          activeClassName="bg-muted font-medium"
-                        >
-                          <item.icon className="h-5 w-5" />
-                          {!isCollapsed && <span>{item.title}</span>}
-                        </NavLink>
-                      )}
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={handleLogout}>
-                  <LogOut className="h-5 w-5" />
-                  {!isCollapsed && <span>Logout</span>}
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-    </Sidebar>
-    
-    <SettingsSheet 
-      open={settingsOpen} 
-      onOpenChange={setSettingsOpen}
-      defaultTab={defaultTab}
-    />
-  </>
+          <SidebarGroup className="flex-1">
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-1">
+                {items.map((item) => {
+                  const isRestricted = ["Analyzer", "Messages", "Profile"].includes(item.title);
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild={!isRestricted}>
+                        {isRestricted ? (
+                          <div
+                            onClick={(e) => handleRestrictedNavigation(item.url, item.title.toLowerCase(), e)}
+                            className="cursor-pointer hover:bg-muted/50 relative w-full"
+                          >
+                            <item.icon className="h-5 w-5" />
+                            {!isCollapsed && <span>{item.title}</span>}
+                            {item.title === "Messages" && unreadMessages > 0 && !isCollapsed && (
+                              <Badge 
+                                variant="destructive" 
+                                className="ml-auto h-5 w-5 p-0 flex items-center justify-center text-xs"
+                              >
+                                {unreadMessages}
+                              </Badge>
+                            )}
+                          </div>
+                        ) : (
+                          <NavLink
+                            to={item.url}
+                            end
+                            className="hover:bg-muted/50 relative w-full"
+                            activeClassName="bg-muted font-medium"
+                          >
+                            <item.icon className="h-5 w-5" />
+                            {!isCollapsed && <span>{item.title}</span>}
+                          </NavLink>
+                        )}
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={handleLogout} className="w-full">
+                    <LogOut className="h-5 w-5" />
+                    {!isCollapsed && <span>Logout</span>}
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+      </Sidebar>
+      
+      <SettingsSheet 
+        open={settingsOpen} 
+        onOpenChange={setSettingsOpen}
+        defaultTab={defaultTab}
+      />
+    </>
   );
 }
