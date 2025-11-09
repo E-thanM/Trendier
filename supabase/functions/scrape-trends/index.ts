@@ -34,6 +34,83 @@ interface TikTokVideo {
 }
 
 /**
+ * Discovers trending fashion searches using Serper API
+ * Used sparingly to guide TikTok video analysis
+ */
+async function discoverTrendingFashionSearches(): Promise<string[]> {
+  const SERPER_API_KEY = Deno.env.get('SERPER_API_KEY');
+  
+  if (!SERPER_API_KEY) {
+    console.log('No SERPER_API_KEY found, skipping Google trends discovery');
+    return [];
+  }
+
+  try {
+    console.log('Discovering trending fashion searches with Serper API...');
+    
+    const trendingSearches: string[] = [];
+    
+    // Key fashion queries to check what's trending
+    const baseQueries = [
+      'fashion trends 2025',
+      'trending fashion style',
+      'viral fashion tiktok'
+    ];
+    
+    for (const query of baseQueries) {
+      const response = await fetch('https://google.serper.dev/search', {
+        method: 'POST',
+        headers: {
+          'X-API-KEY': SERPER_API_KEY,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ q: query }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Extract trending terms from search results
+        if (data.organic) {
+          for (const result of data.organic.slice(0, 3)) {
+            const title = result.title?.toLowerCase() || '';
+            const snippet = result.snippet?.toLowerCase() || '';
+            
+            // Extract fashion-related keywords
+            const text = `${title} ${snippet}`;
+            const fashionKeywords = text.match(/\b(?:style|trend|fashion|outfit|aesthetic|wear|clothing|look)\w*\b/gi);
+            
+            if (fashionKeywords) {
+              trendingSearches.push(...fashionKeywords.slice(0, 2));
+            }
+          }
+        }
+        
+        // Extract related searches
+        if (data.relatedSearches) {
+          for (const related of data.relatedSearches.slice(0, 3)) {
+            trendingSearches.push(related.query);
+          }
+        }
+      }
+      
+      // Small delay between requests
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    // Deduplicate and return
+    const uniqueSearches = [...new Set(trendingSearches)];
+    console.log(`Discovered ${uniqueSearches.length} trending fashion searches from Google`);
+    
+    return uniqueSearches.slice(0, 15); // Return top 15
+    
+  } catch (error) {
+    console.error('Serper API error:', error);
+    return [];
+  }
+}
+
+/**
  * Scrapes TikTok videos and analyzes actual visual content using AI
  * This is much more comprehensive than just hashtag scraping
  */
@@ -41,7 +118,16 @@ async function scrapeFashionVideosFromTikTok(lovableApiKey: string): Promise<any
   try {
     console.log('Starting comprehensive TikTok fashion video analysis...');
     
-    const searchTerms = generateSearchTerms();
+    // First, discover what's trending on Google (used sparingly)
+    const googleTrends = await discoverTrendingFashionSearches();
+    
+    // Combine generated terms with Google trends for maximum relevance
+    let searchTerms = generateSearchTerms();
+    
+    if (googleTrends.length > 0) {
+      console.log(`Prioritizing ${googleTrends.length} Google-discovered trends`);
+      searchTerms = [...googleTrends, ...searchTerms];
+    }
     const allVideos: TikTokVideo[] = [];
     const videoAnalyses: any[] = [];
     
