@@ -317,16 +317,66 @@ export default function Analyzer() {
             </div>
           )}
 
+          {result.googleTrendsData && result.googleTrendsData.length > 0 && (
+            <div className="mb-6">
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-chart-2" />
+                Google Trends Search Results
+              </h3>
+              <div className="space-y-3">
+                {result.googleTrendsData.map((trend: any, index: number) => (
+                  <Card key={index} className="p-4 border-chart-2/30 bg-gradient-to-br from-chart-2/5 to-chart-1/5">
+                    <div className="flex items-center justify-between mb-2">
+                      <Badge variant="outline" className="text-sm border-chart-2">
+                        #{trend.searchTerm}
+                      </Badge>
+                    </div>
+                    {trend.snippet && (
+                      <p className="text-xs text-muted-foreground mb-2 leading-relaxed">
+                        {trend.snippet}
+                      </p>
+                    )}
+                    {trend.trendingTopics && trend.trendingTopics.length > 0 && (
+                      <div className="space-y-1 mt-3">
+                        <div className="text-xs font-medium text-muted-foreground">
+                          Trending Topics:
+                        </div>
+                        {trend.trendingTopics.slice(0, 3).map((topic: string, i: number) => (
+                          <div key={i} className="text-xs pl-2 text-foreground/80">
+                            • {topic}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {trend.trendsUrl && (
+                      <a 
+                        href={trend.trendsUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-xs text-chart-2 hover:underline mt-2 inline-block"
+                      >
+                        View on Google Trends →
+                      </a>
+                    )}
+                  </Card>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2 text-center">
+                Google Trends data from Serper API
+              </p>
+            </div>
+          )}
+
           {result.verifiedTopTrend && (
             <div className="mb-6">
               <h3 className="font-semibold mb-3 flex items-center gap-2">
                 <TrendingUp className="h-4 w-4" />
-                Verified Top Trend (Google Search)
+                Top Verified Trend
               </h3>
               <Card className="p-4 border-primary/30 bg-gradient-to-br from-primary/5 to-secondary/5">
                 <div className="flex items-center justify-between mb-3">
                   <Badge className="text-sm">
-                    {result.verifiedTopTrend.searchTerm || result.verifiedTopTrend.hashtag}
+                    #{result.verifiedTopTrend.searchTerm || result.verifiedTopTrend.hashtag}
                   </Badge>
                   <div className="text-right">
                     <div className="text-2xl font-bold text-primary">
@@ -339,13 +389,28 @@ export default function Analyzer() {
                   AI Estimate: {result.verifiedTopTrend.estimatedScore}/100
                 </div>
                 {result.verifiedTopTrend.topResult && (
-                  <p className="text-xs text-muted-foreground line-clamp-2">
+                  <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
                     📰 {result.verifiedTopTrend.topResult}
                   </p>
                 )}
+                {result.verifiedTopTrend.trendingTopics && 
+                 result.verifiedTopTrend.trendingTopics.length > 0 && (
+                  <div className="mt-3 space-y-1">
+                    <div className="text-xs font-medium text-muted-foreground">
+                      Related Trending Topics from Google Trends:
+                    </div>
+                    <div className="flex gap-1 flex-wrap">
+                      {result.verifiedTopTrend.trendingTopics.slice(0, 3).map((topic: string, i: number) => (
+                        <span key={i} className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                          {topic}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </Card>
               <p className="text-xs text-muted-foreground mt-2 text-center">
-                Only 1 Serper API call used (saved your quota!)
+                Final verification search with Serper API
               </p>
             </div>
           )}

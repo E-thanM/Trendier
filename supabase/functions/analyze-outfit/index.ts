@@ -259,45 +259,93 @@ Use your knowledge of TikTok, Instagram fashion trends, runway shows, and street
 
     console.log('Trend estimates:', trendEstimates);
 
-    // Step 3: Only use Serper API for top trending item (saves quota)
+    // Step 3: Query Google Trends through Serper, then verify top trend
     const SERPER_API_KEY = Deno.env.get('SERPER_API_KEY');
-    const trendSearchResults: any[] = [];
+    const googleTrendsData: any[] = [];
     let verifiedTopTrend = null;
 
-    if (SERPER_API_KEY && trendEstimates.length > 0) {
-      // Find highest scoring search term
-      const topEstimate = trendEstimates.reduce((max: any, curr: any) => 
-        curr.popularityScore > max.popularityScore ? curr : max
-      );
-
-      console.log(`Verifying top trend "${topEstimate.searchTerm}" with Serper API...`);
+    if (SERPER_API_KEY && searchTerms.length > 0) {
+      console.log('Querying Google Trends for search terms...');
       
-      try {
-        const searchQuery = `${topEstimate.searchTerm} fashion trend 2025`;
-        const response = await fetch('https://google.serper.dev/search', {
-          method: 'POST',
-          headers: {
-            'X-API-KEY': SERPER_API_KEY,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ q: searchQuery }),
-        });
+      // For each search term, query Google Trends to get trending information
+      for (const term of searchTerms) {
+        try {
+          const trendsQuery = `${term} fashion trends site:trends.google.com`;
+          console.log(`Searching Google Trends for: ${term}`);
+          
+          const trendsResponse = await fetch('https://google.serper.dev/search', {
+            method: 'POST',
+            headers: {
+              'X-API-KEY': SERPER_API_KEY,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+              q: trendsQuery,
+              num: 5  // Get top 5 results from Google Trends
+            }),
+          });
 
-        if (response.ok) {
-          const data = await response.json();
-          const resultCount = data.searchInformation?.totalResults || 0;
+          if (trendsResponse.ok) {
+            const trendsData = await trendsResponse.json();
+            const trendingResults = trendsData.organic?.slice(0, 3) || [];
+            
+            googleTrendsData.push({
+              searchTerm: term,
+              trendsUrl: trendingResults[0]?.link || null,
+              trendingTopics: trendingResults.map((r: any) => r.title || ''),
+              snippet: trendingResults[0]?.snippet || ''
+            });
+            
+            console.log(`Found ${trendingResults.length} trending topics for "${term}"`);
+          }
           
-          verifiedTopTrend = {
-            searchTerm: topEstimate.searchTerm,
-            resultCount: parseInt(resultCount),
-            topResult: data.organic?.[0]?.title || null,
-            estimatedScore: topEstimate.popularityScore
-          };
-          
-          console.log(`Verified: Found ${resultCount} results for "${topEstimate.searchTerm}"`);
+          // Add small delay to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (error) {
+          console.error(`Error querying trends for "${term}":`, error);
         }
-      } catch (error) {
-        console.error('Error verifying top trend:', error);
+      }
+
+      // Step 4: Verify the top trending term with a final Serper search
+      if (trendEstimates.length > 0) {
+        const topEstimate = trendEstimates.reduce((max: any, curr: any) => 
+          curr.popularityScore > max.popularityScore ? curr : max
+        );
+
+        console.log(`Verifying top trend "${topEstimate.searchTerm}" with final search...`);
+        
+        try {
+          const searchQuery = `${topEstimate.searchTerm} fashion 2025`;
+          const response = await fetch('https://google.serper.dev/search', {
+            method: 'POST',
+            headers: {
+              'X-API-KEY': SERPER_API_KEY,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ q: searchQuery }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            const resultCount = data.searchInformation?.totalResults || 0;
+            
+            // Find Google Trends data for this term
+            const trendsInfo = googleTrendsData.find(t => t.searchTerm === topEstimate.searchTerm);
+            
+            verifiedTopTrend = {
+              searchTerm: topEstimate.searchTerm,
+              resultCount: parseInt(resultCount),
+              topResult: data.organic?.[0]?.title || null,
+              estimatedScore: topEstimate.popularityScore,
+              trendsUrl: trendsInfo?.trendsUrl || null,
+              trendingTopics: trendsInfo?.trendingTopics || []
+            };
+            
+            console.log(`Verified: Found ${resultCount} results for "${topEstimate.searchTerm}"`);
+          }
+        } catch (error) {
+          console.error('Error verifying top trend:', error);
+        }
       }
     }
 
@@ -424,6 +472,7 @@ Provide detailed analysis of how well the outfit matches the user's intended sty
         matchingTrends: analysis.matchedTrends,
         extractedHashtags: searchTerms,
         trendEstimates: trendEstimates,
+        googleTrendsData: googleTrendsData,
         verifiedTopTrend: verifiedTopTrend
       }),
       {
