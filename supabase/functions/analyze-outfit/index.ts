@@ -188,44 +188,111 @@ Return 5-10 highly specific hashtags that would be used on TikTok/Instagram to s
     
     console.log(`Extracted ${hashtags.length} hashtags:`, hashtags);
 
-    // Step 2: Search for trend data using Serper API (limited usage)
+    // Step 2: Use Gemini to estimate trend popularity (saves Serper API calls)
+    console.log('Estimating trend popularity with Gemini...');
+    
+    const trendEstimationPrompt = `Based on your knowledge of current fashion trends (as of your training data), estimate the popularity and relevance of these fashion hashtags on a scale of 0-100:
+
+Hashtags: ${hashtags.join(', ')}
+
+For each hashtag, provide:
+1. Popularity score (0-100) - how trending is this term
+2. Brief context (why it's popular/not popular)
+3. Related trends
+
+Use your knowledge of TikTok, Instagram fashion trends, runway shows, and street style.`;
+
+    const estimationResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${lovableApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          {
+            role: 'user',
+            content: trendEstimationPrompt
+          }
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "estimate_trend_popularity",
+              description: "Estimate popularity of fashion hashtags",
+              parameters: {
+                type: "object",
+                properties: {
+                  estimates: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        hashtag: { type: "string" },
+                        popularityScore: { type: "number", minimum: 0, maximum: 100 },
+                        context: { type: "string" },
+                        relatedTrends: { type: "array", items: { type: "string" } }
+                      },
+                      required: ["hashtag", "popularityScore", "context"]
+                    }
+                  }
+                },
+                required: ["estimates"],
+                additionalProperties: false
+              }
+            }
+          }
+        ],
+        tool_choice: { type: "function", function: { name: "estimate_trend_popularity" } }
+      }),
+    });
+
+    const estimationData = await estimationResponse.json();
+    const trendEstimates = JSON.parse(estimationData.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments || '{"estimates":[]}').estimates;
+
+    console.log('Trend estimates:', trendEstimates);
+
+    // Step 3: Only use Serper API for top trending item (saves quota)
     const SERPER_API_KEY = Deno.env.get('SERPER_API_KEY');
     const trendSearchResults: any[] = [];
+    let verifiedTopTrend = null;
 
-    if (SERPER_API_KEY && hashtags.length > 0) {
-      console.log('Searching for trend data with Serper API...');
+    if (SERPER_API_KEY && trendEstimates.length > 0) {
+      // Find highest scoring hashtag
+      const topEstimate = trendEstimates.reduce((max: any, curr: any) => 
+        curr.popularityScore > max.popularityScore ? curr : max
+      );
+
+      console.log(`Verifying top trend #${topEstimate.hashtag} with Serper API...`);
       
-      // Search for top 3 hashtags to preserve API quota
-      for (const hashtag of hashtags.slice(0, 3)) {
-        try {
-          const searchQuery = `${hashtag} fashion trend tiktok`;
-          const response = await fetch('https://google.serper.dev/search', {
-            method: 'POST',
-            headers: {
-              'X-API-KEY': SERPER_API_KEY,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ q: searchQuery }),
-          });
+      try {
+        const searchQuery = `${topEstimate.hashtag} fashion trend tiktok 2025`;
+        const response = await fetch('https://google.serper.dev/search', {
+          method: 'POST',
+          headers: {
+            'X-API-KEY': SERPER_API_KEY,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ q: searchQuery }),
+        });
 
-          if (response.ok) {
-            const data = await response.json();
-            const resultCount = data.searchInformation?.totalResults || 0;
-            
-            trendSearchResults.push({
-              hashtag,
-              resultCount: parseInt(resultCount),
-              topResult: data.organic?.[0]?.title || null,
-            });
-            
-            console.log(`Found ${resultCount} results for #${hashtag}`);
-          }
+        if (response.ok) {
+          const data = await response.json();
+          const resultCount = data.searchInformation?.totalResults || 0;
           
-          // Small delay between requests
-          await new Promise(resolve => setTimeout(resolve, 300));
-        } catch (error) {
-          console.error(`Error searching for ${hashtag}:`, error);
+          verifiedTopTrend = {
+            hashtag: topEstimate.hashtag,
+            resultCount: parseInt(resultCount),
+            topResult: data.organic?.[0]?.title || null,
+            estimatedScore: topEstimate.popularityScore
+          };
+          
+          console.log(`Verified: Found ${resultCount} results for #${topEstimate.hashtag}`);
         }
+      } catch (error) {
+        console.error('Error verifying top trend:', error);
       }
     }
 
@@ -351,8 +418,8 @@ Provide detailed analysis of how well the outfit matches the user's intended sty
         feedback: analysis.styleAnalysis,
         matchingTrends: analysis.matchedTrends,
         extractedHashtags: hashtags,
-        trendSearchResults: trendSearchResults,
-        totalSearchResults: trendSearchResults.reduce((sum, r) => sum + r.resultCount, 0)
+        trendEstimates: trendEstimates,
+        verifiedTopTrend: verifiedTopTrend
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -279,44 +279,74 @@ export default function Analyzer() {
             </div>
           )}
 
-          {result.trendSearchResults && result.trendSearchResults.length > 0 && (
+          {result.trendEstimates && result.trendEstimates.length > 0 && (
             <div className="mb-6">
               <h3 className="font-semibold mb-3 flex items-center gap-2">
                 <TrendingUp className="h-4 w-4" />
-                Trend Search Results
+                AI Trend Analysis (Gemini Estimates)
               </h3>
-              <Card className="p-4 border-border bg-muted/30 mb-3">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-primary mb-1">
-                    {result.totalSearchResults?.toLocaleString() || 0}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    Total search results found across all hashtags
-                  </div>
-                </div>
-              </Card>
               <div className="space-y-2">
-                {result.trendSearchResults.map((searchResult: any, index: number) => (
+                {result.trendEstimates.map((estimate: any, index: number) => (
                   <Card key={index} className="p-3 border-border">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mb-2">
                       <Badge variant="secondary" className="text-xs">
-                        #{searchResult.hashtag}
+                        #{estimate.hashtag}
                       </Badge>
                       <div className="text-right">
                         <div className="text-sm font-bold text-primary">
-                          {searchResult.resultCount?.toLocaleString() || 0}
+                          {estimate.popularityScore}/100
                         </div>
-                        <div className="text-xs text-muted-foreground">results</div>
+                        <div className="text-xs text-muted-foreground">popularity</div>
                       </div>
                     </div>
-                    {searchResult.topResult && (
-                      <p className="text-xs text-muted-foreground mt-2 line-clamp-1">
-                        {searchResult.topResult}
-                      </p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {estimate.context}
+                    </p>
+                    {estimate.relatedTrends && estimate.relatedTrends.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {estimate.relatedTrends.map((trend: string, i: number) => (
+                          <span key={i} className="text-xs bg-accent/50 px-2 py-0.5 rounded">
+                            {trend}
+                          </span>
+                        ))}
+                      </div>
                     )}
                   </Card>
                 ))}
               </div>
+            </div>
+          )}
+
+          {result.verifiedTopTrend && (
+            <div className="mb-6">
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Verified Top Trend (Google Search)
+              </h3>
+              <Card className="p-4 border-primary/30 bg-gradient-to-br from-primary/5 to-secondary/5">
+                <div className="flex items-center justify-between mb-3">
+                  <Badge className="text-sm">
+                    #{result.verifiedTopTrend.hashtag}
+                  </Badge>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-primary">
+                      {result.verifiedTopTrend.resultCount?.toLocaleString() || 0}
+                    </div>
+                    <div className="text-xs text-muted-foreground">search results</div>
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground mb-2">
+                  AI Estimate: {result.verifiedTopTrend.estimatedScore}/100
+                </div>
+                {result.verifiedTopTrend.topResult && (
+                  <p className="text-xs text-muted-foreground line-clamp-2">
+                    📰 {result.verifiedTopTrend.topResult}
+                  </p>
+                )}
+              </Card>
+              <p className="text-xs text-muted-foreground mt-2 text-center">
+                Only 1 Serper API call used (saved your quota!)
+              </p>
             </div>
           )}
 
