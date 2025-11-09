@@ -571,15 +571,92 @@ function extractTrendsFromTikTokData(tiktokData: any[]): any[] {
     .slice(0, 15); // Top 15 trends
 }
 
-async function enrichTrendsWithGoogleData(trends: any[]): Promise<TrendWithHistory[]> {
-  // Use TikTok data directly - Google Trends API requires paid access
-  // TikTok view counts are already a strong indicator of popularity
-  return trends.map(trend => {
-    return {
+async function enhanceTrendsWithAI(trends: any[]): Promise<TrendWithHistory[]> {
+  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+  
+  if (!LOVABLE_API_KEY) {
+    console.log('No LOVABLE_API_KEY found, using basic descriptions');
+    return trends.map(trend => ({
       ...trend,
-      source: 'TikTok Real-time Data'
-    };
-  });
+      source: 'TikTok Fashion Data'
+    }));
+  }
+
+  console.log('Enhancing trends with AI fashion analysis...');
+  
+  const enhancedTrends = [];
+  
+  for (const trend of trends) {
+    try {
+      const prompt = `Analyze this fashion trend: "${trend.name}"
+
+Current basic description: ${trend.description}
+
+Provide a detailed, fashion-expert analysis covering:
+1. Key clothing items and pieces that define this trend (specific items, cuts, silhouettes)
+2. Common brands or design aesthetics associated with it
+3. How to style this trend (layering, combinations, accessories)
+4. Color palettes and fabrics typically used
+5. Celebrity or influencer associations
+6. Where this trend is most popular (runway, street style, social media)
+7. Styling tips and how to incorporate it into everyday wear
+
+Make it detailed, specific, and actionable for someone wanting to adopt this style. Focus on FASHION details, not just social media popularity.`;
+
+      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a fashion expert analyst. Provide detailed, specific fashion insights about trends, clothing items, styling, and brands. Focus on actionable fashion advice.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          max_tokens: 500
+        }),
+      });
+
+      if (response.ok) {
+        const aiData = await response.json();
+        const enhancedDescription = aiData.choices?.[0]?.message?.content || trend.description;
+        
+        enhancedTrends.push({
+          ...trend,
+          description: enhancedDescription,
+          source: 'AI-Enhanced Fashion Analysis'
+        });
+        
+        console.log(`Enhanced trend: ${trend.name}`);
+      } else {
+        console.error(`Failed to enhance trend ${trend.name}: ${response.status}`);
+        enhancedTrends.push({
+          ...trend,
+          source: 'TikTok Fashion Data'
+        });
+      }
+      
+      // Small delay between AI calls to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+    } catch (error) {
+      console.error(`Error enhancing trend ${trend.name}:`, error);
+      enhancedTrends.push({
+        ...trend,
+        source: 'TikTok Fashion Data'
+      });
+    }
+  }
+  
+  return enhancedTrends;
 }
 
 serve(async (req) => {
@@ -600,12 +677,12 @@ serve(async (req) => {
       console.log('Scraping real trends from TikTok...');
       const tiktokData = await scrapeTrendsFromTikTok();
       let extractedTrends = extractTrendsFromTikTokData(tiktokData);
-      trendingStyles = await enrichTrendsWithGoogleData(extractedTrends);
-      console.log(`Extracted ${trendingStyles.length} trends from TikTok + Google Trends`);
+      trendingStyles = await enhanceTrendsWithAI(extractedTrends);
+      console.log(`Extracted and enhanced ${trendingStyles.length} fashion trends`);
     } catch (tiktokError) {
       console.error('TikTok scraping failed, falling back to default trends:', tiktokError);
       const defaultTrends = getDefaultTrends();
-      trendingStyles = await enrichTrendsWithGoogleData(defaultTrends);
+      trendingStyles = await enhanceTrendsWithAI(defaultTrends);
     }
 
     // Insert trends into database (cleaned data only)

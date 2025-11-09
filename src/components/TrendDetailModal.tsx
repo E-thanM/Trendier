@@ -129,13 +129,15 @@ export function TrendDetailModal({ trend, open, onOpenChange }: TrendDetailModal
           </div>
 
           {/* Description */}
-          <div>
-            <h3 className="font-semibold mb-2 text-sm text-muted-foreground flex items-center gap-2">
+          <Card className="p-5 border-border bg-muted/30">
+            <h3 className="font-semibold mb-3 text-sm text-muted-foreground flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              About this trend
+              Fashion Analysis
             </h3>
-            <p className="text-sm leading-relaxed">{trend.description}</p>
-          </div>
+            <div className="prose prose-sm dark:prose-invert max-w-none">
+              <p className="text-sm leading-relaxed whitespace-pre-line">{trend.description}</p>
+            </div>
+          </Card>
 
           {/* Popularity Chart */}
           <div>
