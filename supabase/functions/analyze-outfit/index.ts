@@ -1,11 +1,39 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const requestSchema = z.object({
+  imageUrl: z.string()
+    .url('Invalid URL format')
+    .max(2000, 'URL too long')
+    .refine(
+      (url) => {
+        try {
+          const parsed = new URL(url);
+          return parsed.protocol === 'https:' && 
+                 parsed.hostname.includes('.supabase.co') &&
+                 parsed.pathname.includes('/storage/v1/object/public/outfits/');
+        } catch {
+          return false;
+        }
+      },
+      'Only images from Supabase storage are allowed'
+    ),
+  targetStyle: z.string()
+    .trim()
+    .min(1, 'Target style is required')
+    .max(200, 'Target style must be 200 characters or less')
+    .regex(
+      /^[a-zA-Z0-9\s,.-]+$/,
+      'Only letters, numbers, spaces, commas, periods, and hyphens are allowed'
+    )
+});
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -44,11 +72,26 @@ serve(async (req) => {
 
     console.log(`Request from authenticated user: ${user.id}`);
 
-    const { imageUrl, targetStyle } = await req.json();
+    const body = await req.json();
+    const validation = requestSchema.safeParse(body);
     
-    if (!imageUrl || !targetStyle) {
-      throw new Error('Image URL and target style are required');
+    if (!validation.success) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid input',
+          details: validation.error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message
+          }))
+        }),
+        { 
+          status: 400, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
+    
+    const { imageUrl, targetStyle } = validation.data;
 
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
     if (!lovableApiKey) {

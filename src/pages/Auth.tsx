@@ -28,8 +28,20 @@ export default function Auth() {
     checkAuth();
   }, [navigate]);
 
-  const handleGuestMode = () => {
-    localStorage.setItem("guestMode", "true");
+  const handleGuestMode = async () => {
+    setLoading(true);
+    const { error } = await supabase.auth.signInAnonymously();
+    
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Could not start guest session. Please try again.",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+    
     navigate("/");
   };
 

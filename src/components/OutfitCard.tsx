@@ -52,9 +52,8 @@ export const OutfitCard = ({ outfit, isLiked, onLikeToggle }: OutfitCardProps) =
 
   const handleCommentsOpen = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    const isGuest = localStorage.getItem("guestMode") === "true";
     
-    if (!user || isGuest) {
+    if (!user || user.is_anonymous) {
       toast({
         title: "Sign up required",
         description: "Create an account to comment on outfits",
@@ -71,9 +70,8 @@ export const OutfitCard = ({ outfit, isLiked, onLikeToggle }: OutfitCardProps) =
     setIsLiking(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      const isGuest = localStorage.getItem("guestMode") === "true";
       
-      if (!user || isGuest) {
+      if (!user || user.is_anonymous) {
         toast({
           title: "Sign up required",
           description: "Create an account to like outfits",
@@ -182,9 +180,8 @@ export const OutfitCard = ({ outfit, isLiked, onLikeToggle }: OutfitCardProps) =
             className="hover:scale-110 transition-transform"
             onClick={async () => {
               const { data: { user } } = await supabase.auth.getUser();
-              const isGuest = localStorage.getItem("guestMode") === "true";
               
-              if (!user || isGuest) {
+              if (!user || user.is_anonymous) {
                 toast({
                   title: "Sign up required",
                   description: "Create an account to share outfits",

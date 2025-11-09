@@ -13,9 +13,8 @@ export function BottomNav() {
 
   const handleRestrictedNavigation = async (path: string, featureName: string) => {
     const { data: { user } } = await supabase.auth.getUser();
-    const isGuest = localStorage.getItem("guestMode") === "true";
     
-    if (!user || isGuest) {
+    if (!user || user.is_anonymous) {
       toast({
         title: "Sign up required",
         description: `Create an account to access ${featureName}`,

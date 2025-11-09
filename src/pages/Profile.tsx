@@ -51,9 +51,8 @@ export default function Profile() {
 
   const initProfile = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    const isGuest = localStorage.getItem("guestMode") === "true";
     
-    if (user) {
+    if (user && !user.is_anonymous) {
       setIsAuthenticated(true);
       setCurrentUserId(user.id);
       const userId = searchParams.get('user');
@@ -70,22 +69,22 @@ export default function Profile() {
       if (userId && userId !== user.id) {
         checkFollowStatus(userId);
       }
-    } else if (isGuest) {
+    } else if (user && user.is_anonymous) {
       setIsAuthenticated(false);
       const userId = searchParams.get('user');
       
       if (userId) {
-        // Guest viewing someone else's profile
+        // Anonymous user viewing someone else's profile
         await Promise.all([
           fetchProfile(),
           fetchUserOutfits()
         ]);
       } else {
-        // Guest trying to view their own profile - show auth prompt
+        // Anonymous user trying to view their own profile - show auth prompt
         setLoading(false);
       }
     } else {
-      // Not authenticated and not guest - show auth prompt
+      // Not authenticated - show auth prompt
       setIsAuthenticated(false);
       setLoading(false);
     }
@@ -227,9 +226,8 @@ export default function Profile() {
 
   const fetchProfile = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    const isGuest = localStorage.getItem("guestMode") === "true";
     
-    if (!user && !isGuest) return;
+    if (!user) return;
 
     const userId = searchParams.get('user') || (user?.id);
     if (!userId) return;
@@ -444,11 +442,11 @@ export default function Profile() {
         <Card className="p-8 text-center border-border">
           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center ring-2 ring-primary/20 mx-auto mb-6">
             <span className="text-3xl font-bold text-primary">
-              {localStorage.getItem("guestMode") === "true" ? "G" : "?"}
+              G
             </span>
           </div>
           <h2 className="text-2xl font-bold mb-2">
-            {localStorage.getItem("guestMode") === "true" ? "Guest Mode" : "Sign In Required"}
+            Guest Mode
           </h2>
           <p className="text-muted-foreground mb-6 max-w-md mx-auto">
             Create an account to upload outfits, interact with the community, save your favorite styles, and personalize your fashion experience.

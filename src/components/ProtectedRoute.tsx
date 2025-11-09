@@ -13,8 +13,7 @@ export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    const isGuest = localStorage.getItem("guestMode") === "true";
-    setAuthenticated(!!session || isGuest);
+    setAuthenticated(!!session);
     setLoading(false);
   };
 

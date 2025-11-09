@@ -83,13 +83,12 @@ export default function Feed() {
   const fetchOutfits = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      const isGuest = !user && localStorage.getItem("guestMode") === "true";
 
       let preferences = null;
       let interactions = null;
 
-      // Only fetch user-specific data if authenticated
-      if (user) {
+      // Only fetch user-specific data if authenticated and not anonymous
+      if (user && !user.is_anonymous) {
         // Fetch user preferences
         const { data: preferencesData } = await supabase
           .from('user_preferences')

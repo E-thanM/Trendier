@@ -17,9 +17,8 @@ export function FeedHeader() {
 
   const handleMessagesClick = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    const isGuest = localStorage.getItem("guestMode") === "true";
     
-    if (!user || isGuest) {
+    if (!user || user.is_anonymous) {
       toast({
         title: "Sign up required",
         description: "Create an account to access messages",
@@ -32,9 +31,8 @@ export function FeedHeader() {
 
   const handleNotificationsClick = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    const isGuest = localStorage.getItem("guestMode") === "true";
     
-    if (!user || isGuest) {
+    if (!user || user.is_anonymous) {
       toast({
         title: "Sign up required",
         description: "Create an account to access notifications",
