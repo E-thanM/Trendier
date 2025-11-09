@@ -28,23 +28,32 @@ export default function Analyzer() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Check file extension first
+      const fileName = file.name.toLowerCase();
+      const supportedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+      const hasValidExtension = supportedExtensions.some(ext => fileName.endsWith(ext));
+      
+      if (!hasValidExtension) {
+        toast({
+          title: "Unsupported Format",
+          description: "Please use JPG, PNG, WEBP, or GIF format. AVIF and HEIC are not supported.",
+          variant: "destructive",
+        });
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+        return;
+      }
+      
       if (!file.type.startsWith('image/')) {
         toast({
           title: "Invalid File",
           description: "Please select an image file",
           variant: "destructive",
         });
-        return;
-      }
-      
-      // Check for unsupported formats
-      const supportedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-      if (!supportedTypes.includes(file.type)) {
-        toast({
-          title: "Unsupported Format",
-          description: "Please use JPG, PNG, WEBP, or GIF format. AVIF and HEIC are not supported.",
-          variant: "destructive",
-        });
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
         return;
       }
       
@@ -192,7 +201,7 @@ export default function Analyzer() {
               ref={fileInputRef}
               id="imageFile"
               type="file"
-              accept="image/*"
+              accept=".jpg,.jpeg,.png,.gif,.webp"
               onChange={handleFileChange}
               required
               className="hidden"
