@@ -17,7 +17,8 @@ export function useUnreadCounts() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
         fetchUnreadCounts();
       })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversation_participants' }, () => {
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversation_participants' }, (payload) => {
+        console.log('Participant updated, refetching counts:', payload);
         fetchUnreadCounts();
       })
       .subscribe();
@@ -26,9 +27,13 @@ export function useUnreadCounts() {
     const handleFocus = () => fetchUnreadCounts();
     window.addEventListener('focus', handleFocus);
 
+    // Refetch every 5 seconds as a fallback
+    const interval = setInterval(fetchUnreadCounts, 5000);
+
     return () => {
       supabase.removeChannel(messagesChannel);
       window.removeEventListener('focus', handleFocus);
+      clearInterval(interval);
     };
   }, []);
 
