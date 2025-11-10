@@ -110,9 +110,7 @@ serve(async (req) => {
     }
 
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
-    if (!geminiApiKey) {
-      throw new Error('GEMINI_API_KEY is not configured');
-    }
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
 
     console.log('Fetching current trends...');
     
@@ -162,43 +160,106 @@ Return 5-8 general search terms that would work well in Google Search.`;
     }
     const base64Image1 = btoa(binaryString1);
 
-    const hashtagResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: extractionPrompt },
-            {
-              inline_data: {
-                mime_type: "image/jpeg",
-                data: base64Image1
-              }
-            }
-          ]
-        }],
-        generationConfig: {
-          temperature: 0.4,
-          topK: 32,
-          topP: 1,
-          maxOutputTokens: 2048,
-          responseMimeType: "application/json"
-        }
-      }),
-    });
+    let searchTerms: string[] = [];
 
-    if (!hashtagResponse.ok) {
-      const errorText = await hashtagResponse.text();
-      console.error('Gemini API error for search terms:', hashtagResponse.status, errorText);
-      throw new Error(`Failed to extract search terms: ${hashtagResponse.status} - ${errorText}`);
+    // Try Gemini first
+    if (geminiApiKey) {
+      try {
+        const hashtagResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: extractionPrompt },
+                {
+                  inline_data: {
+                    mime_type: "image/jpeg",
+                    data: base64Image1
+                  }
+                }
+              ]
+            }],
+            generationConfig: {
+              temperature: 0.4,
+              topK: 32,
+              topP: 1,
+              maxOutputTokens: 2048,
+              responseMimeType: "application/json"
+            }
+          }),
+        });
+
+        if (hashtagResponse.ok) {
+          const hashtagData = await hashtagResponse.json();
+          searchTerms = JSON.parse(hashtagData.candidates?.[0]?.content?.parts?.[0]?.text || '{"searchTerms":[]}').searchTerms;
+          console.log(`✅ Gemini extracted ${searchTerms.length} search terms:`, searchTerms);
+        } else if (hashtagResponse.status === 429) {
+          console.log(`⚠️ Gemini rate limit hit for extraction, falling back to Lovable AI`);
+        }
+      } catch (error) {
+        console.log(`⚠️ Gemini failed for extraction, trying Lovable AI:`, error);
+      }
     }
 
-    const hashtagData = await hashtagResponse.json();
-    const searchTerms = JSON.parse(hashtagData.candidates?.[0]?.content?.parts?.[0]?.text || '{"searchTerms":[]}').searchTerms;
-    
-    console.log(`Extracted ${searchTerms.length} search terms:`, searchTerms);
+    // Fallback to Lovable AI if Gemini fails
+    if (searchTerms.length === 0 && lovableApiKey) {
+      try {
+        const lovableResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${lovableApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages: [{
+              role: 'user',
+              content: [
+                { type: 'text', text: extractionPrompt },
+                { type: 'image_url', image_url: { url: imageUrl } }
+              ]
+            }],
+            tools: [{
+              type: "function",
+              function: {
+                name: "extract_search_terms",
+                description: "Extract fashion search terms",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    searchTerms: {
+                      type: "array",
+                      items: { type: "string" }
+                    }
+                  },
+                  required: ["searchTerms"]
+                }
+              }
+            }],
+            tool_choice: { type: "function", function: { name: "extract_search_terms" } }
+          }),
+        });
+
+        if (lovableResponse.ok) {
+          const lovableData = await lovableResponse.json();
+          const toolCall = lovableData.choices?.[0]?.message?.tool_calls?.[0];
+          if (toolCall?.function?.arguments) {
+            const parsed = JSON.parse(toolCall.function.arguments);
+            searchTerms = parsed.searchTerms || [];
+            console.log(`✅ Lovable AI extracted ${searchTerms.length} search terms`);
+          }
+        }
+      } catch (error) {
+        console.error('Lovable AI fallback failed:', error);
+      }
+    }
+
+    if (searchTerms.length === 0) {
+      throw new Error('Failed to extract search terms from both Gemini and Lovable AI');
+    }
 
     // Step 2: Use Gemini to estimate trend popularity (saves Serper API calls)
     // Fetch recent TikTok trend data from database
@@ -243,29 +304,101 @@ For each term, provide:
 
 Consider TikTok trends, Instagram fashion trends, runway shows, and street style.`;
 
-    const estimationResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: `${trendEstimationPrompt}\n\nReturn a JSON object with this structure:\n{\n  "estimates": [\n    {\n      "searchTerm": "term",\n      "popularityScore": 0-100,\n      "context": "explanation",\n      "relatedTrends": ["trend1", "trend2"]\n    }\n  ]\n}` }
-          ]
-        }],
-        generationConfig: {
-          temperature: 0.4,
-          topK: 32,
-          topP: 1,
-          maxOutputTokens: 2048,
-          responseMimeType: "application/json"
-        }
-      }),
-    });
+    let trendEstimates: any[] = [];
 
-    const estimationData = await estimationResponse.json();
-    const trendEstimates = JSON.parse(estimationData.candidates?.[0]?.content?.parts?.[0]?.text || '{"estimates":[]}').estimates;
+    // Try Gemini first
+    if (geminiApiKey) {
+      try {
+        const estimationResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: `${trendEstimationPrompt}\n\nReturn a JSON object with this structure:\n{\n  "estimates": [\n    {\n      "searchTerm": "term",\n      "popularityScore": 0-100,\n      "context": "explanation",\n      "relatedTrends": ["trend1", "trend2"]\n    }\n  ]\n}` }
+              ]
+            }],
+            generationConfig: {
+              temperature: 0.4,
+              topK: 32,
+              topP: 1,
+              maxOutputTokens: 2048,
+              responseMimeType: "application/json"
+            }
+          }),
+        });
+
+        if (estimationResponse.ok) {
+          const estimationData = await estimationResponse.json();
+          trendEstimates = JSON.parse(estimationData.candidates?.[0]?.content?.parts?.[0]?.text || '{"estimates":[]}').estimates;
+          console.log(`✅ Gemini estimated trends for ${trendEstimates.length} terms`);
+        } else if (estimationResponse.status === 429) {
+          console.log(`⚠️ Gemini rate limit hit for estimation, falling back to Lovable AI`);
+        }
+      } catch (error) {
+        console.log(`⚠️ Gemini failed for estimation, trying Lovable AI:`, error);
+      }
+    }
+
+    // Fallback to Lovable AI
+    if (trendEstimates.length === 0 && lovableApiKey) {
+      try {
+        const lovableResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${lovableApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages: [{
+              role: 'user',
+              content: trendEstimationPrompt
+            }],
+            tools: [{
+              type: "function",
+              function: {
+                name: "estimate_trends",
+                description: "Estimate fashion trend popularity",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    estimates: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          searchTerm: { type: "string" },
+                          popularityScore: { type: "number" },
+                          context: { type: "string" },
+                          relatedTrends: { type: "array", items: { type: "string" } }
+                        }
+                      }
+                    }
+                  },
+                  required: ["estimates"]
+                }
+              }
+            }],
+            tool_choice: { type: "function", function: { name: "estimate_trends" } }
+          }),
+        });
+
+        if (lovableResponse.ok) {
+          const lovableData = await lovableResponse.json();
+          const toolCall = lovableData.choices?.[0]?.message?.tool_calls?.[0];
+          if (toolCall?.function?.arguments) {
+            const parsed = JSON.parse(toolCall.function.arguments);
+            trendEstimates = parsed.estimates || [];
+            console.log(`✅ Lovable AI estimated trends`);
+          }
+        }
+      } catch (error) {
+        console.error('Lovable AI fallback failed for estimation:', error);
+      }
+    }
 
     console.log('Trend estimates:', trendEstimates);
 
@@ -387,57 +520,112 @@ Provide detailed analysis of how well the outfit matches the user's intended sty
     }
     const base64Image2 = btoa(binaryString2);
 
-    // Analyze outfit using Gemini API with vision
-    const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: `${systemPrompt}\n\n${userPrompt}\n\nReturn a JSON object with this structure:\n{\n  "rating": 1-100,\n  "matchedTrends": ["trend1", "trend2"],\n  "styleAnalysis": "analysis text",\n  "suggestedTags": ["tag1", "tag2"],\n  "trendMatchScore": 0-100\n}` },
-            {
-              inline_data: {
-                mime_type: "image/jpeg",
-                data: base64Image2
-              }
+    let analysis: any = null;
+
+    // Try Gemini first
+    if (geminiApiKey) {
+      try {
+        const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: `${systemPrompt}\n\n${userPrompt}\n\nReturn a JSON object with this structure:\n{\n  "rating": 1-100,\n  "matchedTrends": ["trend1", "trend2"],\n  "styleAnalysis": "analysis text",\n  "suggestedTags": ["tag1", "tag2"],\n  "trendMatchScore": 0-100\n}` },
+                {
+                  inline_data: {
+                    mime_type: "image/jpeg",
+                    data: base64Image2
+                  }
+                }
+              ]
+            }],
+            generationConfig: {
+              temperature: 0.4,
+              topK: 32,
+              topP: 1,
+              maxOutputTokens: 2048,
+              responseMimeType: "application/json"
             }
-          ]
-        }],
-        generationConfig: {
-          temperature: 0.4,
-          topK: 32,
-          topP: 1,
-          maxOutputTokens: 2048,
-          responseMimeType: "application/json"
+          }),
+        });
+
+        if (aiResponse.ok) {
+          const aiData = await aiResponse.json();
+          const responseText = aiData.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (responseText) {
+            analysis = JSON.parse(responseText);
+            console.log('✅ Gemini analysis successful');
+          }
+        } else if (aiResponse.status === 429) {
+          console.log(`⚠️ Gemini rate limit hit for analysis, falling back to Lovable AI`);
         }
-      }),
-    });
-
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error('AI API error:', aiResponse.status, errorText);
-      
-      if (aiResponse.status === 429) {
-        throw new Error('Rate limit exceeded. Please try again later.');
+      } catch (error) {
+        console.log(`⚠️ Gemini failed for analysis, trying Lovable AI:`, error);
       }
-      if (aiResponse.status === 402) {
-        throw new Error('Payment required. Please add credits to your Lovable AI workspace.');
-      }
-      
-      throw new Error(`AI analysis failed: ${errorText}`);
     }
 
-    const aiData = await aiResponse.json();
-    console.log('AI response received');
+    // Fallback to Lovable AI
+    if (!analysis && lovableApiKey) {
+      try {
+        const lovableResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${lovableApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages: [{
+              role: 'system',
+              content: systemPrompt
+            }, {
+              role: 'user',
+              content: [
+                { type: 'text', text: userPrompt },
+                { type: 'image_url', image_url: { url: imageUrl } }
+              ]
+            }],
+            tools: [{
+              type: "function",
+              function: {
+                name: "analyze_outfit",
+                description: "Analyze outfit and provide ratings",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    rating: { type: "number", minimum: 1, maximum: 100 },
+                    matchedTrends: { type: "array", items: { type: "string" } },
+                    styleAnalysis: { type: "string" },
+                    suggestedTags: { type: "array", items: { type: "string" } },
+                    trendMatchScore: { type: "number", minimum: 0, maximum: 100 }
+                  },
+                  required: ["rating", "matchedTrends", "styleAnalysis", "suggestedTags", "trendMatchScore"]
+                }
+              }
+            }],
+            tool_choice: { type: "function", function: { name: "analyze_outfit" } }
+          }),
+        });
 
-    const responseText = aiData.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!responseText) {
-      throw new Error('No analysis result from AI');
+        if (lovableResponse.ok) {
+          const lovableData = await lovableResponse.json();
+          const toolCall = lovableData.choices?.[0]?.message?.tool_calls?.[0];
+          if (toolCall?.function?.arguments) {
+            analysis = JSON.parse(toolCall.function.arguments);
+            console.log(`✅ Lovable AI analysis successful`);
+          }
+        }
+      } catch (error) {
+        console.error('Lovable AI fallback failed for analysis:', error);
+      }
     }
 
-    const analysis = JSON.parse(responseText);
+    if (!analysis) {
+      throw new Error('Failed to analyze outfit with both Gemini and Lovable AI');
+    }
 
     // Calculate TikTok trend matches
     const tiktokMatches: any[] = [];
