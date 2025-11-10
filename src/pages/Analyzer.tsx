@@ -394,7 +394,7 @@ export default function Analyzer() {
               value={result.rating || 0}
               maxValue={100}
               label="Style Match"
-              description="How well your outfit matches your target style aesthetic"
+              description="How well your outfit matches your target style"
               color="primary"
               icon={<Star className="h-5 w-5" />}
             />
@@ -403,7 +403,7 @@ export default function Analyzer() {
               value={result.trendMatch || 0}
               maxValue={100}
               label="Trend Score"
-              description="Overall trendiness based on current fashion trends"
+              description="Current fashion trendiness"
               color="secondary"
               icon={<TrendingUp className="h-5 w-5" />}
             />
@@ -412,114 +412,17 @@ export default function Analyzer() {
               value={result.tiktokTrendScore || 0}
               maxValue={100}
               label="TikTok Viral"
-              description={`Based on ${result.tiktokMatches?.length || 0} items trending in real TikTok videos`}
+              description={`From ${result.tiktokMatches?.length || 0} TikTok videos`}
               color="chart-1"
               icon={<Video className="h-5 w-5" />}
             />
           </div>
 
-          {result.extractedHashtags && result.extractedHashtags.length > 0 && (
+          {result.feedback && (
             <div className="mb-6">
-              <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm text-muted-foreground">
-                Extracted Fashion Elements
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {result.extractedHashtags.map((tag: string, index: number) => (
-                  <Badge 
-                    key={index} 
-                    variant="outline" 
-                    className="text-xs"
-                  >
-                    #{tag}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {result.trendEstimates && result.trendEstimates.length > 0 && (
-            <div className="mb-6">
-              <h3 className="font-semibold mb-3 flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                AI Trend Analysis (Gemini Estimates)
-              </h3>
-              <div className="space-y-2">
-                {result.trendEstimates.map((estimate: any, index: number) => (
-                  <Card key={index} className="p-3 border-border">
-                    <div className="flex items-center justify-between mb-2">
-                      <Badge variant="secondary" className="text-xs">
-                        {estimate.searchTerm || estimate.hashtag}
-                      </Badge>
-                      <div className="text-right">
-                        <div className="text-sm font-bold text-primary">
-                          {estimate.popularityScore}/100
-                        </div>
-                        <div className="text-xs text-muted-foreground">popularity</div>
-                      </div>
-                    </div>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      {estimate.context}
-                    </p>
-                    {estimate.relatedTrends && estimate.relatedTrends.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {estimate.relatedTrends.map((trend: string, i: number) => (
-                          <span key={i} className="text-xs bg-accent/50 px-2 py-0.5 rounded">
-                            {trend}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {result.verifiedTopTrend && result.verifiedTopTrend.resultCount > 0 && (
-            <div className="mb-6">
-              <h3 className="font-semibold mb-3 flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                Top Verified Trend
-              </h3>
-              <Card className="p-4 border-primary/30 bg-gradient-to-br from-primary/5 to-secondary/5">
-                <div className="flex items-center justify-between mb-3">
-                  <Badge className="text-sm">
-                    #{result.verifiedTopTrend.searchTerm}
-                  </Badge>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-primary">
-                      {result.verifiedTopTrend.resultCount.toLocaleString()}
-                    </div>
-                    <div className="text-xs text-muted-foreground">search results</div>
-                  </div>
-                </div>
-                <div className="text-xs text-muted-foreground mb-2">
-                  AI Estimate: {result.verifiedTopTrend.estimatedScore}/100
-                </div>
-                {result.verifiedTopTrend.topResult && (
-                  <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                    📰 {result.verifiedTopTrend.topResult}
-                  </p>
-                )}
-                {result.verifiedTopTrend.trendingTopics && 
-                 result.verifiedTopTrend.trendingTopics.length > 0 && (
-                  <div className="mt-3 space-y-1">
-                    <div className="text-xs font-medium text-muted-foreground">
-                      Related Trending Topics:
-                    </div>
-                    <div className="flex gap-1 flex-wrap">
-                      {result.verifiedTopTrend.trendingTopics.slice(0, 3).map((topic: string, i: number) => (
-                        <span key={i} className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
-                          {topic}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
+              <Card className="p-4 border-border">
+                <p className="text-sm leading-relaxed">{result.feedback}</p>
               </Card>
-              <p className="text-xs text-muted-foreground mt-2 text-center">
-                Verified with real-time search data
-              </p>
             </div>
           )}
 
@@ -527,45 +430,28 @@ export default function Analyzer() {
             <div className="mb-6">
               <h3 className="font-semibold mb-3 flex items-center gap-2">
                 <Video className="h-4 w-4 text-chart-1" />
-                TikTok Viral Score Breakdown
+                Trending on TikTok
               </h3>
-              
-              <Card className="p-4 mb-4 border-chart-1/30 bg-gradient-to-br from-chart-1/10 to-chart-2/10">
-                <div className="text-center mb-3">
-                  <div className="text-4xl font-bold text-chart-1 mb-1">
-                    {result.tiktokTrendScore}/100
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Average TikTok Trend Score
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Calculated from {result.tiktokMatches.length} matching items in real TikTok videos
-                  </p>
-                </div>
-              </Card>
 
               <div className="space-y-3">
                 {result.tiktokMatches.map((match: any, index: number) => (
-                  <Card key={index} className="p-4 border-chart-1/30 bg-gradient-to-br from-chart-1/5 to-chart-2/5">
+                  <Card key={index} className="p-4 border-chart-1/30">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           <Badge className="text-xs bg-chart-1">
                             {match.itemName}
                           </Badge>
-                          <Badge variant="outline" className="text-xs">
-                            {match.category}
-                          </Badge>
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          Featured in videos by <span className="font-medium">@{match.author}</span>
+                          By @{match.author}
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-2xl font-bold text-chart-1">
-                          {match.trendScore}
+                        <div className="text-xl font-bold text-chart-1">
+                          {match.finalScore}
                         </div>
-                        <div className="text-xs text-muted-foreground">score</div>
+                        <div className="text-xs text-muted-foreground">match</div>
                       </div>
                     </div>
                     {match.videoUrl && (
@@ -575,42 +461,34 @@ export default function Analyzer() {
                         rel="noopener noreferrer"
                         className="text-xs text-chart-1 hover:underline inline-flex items-center gap-1"
                       >
-                        Watch on TikTok <ExternalLink className="h-3 w-3" />
+                        Watch <ExternalLink className="h-3 w-3" />
                       </a>
                     )}
                   </Card>
                 ))}
               </div>
-              
-              <p className="text-xs text-muted-foreground mt-3 text-center">
-                Items detected from analyzing actual TikTok fashion video content
-              </p>
             </div>
           )}
 
-          {result.feedback && (
-            <div className="mb-4">
-              <h3 className="font-semibold mb-2 text-sm text-muted-foreground">AI Feedback</h3>
-              <p className="text-sm leading-relaxed">{result.feedback}</p>
-            </div>
-          )}
-
-          {result.matchingTrends && result.matchingTrends.length > 0 && (
+          {result.recommendations && result.recommendations.length > 0 && (
             <div>
               <h3 className="font-semibold mb-3 flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                Matching Trends
+                <Sparkles className="h-4 w-4" />
+                Recommended to Pair With Your Outfit
               </h3>
-              <div className="flex flex-wrap gap-2">
-                {result.matchingTrends.map((trend: string, index: number) => (
-                  <Badge 
-                    key={index} 
-                    variant="secondary" 
-                    className="text-xs cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
-                    onClick={() => handleTrendClick(trend)}
-                  >
-                    #{trend}
-                  </Badge>
+              <div className="space-y-3">
+                {result.recommendations.map((rec: any, index: number) => (
+                  <Card key={index} className="p-4 border-primary/20">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Star className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-sm mb-1">{rec.item}</div>
+                        <p className="text-xs text-muted-foreground">{rec.reason}</p>
+                      </div>
+                    </div>
+                  </Card>
                 ))}
               </div>
             </div>

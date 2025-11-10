@@ -669,10 +669,26 @@ Provide detailed analysis of how well the outfit matches the user's intended sty
         'dress': ['gown', 'frock']
       };
       
+      // Content filter - exclude inappropriate content
+      const inappropriateKeywords = [
+        'bikini', 'lingerie', 'underwear', 'bra', 'panties', 'sexy', 'nsfw',
+        'nude', 'naked', 'explicit', 'adult', 'suggestive', 'revealing'
+      ];
+      
       const candidates: any[] = [];
       for (const item of tiktokItems) {
         const itemNameLower = item.item_name.toLowerCase();
         const itemWords = itemNameLower.split(/\s+/);
+        
+        // Skip inappropriate content
+        const hasInappropriateContent = inappropriateKeywords.some(keyword => 
+          itemNameLower.includes(keyword)
+        );
+        
+        if (hasInappropriateContent) {
+          console.log(`⚠️ Filtered inappropriate content: ${item.item_name}`);
+          continue;
+        }
         
         const hasDirectMatch = searchWords.some((word: string) => 
           itemWords.some((itemWord: string) => 
@@ -704,7 +720,7 @@ Provide detailed analysis of how well the outfit matches the user's intended sty
             matchReason: hasDirectMatch ? 'direct' : (hasCategoryMatch ? 'category' : 'category-word')
           });
           
-          if (candidates.length >= 15) break; // Get top 15 candidates for visual analysis
+          if (candidates.length >= 5) break; // Get top 5 candidates for visual analysis
         }
       }
       
@@ -729,20 +745,24 @@ Provide detailed analysis of how well the outfit matches the user's intended sty
       
       console.log(`📋 Got ${candidates.length} candidates, performing visual AI analysis...`);
       
-      // Step 2: Visual comparison using Gemini Vision for top candidates
-      const visualComparisonPromises = candidates.slice(0, 8).map(async (candidate) => {
+      // Step 2: Visual comparison using Gemini Vision for top 3 candidates (faster)
+      const visualComparisonPromises = candidates.slice(0, 3).map(async (candidate) => {
         if (!candidate.thumbnailUrl) {
           return { ...candidate, visualScore: 0, finalScore: candidate.trendScore };
         }
         
         try {
-          const visualPrompt = `Compare these two fashion images and rate the visual similarity of the outfits/clothing items on a scale of 0-100.
-Focus on:
-- Color similarity (30% weight)
-- Style/aesthetic match (30% weight)  
-- Clothing item type match (40% weight)
+          const visualPrompt = `You are comparing a user's outfit with a TikTok fashion trend outfit.
 
-Return ONLY a number between 0-100. No explanation needed.
+TARGET STYLE: ${targetStyle}
+
+Compare these two fashion images specifically for ${targetStyle} aesthetic and rate visual similarity 0-100:
+- Does the TikTok outfit match the ${targetStyle} style? (40% weight)
+- Color palette similarity (25% weight)
+- Clothing item type match (25% weight)
+- Overall vibe and aesthetic (10% weight)
+
+Return ONLY a number 0-100. Higher = better style match for ${targetStyle}.
 
 User's outfit (image 1) vs TikTok outfit (image 2)`;
 
@@ -845,8 +865,8 @@ User's outfit (image 1) vs TikTok outfit (image 2)`;
       // Wait for all visual comparisons
       const visualResults = await Promise.all(visualComparisonPromises);
       
-      // Sort by final score and take top 5
-      tiktokMatches.push(...visualResults.sort((a, b) => b.finalScore - a.finalScore).slice(0, 5));
+      // Sort by final score and take top 3
+      tiktokMatches.push(...visualResults.sort((a, b) => b.finalScore - a.finalScore).slice(0, 3));
       
       console.log(`🎨 Visual analysis complete: ${tiktokMatches.length} matches with visual scoring`);
     }
@@ -857,6 +877,103 @@ User's outfit (image 1) vs TikTok outfit (image 2)`;
 
     console.log(`Found ${tiktokMatches.length} visually-matched TikTok items with average score: ${tiktokTrendScore}`);
 
+    // Generate outfit recommendations using AI
+    const recommendationPrompt = `Based on this ${targetStyle} outfit analysis, suggest 2-3 specific clothing items or accessories that would:
+1. Complete or enhance this ${targetStyle} look
+2. Match current fashion trends
+3. Pair well with the existing outfit
+
+Be specific (e.g., "white chunky sneakers" not just "shoes"). Return as array of recommendation objects.`;
+
+    let recommendations: any[] = [];
+    
+    // Try Gemini first
+    if (geminiApiKey) {
+      try {
+        const recResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: `${recommendationPrompt}\n\nAnalysis: ${analysis.styleAnalysis}\n\nReturn JSON:\n{"recommendations": [{"item": "item name", "reason": "why it works"}]}` },
+                { inline_data: { mime_type: "image/jpeg", data: base64Image1 } }
+              ]
+            }],
+            generationConfig: {
+              temperature: 0.7,
+              maxOutputTokens: 512,
+              responseMimeType: "application/json"
+            }
+          })
+        });
+
+        if (recResponse.ok) {
+          const recData = await recResponse.json();
+          recommendations = JSON.parse(recData.candidates?.[0]?.content?.parts?.[0]?.text || '{"recommendations":[]}').recommendations;
+        }
+      } catch (error) {
+        console.log('Gemini recommendations failed, trying Lovable AI');
+      }
+    }
+    
+    // Fallback to Lovable AI
+    if (recommendations.length === 0 && lovableApiKey) {
+      try {
+        const lovableResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${lovableApiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages: [{
+              role: 'user',
+              content: [
+                { type: 'text', text: `${recommendationPrompt}\n\nAnalysis: ${analysis.styleAnalysis}` },
+                { type: 'image_url', image_url: { url: imageUrl } }
+              ]
+            }],
+            tools: [{
+              type: "function",
+              function: {
+                name: "suggest_items",
+                description: "Suggest clothing items",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    recommendations: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          item: { type: "string" },
+                          reason: { type: "string" }
+                        }
+                      }
+                    }
+                  },
+                  required: ["recommendations"]
+                }
+              }
+            }],
+            tool_choice: { type: "function", function: { name: "suggest_items" } }
+          })
+        });
+
+        if (lovableResponse.ok) {
+          const lovableData = await lovableResponse.json();
+          const toolCall = lovableData.choices?.[0]?.message?.tool_calls?.[0];
+          if (toolCall?.function?.arguments) {
+            recommendations = JSON.parse(toolCall.function.arguments).recommendations || [];
+          }
+        }
+      } catch (error) {
+        console.error('Lovable AI recommendations failed:', error);
+      }
+    }
+
     const finalResult = {
       success: true,
       rating: analysis.rating,
@@ -865,8 +982,9 @@ User's outfit (image 1) vs TikTok outfit (image 2)`;
       matchingTrends: analysis.matchedTrends,
       extractedHashtags: searchTerms,
       trendEstimates: trendEstimates,
-      tiktokMatches: tiktokMatches.slice(0, 5),
-      tiktokTrendScore: tiktokTrendScore
+      tiktokMatches: tiktokMatches.slice(0, 3),
+      tiktokTrendScore: tiktokTrendScore,
+      recommendations: recommendations.slice(0, 3)
     };
 
     // Cache the result in background (fire and forget)
