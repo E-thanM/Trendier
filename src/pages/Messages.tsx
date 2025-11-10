@@ -260,9 +260,20 @@ export default function Messages() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Get the latest message timestamp
+      const { data: latestMessage } = await supabase
+        .from('messages')
+        .select('created_at')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      const timestamp = latestMessage?.created_at || new Date().toISOString();
+
       const { error } = await supabase
         .from('conversation_participants')
-        .update({ last_read_at: new Date().toISOString() })
+        .update({ last_read_at: timestamp })
         .eq('conversation_id', conversationId)
         .eq('user_id', user.id);
 
@@ -271,13 +282,14 @@ export default function Messages() {
         return;
       }
 
-      // Update local state
+      // Update local state immediately
       setConversations(prev =>
         prev.map(c => c.id === conversationId ? { ...c, unread_count: 0 } : c)
       );
       
-      // Force a small delay to ensure the update propagates
-      await new Promise(resolve => setTimeout(resolve, 100));
+      if (selectedConversation?.id === conversationId) {
+        setSelectedConversation(prev => prev ? { ...prev, unread_count: 0 } : null);
+      }
     } catch (error) {
       console.error('Error marking as read:', error);
     }
