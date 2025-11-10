@@ -136,9 +136,12 @@ serve(async (req) => {
     }
 
     // Analyze ALL videos in parallel for maximum speed
-    console.log(`Starting parallel analysis of ${videos.length} videos`);
+    const startTime = Date.now();
+    console.log(`Starting parallel analysis of ${videos.length} videos at ${new Date().toISOString()}`);
     const analysisPromises = videos.map(video => analyzeVideo(video, trendsList, lovableApiKey));
     const analysisResults = await Promise.all(analysisPromises);
+    const analysisTime = Date.now() - startTime;
+    console.log(`Completed analysis in ${analysisTime}ms (${(analysisTime / videos.length).toFixed(0)}ms per video)`);
     
     // Filter out failed analyses
     const analyses: AnalysisResult[] = analysisResults.filter(result => result !== null) as AnalysisResult[];
@@ -228,19 +231,8 @@ async function scrapeTikTokVideos(hashtag: string, maxVideos: number): Promise<T
           for (const result of data.organic.slice(0, maxVideos)) {
             const videoIdMatch = result.link.match(/video\/(\d+)/);
             if (videoIdMatch) {
-              // Extract thumbnail from TikTok OEmbed
-              const oembedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(result.link)}`;
-              let thumbnailUrl = `https://picsum.photos/400/600?random=${videos.length}`;
-              
-              try {
-                const oembedResponse = await fetch(oembedUrl);
-                if (oembedResponse.ok) {
-                  const oembedData = await oembedResponse.json();
-                  thumbnailUrl = oembedData.thumbnail_url || thumbnailUrl;
-                }
-              } catch (e) {
-                console.error('Error fetching oembed:', e);
-              }
+              // Use a placeholder thumbnail - significantly speeds up scraping
+              const thumbnailUrl = `https://picsum.photos/400/600?random=${videos.length}`;
               
               videos.push({
                 id: videoIdMatch[1],
