@@ -69,7 +69,7 @@ export default function Feed() {
 
     // Boost high-rated outfits
     if (outfit.rating) {
-      score += outfit.rating * 0.3; // Up to 3 points for 10/10 rating
+      score += outfit.rating * 0.03; // Up to 3 points for 100/100 rating
     }
 
     // Boost trending outfits

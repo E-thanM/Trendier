@@ -694,7 +694,7 @@ export default function Profile() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col items-center justify-end pb-3">
                     {outfit.rating && (
                       <div className="bg-primary/90 text-primary-foreground font-bold text-lg px-3 py-1 rounded-full mb-1 animate-scale-in">
-                        {outfit.rating}/10
+                        {outfit.rating}/100
                       </div>
                     )}
                     {outfit.trend_match_score > 0 && (

@@ -144,7 +144,7 @@ export const OutfitCard = ({ outfit, isLiked, onLikeToggle }: OutfitCardProps) =
         />
         {outfit.rating && (
           <div className="absolute top-3 right-3 bg-primary/90 backdrop-blur-sm px-3 py-1.5 rounded-full">
-            <span className="font-bold text-sm text-primary-foreground">{outfit.rating}/10</span>
+            <span className="font-bold text-sm text-primary-foreground">{outfit.rating}/100</span>
           </div>
         )}
         {showHeart && (

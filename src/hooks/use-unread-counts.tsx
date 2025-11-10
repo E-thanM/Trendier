@@ -17,13 +17,18 @@ export function useUnreadCounts() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
         fetchUnreadCounts();
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversation_participants' }, () => {
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversation_participants' }, () => {
         fetchUnreadCounts();
       })
       .subscribe();
 
+    // Also refetch on window focus (when user returns to the app)
+    const handleFocus = () => fetchUnreadCounts();
+    window.addEventListener('focus', handleFocus);
+
     return () => {
       supabase.removeChannel(messagesChannel);
+      window.removeEventListener('focus', handleFocus);
     };
   }, []);
 

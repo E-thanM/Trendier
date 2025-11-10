@@ -285,7 +285,7 @@ export default function Analyzer() {
           <div className="grid grid-cols-2 gap-4 mb-6">
             <Card className="p-4 border-border text-center">
               <div className="text-3xl font-bold text-primary mb-1">
-                {result.rating || 0}/10
+                {result.rating || 0}/100
               </div>
               <div className="text-sm text-muted-foreground">Style Rating</div>
             </Card>
