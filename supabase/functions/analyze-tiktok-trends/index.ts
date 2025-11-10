@@ -107,17 +107,19 @@ serve(async (req) => {
       try {
         console.log(`Analyzing video: ${video.id}`);
         
-        const analysisPrompt = `Analyze this TikTok video thumbnail/frame and identify all visible clothing items and fashion accessories.
+        const analysisPrompt = `Analyze this TikTok video image and the video description/caption to identify all clothing items and fashion accessories.
+
+Video Description: "${video.description}"
 
 Current trending fashion items: ${trendsList}
 
-For each clothing item you detect:
+For each clothing item you detect (from BOTH the image AND the description text):
 1. Name the specific item (e.g., "oversized blazer", "cargo pants", "chunky sneakers")
 2. Categorize it (tops, bottoms, shoes, accessories, outerwear)
-3. Rate how trendy/fashionable it appears (0-100)
-4. Compare it to the trending items list
+3. Rate how trendy/fashionable it appears (0-100) based on current trends
+4. Note if it matches any trending items from the list
 
-Focus on: clothing, shoes, accessories, jewelry, bags, hats, sunglasses, and any other fashion items.`;
+Analyze the actual content: look at clothing styles, colors, fits, and styling. Also parse the description for mentioned items like "wearing", "outfit", brand names, clothing items, etc.`;
 
         const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
@@ -271,11 +273,68 @@ Focus on: clothing, shoes, accessories, jewelry, bags, hats, sunglasses, and any
 
 async function scrapeTikTokVideos(hashtag: string, maxVideos: number): Promise<TikTokVideo[]> {
   try {
-    // Using TikTok's public API (unofficial)
+    const serperApiKey = Deno.env.get('SERPER_API_KEY');
+    
+    if (serperApiKey) {
+      console.log('Using Serper API to search TikTok videos');
+      
+      const response = await fetch('https://google.serper.dev/search', {
+        method: 'POST',
+        headers: {
+          'X-API-KEY': serperApiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          q: `site:tiktok.com ${hashtag} fashion outfit`,
+          num: maxVideos
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const videos: TikTokVideo[] = [];
+        
+        if (data.organic) {
+          for (const result of data.organic.slice(0, maxVideos)) {
+            const videoIdMatch = result.link.match(/video\/(\d+)/);
+            if (videoIdMatch) {
+              // Extract thumbnail from TikTok OEmbed
+              const oembedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(result.link)}`;
+              let thumbnailUrl = `https://picsum.photos/400/600?random=${videos.length}`;
+              
+              try {
+                const oembedResponse = await fetch(oembedUrl);
+                if (oembedResponse.ok) {
+                  const oembedData = await oembedResponse.json();
+                  thumbnailUrl = oembedData.thumbnail_url || thumbnailUrl;
+                }
+              } catch (e) {
+                console.error('Error fetching oembed:', e);
+              }
+              
+              videos.push({
+                id: videoIdMatch[1],
+                videoUrl: result.link,
+                thumbnailUrl,
+                description: result.snippet || result.title || '',
+                author: result.link.match(/@([^/]+)/)?.[1] || 'unknown'
+              });
+            }
+          }
+        }
+        
+        if (videos.length > 0) {
+          console.log(`Found ${videos.length} videos via Serper`);
+          return videos;
+        }
+      }
+    }
+
+    // Try direct TikTok API as fallback
     const cleanHashtag = hashtag.replace('#', '');
     const apiUrl = `https://www.tiktok.com/api/challenge/item_list/?challengeName=${encodeURIComponent(cleanHashtag)}&count=${maxVideos}`;
     
-    console.log('Fetching from TikTok API:', apiUrl);
+    console.log('Trying TikTok API:', apiUrl);
     
     const response = await fetch(apiUrl, {
       headers: {
@@ -285,7 +344,6 @@ async function scrapeTikTokVideos(hashtag: string, maxVideos: number): Promise<T
 
     if (!response.ok) {
       console.error('TikTok API error:', response.status);
-      // Return mock data for demonstration
       return generateMockVideos(hashtag, Math.min(maxVideos, 5));
     }
 
@@ -304,7 +362,6 @@ async function scrapeTikTokVideos(hashtag: string, maxVideos: number): Promise<T
       }
     }
 
-    // Fallback to mock data if no videos found
     if (videos.length === 0) {
       return generateMockVideos(hashtag, Math.min(maxVideos, 5));
     }
@@ -312,7 +369,6 @@ async function scrapeTikTokVideos(hashtag: string, maxVideos: number): Promise<T
     return videos;
   } catch (error) {
     console.error('Error scraping TikTok:', error);
-    // Return mock data as fallback
     return generateMockVideos(hashtag, Math.min(maxVideos, 5));
   }
 }
