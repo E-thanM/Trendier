@@ -559,9 +559,36 @@ export default function Analyzer() {
                         rel="noopener noreferrer"
                         className="text-xs text-chart-1 hover:underline inline-flex items-center gap-1"
                       >
-                        Watch <ExternalLink className="h-3 w-3" />
+                        Watch on TikTok <ExternalLink className="h-3 w-3" />
                       </a>
                     )}
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {result.pairingRecommendations && result.pairingRecommendations.length > 0 && (
+            <div>
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <Sparkles className="h-4 w-4" />
+                Items to Pair With Your Outfit
+              </h3>
+              <div className="space-y-3">
+                {result.pairingRecommendations.map((rec: any, index: number) => (
+                  <Card key={index} className="p-4 border-secondary/30">
+                    <div className="mb-2">
+                      <div className="font-medium text-sm mb-1">{rec.item}</div>
+                      <p className="text-xs text-muted-foreground">{rec.reason}</p>
+                    </div>
+                    <a
+                      href={rec.shopLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-xs text-secondary hover:underline font-medium"
+                    >
+                      Shop Now <ExternalLink className="h-3 w-3" />
+                    </a>
                   </Card>
                 ))}
               </div>

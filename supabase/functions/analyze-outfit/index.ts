@@ -656,17 +656,21 @@ Provide detailed analysis of how well the outfit matches the user's intended sty
     if (tiktokItems && tiktokItems.length > 0) {
       console.log('🎯 Starting visual-based TikTok matching...');
       
-      // Step 1: Keyword filtering to get candidates
+      // Step 1: Enhanced keyword filtering to get more candidates
       const searchWords = searchTerms.flatMap(term => 
         term.toLowerCase().split(/\s+/).filter(w => w.length > 2)
       );
       
+      // Expanded category map for better matching
       const categoryMap: Record<string, string[]> = {
-        'shoes': ['sneakers', 'boots', 'loafers', 'heels', 'sandals'],
-        'pants': ['jeans', 'trousers', 'bottoms', 'slacks'],
-        'shirt': ['t-shirt', 'top', 'blouse', 'tee'],
-        'jacket': ['outerwear', 'coat', 'blazer'],
-        'dress': ['gown', 'frock']
+        'shoes': ['sneakers', 'boots', 'loafers', 'heels', 'sandals', 'footwear', 'kicks'],
+        'pants': ['jeans', 'trousers', 'bottoms', 'slacks', 'denim'],
+        'shirt': ['t-shirt', 'top', 'blouse', 'tee', 'shirt'],
+        'jacket': ['outerwear', 'coat', 'blazer', 'hoodie', 'sweater'],
+        'dress': ['gown', 'frock', 'midi', 'maxi'],
+        'accessories': ['bag', 'jewelry', 'watch', 'belt', 'hat'],
+        'streetwear': ['hoodie', 'joggers', 'sneakers', 'cap'],
+        'formal': ['suit', 'dress', 'blazer', 'heels']
       };
       
       // Content filter - exclude inappropriate content
@@ -676,6 +680,8 @@ Provide detailed analysis of how well the outfit matches the user's intended sty
       ];
       
       const candidates: any[] = [];
+      const scoredItems: Array<{item: any, score: number}> = [];
+      
       for (const item of tiktokItems) {
         const itemNameLower = item.item_name.toLowerCase();
         const itemWords = itemNameLower.split(/\s+/);
@@ -690,55 +696,87 @@ Provide detailed analysis of how well the outfit matches the user's intended sty
           continue;
         }
         
+        let matchScore = 0;
+        
+        // Direct word match (highest priority)
         const hasDirectMatch = searchWords.some((word: string) => 
           itemWords.some((itemWord: string) => 
             itemWord.includes(word) || word.includes(itemWord)
           )
         );
+        if (hasDirectMatch) matchScore += 3;
         
+        // Category match
         const hasCategoryMatch = searchWords.some(word => {
           const relatedCategories = categoryMap[word] || [];
           return relatedCategories.some(cat => itemNameLower.includes(cat));
         });
+        if (hasCategoryMatch) matchScore += 2;
         
+        // Category word match
         const categoryLower = item.category?.toLowerCase() || '';
         const hasCategoryWordMatch = searchWords.some(word => 
           categoryLower.includes(word) || word.includes(categoryLower)
         );
+        if (hasCategoryWordMatch) matchScore += 1;
         
-        if ((hasDirectMatch || hasCategoryMatch || hasCategoryWordMatch) && !matchedItems.has(item.item_name)) {
+        // Style match with target style
+        if (targetStyle && itemNameLower.includes(targetStyle.toLowerCase())) {
+          matchScore += 2;
+        }
+        
+        if (matchScore > 0 && !matchedItems.has(item.item_name)) {
           matchedItems.add(item.item_name);
-          const video: any = Array.isArray(item.video) ? item.video[0] : item.video;
-          candidates.push({
-            itemName: item.item_name,
-            category: item.category,
-            trendScore: item.trend_score,
-            videoUrl: video?.video_url,
-            thumbnailUrl: video?.thumbnail_url,
-            author: video?.author,
-            hashtag: video?.hashtag,
-            matchReason: hasDirectMatch ? 'direct' : (hasCategoryMatch ? 'category' : 'category-word')
-          });
-          
-          if (candidates.length >= 5) break; // Get top 5 candidates for visual analysis
+          scoredItems.push({ item, score: matchScore });
         }
       }
       
-      // Fallback to popular items if no keyword matches
+      // Sort by match score and take top 10 for visual analysis
+      scoredItems.sort((a, b) => b.score - a.score);
+      
+      for (const {item} of scoredItems.slice(0, 10)) {
+        const video: any = Array.isArray(item.video) ? item.video[0] : item.video;
+        
+        // Ensure video URL is valid
+        const videoUrl = video?.video_url || '';
+        const videoId = video?.video_id || '';
+        const author = video?.author || '';
+        
+        // Construct proper TikTok URL if needed
+        const properUrl = videoUrl || (videoId && author ? `https://www.tiktok.com/@${author}/video/${videoId}` : '');
+        
+        candidates.push({
+          itemName: item.item_name,
+          category: item.category,
+          trendScore: item.trend_score,
+          videoUrl: properUrl,
+          videoId: videoId,
+          thumbnailUrl: video?.thumbnail_url,
+          author: author,
+          hashtag: video?.hashtag
+        });
+      }
+      
+      // Fallback to popular items if no matches
       if (candidates.length === 0) {
-        console.log('No keyword matches, using popular items for visual analysis');
-        const popularItems = tiktokItems.slice(0, 8);
+        console.log('No matches found, using top trending items for visual analysis');
+        const popularItems = tiktokItems.slice(0, 10);
         for (const item of popularItems) {
           const video: any = Array.isArray(item.video) ? item.video[0] : item.video;
+          const videoUrl = video?.video_url || '';
+          const videoId = video?.video_id || '';
+          const author = video?.author || '';
+          const properUrl = videoUrl || (videoId && author ? `https://www.tiktok.com/@${author}/video/${videoId}` : '');
+          
           candidates.push({
             itemName: item.item_name,
             category: item.category,
             trendScore: Math.round(item.trend_score * 0.7),
-            videoUrl: video?.video_url,
+            videoUrl: properUrl,
+            videoId: videoId,
             thumbnailUrl: video?.thumbnail_url,
-            author: video?.author,
-            hashtag: video?.hashtag,
-            matchReason: 'popular-fallback'
+            author: author,
+            hashtag: video?.hashtag
           });
         }
       }
@@ -877,6 +915,110 @@ User's outfit (image 1) vs TikTok outfit (image 2)`;
 
     console.log(`Found ${tiktokMatches.length} visually-matched TikTok items with average score: ${tiktokTrendScore}`);
 
+    // Generate outfit pairing recommendations using AI
+    const pairingPrompt = `Based on this ${targetStyle} outfit, suggest 2-3 specific items to pair with it that would:
+1. Complete or enhance the ${targetStyle} aesthetic
+2. Match current fashion trends
+3. Create a cohesive, stylish look
+
+Be specific (e.g., "chunky white sneakers" not just "shoes"). For each suggestion, explain why it works.`;
+
+    let pairingRecommendations: any[] = [];
+    
+    // Try Gemini first  
+    if (geminiApiKey) {
+      try {
+        const pairResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: `${pairingPrompt}\n\nReturn JSON:\n{"recommendations": [{"item": "item name", "reason": "why it pairs well", "searchTerm": "shopping search"}]}` },
+                { inline_data: { mime_type: "image/jpeg", data: base64Image1 } }
+              ]
+            }],
+            generationConfig: {
+              temperature: 0.7,
+              maxOutputTokens: 512,
+              responseMimeType: "application/json"
+            }
+          })
+        });
+
+        if (pairResponse.ok) {
+          const pairData = await pairResponse.json();
+          pairingRecommendations = JSON.parse(pairData.candidates?.[0]?.content?.parts?.[0]?.text || '{"recommendations":[]}').recommendations;
+        }
+      } catch (error) {
+        console.log('Gemini pairing failed, trying Lovable AI');
+      }
+    }
+    
+    // Fallback to Lovable AI
+    if (pairingRecommendations.length === 0 && lovableApiKey) {
+      try {
+        const lovableResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${lovableApiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages: [{
+              role: 'user',
+              content: [
+                { type: 'text', text: pairingPrompt },
+                { type: 'image_url', image_url: { url: imageUrl } }
+              ]
+            }],
+            tools: [{
+              type: "function",
+              function: {
+                name: "suggest_pairings",
+                description: "Suggest items to pair with outfit",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    recommendations: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          item: { type: "string" },
+                          reason: { type: "string" },
+                          searchTerm: { type: "string" }
+                        }
+                      }
+                    }
+                  },
+                  required: ["recommendations"]
+                }
+              }
+            }],
+            tool_choice: { type: "function", function: { name: "suggest_pairings" } }
+          })
+        });
+
+        if (lovableResponse.ok) {
+          const lovableData = await lovableResponse.json();
+          const toolCall = lovableData.choices?.[0]?.message?.tool_calls?.[0];
+          if (toolCall?.function?.arguments) {
+            pairingRecommendations = JSON.parse(toolCall.function.arguments).recommendations || [];
+          }
+        }
+      } catch (error) {
+        console.error('Lovable AI pairing failed:', error);
+      }
+    }
+
+    // Add shopping links to pairing recommendations
+    const pairingsWithLinks = pairingRecommendations.slice(0, 3).map(rec => ({
+      ...rec,
+      shopLink: `https://www.google.com/search?q=${encodeURIComponent(rec.searchTerm || rec.item)}&tbm=shop`
+    }));
+
     // Generate detailed outfit element descriptions using AI
     const elementPrompt = `Analyze this ${targetStyle} outfit and identify the 3 MOST IMPORTANT elements (clothing items, accessories, or style choices).
 
@@ -993,6 +1135,7 @@ Focus on the most impactful pieces that define the outfit.`;
       outfitElements: elementsWithLinks,
       tiktokMatches: tiktokMatches.slice(0, 3),
       tiktokTrendScore: tiktokTrendScore,
+      pairingRecommendations: pairingsWithLinks,
       imageUrl: imageUrl,
       targetStyle: targetStyle
     };
