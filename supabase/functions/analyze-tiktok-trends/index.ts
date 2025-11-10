@@ -60,7 +60,7 @@ serve(async (req) => {
       );
     }
 
-    const { hashtag, maxVideos = 10 } = await req.json();
+    const { hashtag, maxVideos = 10, forceRefresh = false } = await req.json();
     
     if (!hashtag) {
       return new Response(
@@ -69,23 +69,76 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Scraping TikTok videos for hashtag: ${hashtag}`);
+    const cleanHashtag = hashtag.replace('#', '').toLowerCase();
+    console.log(`Analyzing TikTok trends for hashtag: ${cleanHashtag}`);
+
+    // Check if we have recent cached data (within 24 hours)
+    if (!forceRefresh) {
+      const { data: cachedVideos } = await supabaseClient
+        .from('tiktok_videos')
+        .select(`
+          *,
+          detected_items:tiktok_detected_items(*)
+        `)
+        .eq('hashtag', cleanHashtag)
+        .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+        .order('overall_trend_score', { ascending: false });
+
+      if (cachedVideos && cachedVideos.length > 0) {
+        console.log(`Using ${cachedVideos.length} cached videos from database`);
+        
+        const rankedAnalyses = cachedVideos.map((video: any) => ({
+          videoId: video.video_id,
+          videoUrl: video.video_url,
+          author: video.author,
+          description: video.description,
+          detectedItems: video.detected_items.map((item: any) => ({
+            name: item.item_name,
+            category: item.category,
+            confidence: item.confidence,
+            trendScore: item.trend_score
+          })),
+          overallTrendScore: video.overall_trend_score,
+          rank: video.rank,
+          percentile: video.percentile,
+          trendingItems: video.detected_items
+            .filter((item: any) => item.matches_trend)
+            .map((item: any) => item.matches_trend)
+        }));
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            hashtag: cleanHashtag,
+            totalVideos: rankedAnalyses.length,
+            analyses: rankedAnalyses,
+            cached: true,
+            summary: {
+              mostTrendyVideo: rankedAnalyses[0],
+              averageTrendScore: Math.round(
+                rankedAnalyses.reduce((sum: number, a: any) => sum + a.overallTrendScore, 0) / rankedAnalyses.length
+              ),
+              topItems: getTopItemsFromCache(rankedAnalyses, 5)
+            }
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    console.log(`No cache found, scraping fresh data for: ${cleanHashtag}`);
 
     // Fetch trending items from database
-    const { data: trends, error: trendsError } = await supabaseClient
+    const { data: trends } = await supabaseClient
       .from('trends')
-      .select('name, description, tags, popularity_score')
+      .select('name, tags')
       .order('popularity_score', { ascending: false })
       .limit(20);
 
-    if (trendsError) {
-      console.error('Error fetching trends:', trendsError);
-    }
-
     const trendsList = trends?.map(t => `${t.name} (${t.tags?.join(', ')})`).join(', ') || 'No trends available';
 
-    // Scrape TikTok videos (using unofficial API approach)
-    const videos = await scrapeTikTokVideos(hashtag, maxVideos);
+    // Scrape TikTok videos
+    const videos = await scrapeTikTokVideos(cleanHashtag, maxVideos);
     console.log(`Found ${videos.length} videos to analyze`);
 
     if (videos.length === 0) {
@@ -95,134 +148,25 @@ serve(async (req) => {
       );
     }
 
-    // Analyze each video with AI
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
     if (!lovableApiKey) {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    const analyses: AnalysisResult[] = [];
+    // Analyze ALL videos in parallel for maximum speed
+    console.log(`Starting parallel analysis of ${videos.length} videos`);
+    const analysisPromises = videos.map(video => analyzeVideo(video, trendsList, lovableApiKey));
+    const analysisResults = await Promise.all(analysisPromises);
+    
+    // Filter out failed analyses
+    const analyses: AnalysisResult[] = analysisResults.filter(result => result !== null) as AnalysisResult[];
+    console.log(`Successfully analyzed ${analyses.length} videos`);
 
-    for (const video of videos) {
-      try {
-        console.log(`Analyzing video: ${video.id}`);
-        
-        const analysisPrompt = `Analyze this TikTok video image and the video description/caption to identify all clothing items and fashion accessories.
-
-Video Description: "${video.description}"
-
-Current trending fashion items: ${trendsList}
-
-For each clothing item you detect (from BOTH the image AND the description text):
-1. Name the specific item (e.g., "oversized blazer", "cargo pants", "chunky sneakers")
-2. Categorize it (tops, bottoms, shoes, accessories, outerwear)
-3. Rate how trendy/fashionable it appears (0-100) based on current trends
-4. Note if it matches any trending items from the list
-
-Analyze the actual content: look at clothing styles, colors, fits, and styling. Also parse the description for mentioned items like "wearing", "outfit", brand names, clothing items, etc.`;
-
-        const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${lovableApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'google/gemini-2.5-flash',
-            messages: [
-              {
-                role: 'user',
-                content: [
-                  {
-                    type: 'text',
-                    text: analysisPrompt
-                  },
-                  {
-                    type: 'image_url',
-                    image_url: { url: video.thumbnailUrl }
-                  }
-                ]
-              }
-            ],
-            tools: [
-              {
-                type: "function",
-                function: {
-                  name: "analyze_fashion_items",
-                  description: "Identify and rate fashion items in the image",
-                  parameters: {
-                    type: "object",
-                    properties: {
-                      items: {
-                        type: "array",
-                        items: {
-                          type: "object",
-                          properties: {
-                            name: { type: "string", description: "Name of the clothing item" },
-                            category: { type: "string", description: "Category: tops, bottoms, shoes, accessories, outerwear" },
-                            trendScore: { type: "number", description: "How trendy this item is (0-100)" },
-                            matchesTrend: { type: "string", description: "Which trending item it matches, if any" }
-                          },
-                          required: ["name", "category", "trendScore"]
-                        }
-                      }
-                    },
-                    required: ["items"],
-                    additionalProperties: false
-                  }
-                }
-              }
-            ],
-            tool_choice: { type: "function", function: { name: "analyze_fashion_items" } }
-          }),
-        });
-
-        if (!aiResponse.ok) {
-          const errorText = await aiResponse.text();
-          console.error('AI API error:', aiResponse.status, errorText);
-          continue;
-        }
-
-        const aiData = await aiResponse.json();
-        const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-        if (!toolCall) {
-          console.error('No analysis result from AI for video:', video.id);
-          continue;
-        }
-
-        const analysis = JSON.parse(toolCall.function.arguments);
-        const detectedItems: ClothingItem[] = analysis.items.map((item: any) => ({
-          name: item.name,
-          category: item.category,
-          confidence: 100,
-          trendScore: item.trendScore
-        }));
-
-        const overallTrendScore = detectedItems.length > 0
-          ? detectedItems.reduce((sum, item) => sum + item.trendScore, 0) / detectedItems.length
-          : 0;
-
-        const trendingItems = analysis.items
-          .filter((item: any) => item.matchesTrend)
-          .map((item: any) => item.matchesTrend);
-
-        analyses.push({
-          videoId: video.id,
-          videoUrl: video.videoUrl,
-          author: video.author,
-          description: video.description,
-          detectedItems,
-          overallTrendScore: Math.round(overallTrendScore),
-          trendingItems
-        });
-
-        console.log(`Analyzed video ${video.id}: ${detectedItems.length} items, score: ${overallTrendScore}`);
-        
-        // Small delay to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 500));
-      } catch (error) {
-        console.error(`Error analyzing video ${video.id}:`, error);
-      }
+    if (analyses.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'Failed to analyze videos' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Sort by trend score
@@ -234,6 +178,10 @@ Analyze the actual content: look at clothing styles, colors, fits, and styling. 
       rank: index + 1,
       percentile: Math.round(((analyses.length - index) / analyses.length) * 100)
     }));
+
+    // Store in database for future use
+    console.log('Storing results in database...');
+    await storeAnalysisResults(supabaseClient, cleanHashtag, rankedAnalyses);
 
     console.log(`Analysis complete: ${rankedAnalyses.length} videos analyzed`);
 
@@ -390,6 +338,175 @@ function generateMockVideos(hashtag: string, count: number): TikTokVideo[] {
   return mockVideos;
 }
 
+async function analyzeVideo(video: TikTokVideo, trendsList: string, lovableApiKey: string): Promise<AnalysisResult | null> {
+  try {
+    console.log(`Analyzing video: ${video.id}`);
+    
+    const analysisPrompt = `Analyze this TikTok video image and description to identify clothing items and fashion accessories.
+
+Video Description: "${video.description}"
+
+Current trending items: ${trendsList}
+
+For each clothing item (from BOTH image AND description):
+1. Name the item (e.g., "oversized blazer", "cargo pants")
+2. Categorize it (tops, bottoms, shoes, accessories, outerwear)
+3. Rate trendiness (0-100)
+4. Note if it matches any trending items
+
+Be quick and accurate. Focus on visible items and mentioned brands/styles.`;
+
+    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${lovableApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'text', text: analysisPrompt },
+            { type: 'image_url', image_url: { url: video.thumbnailUrl } }
+          ]
+        }],
+        tools: [{
+          type: "function",
+          function: {
+            name: "analyze_fashion_items",
+            description: "Identify and rate fashion items",
+            parameters: {
+              type: "object",
+              properties: {
+                items: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      name: { type: "string" },
+                      category: { type: "string" },
+                      trendScore: { type: "number" },
+                      matchesTrend: { type: "string" }
+                    },
+                    required: ["name", "category", "trendScore"]
+                  }
+                }
+              },
+              required: ["items"],
+              additionalProperties: false
+            }
+          }
+        }],
+        tool_choice: { type: "function", function: { name: "analyze_fashion_items" } }
+      }),
+    });
+
+    if (!aiResponse.ok) {
+      console.error('AI API error:', aiResponse.status, await aiResponse.text());
+      return null;
+    }
+
+    const aiData = await aiResponse.json();
+    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+    if (!toolCall) {
+      console.error('No analysis result for video:', video.id);
+      return null;
+    }
+
+    const analysis = JSON.parse(toolCall.function.arguments);
+    const detectedItems: ClothingItem[] = analysis.items.map((item: any) => ({
+      name: item.name,
+      category: item.category,
+      confidence: 100,
+      trendScore: item.trendScore
+    }));
+
+    const overallTrendScore = detectedItems.length > 0
+      ? Math.round(detectedItems.reduce((sum, item) => sum + item.trendScore, 0) / detectedItems.length)
+      : 0;
+
+    const trendingItems = analysis.items
+      .filter((item: any) => item.matchesTrend)
+      .map((item: any) => item.matchesTrend);
+
+    return {
+      videoId: video.id,
+      videoUrl: video.videoUrl,
+      author: video.author,
+      description: video.description,
+      detectedItems,
+      overallTrendScore,
+      trendingItems
+    };
+  } catch (error) {
+    console.error(`Error analyzing video ${video.id}:`, error);
+    return null;
+  }
+}
+
+async function storeAnalysisResults(supabaseClient: any, hashtag: string, analyses: any[]) {
+  try {
+    // Update hashtag tracking
+    await supabaseClient
+      .from('tiktok_hashtags')
+      .upsert({
+        hashtag,
+        last_scraped_at: new Date().toISOString(),
+        video_count: analyses.length
+      }, { onConflict: 'hashtag' });
+
+    // Store videos
+    for (const analysis of analyses) {
+      const { data: videoData, error: videoError } = await supabaseClient
+        .from('tiktok_videos')
+        .upsert({
+          video_id: analysis.videoId,
+          hashtag,
+          video_url: analysis.videoUrl,
+          thumbnail_url: `https://picsum.photos/400/600?random=${analysis.videoId}`,
+          description: analysis.description,
+          author: analysis.author,
+          overall_trend_score: analysis.overallTrendScore,
+          rank: analysis.rank,
+          percentile: analysis.percentile
+        }, { onConflict: 'video_id' })
+        .select()
+        .single();
+
+      if (videoError) {
+        console.error('Error storing video:', videoError);
+        continue;
+      }
+
+      // Store detected items
+      const itemsToInsert = analysis.detectedItems.map((item: any) => ({
+        video_id: videoData.id,
+        item_name: item.name,
+        category: item.category,
+        trend_score: item.trendScore,
+        confidence: item.confidence,
+        matches_trend: analysis.trendingItems.find((t: string) => t.toLowerCase().includes(item.name.toLowerCase())) || null
+      }));
+
+      if (itemsToInsert.length > 0) {
+        await supabaseClient
+          .from('tiktok_detected_items')
+          .delete()
+          .eq('video_id', videoData.id);
+
+        await supabaseClient
+          .from('tiktok_detected_items')
+          .insert(itemsToInsert);
+      }
+    }
+
+    console.log('Successfully stored analysis results in database');
+  } catch (error) {
+    console.error('Error storing analysis results:', error);
+  }
+}
+
 function getTopItems(analyses: AnalysisResult[], count: number): { name: string; occurrences: number; avgTrendScore: number }[] {
   const itemMap = new Map<string, { count: number; totalScore: number }>();
   
@@ -406,7 +523,7 @@ function getTopItems(analyses: AnalysisResult[], count: number): { name: string;
     }
   }
   
-  const topItems = Array.from(itemMap.entries())
+  return Array.from(itemMap.entries())
     .map(([name, data]) => ({
       name,
       occurrences: data.count,
@@ -414,6 +531,30 @@ function getTopItems(analyses: AnalysisResult[], count: number): { name: string;
     }))
     .sort((a, b) => b.occurrences - a.occurrences)
     .slice(0, count);
+}
+
+function getTopItemsFromCache(analyses: any[], count: number) {
+  const itemMap = new Map<string, { count: number; totalScore: number }>();
   
-  return topItems;
+  for (const analysis of analyses) {
+    for (const item of analysis.detectedItems) {
+      const key = item.name.toLowerCase();
+      const existing = itemMap.get(key);
+      if (existing) {
+        existing.count++;
+        existing.totalScore += item.trendScore;
+      } else {
+        itemMap.set(key, { count: 1, totalScore: item.trendScore });
+      }
+    }
+  }
+  
+  return Array.from(itemMap.entries())
+    .map(([name, data]) => ({
+      name,
+      occurrences: data.count,
+      avgTrendScore: Math.round(data.totalScore / data.count)
+    }))
+    .sort((a, b) => b.occurrences - a.occurrences)
+    .slice(0, count);
 }

@@ -64,7 +64,8 @@ export default function TikTokTrends() {
         {
           body: {
             hashtag: hashtag.replace('#', ''),
-            maxVideos
+            maxVideos,
+            forceRefresh: false
           }
         }
       );
@@ -77,8 +78,10 @@ export default function TikTokTrends() {
 
       setResult(functionData);
       toast({
-        title: "Analysis Complete",
-        description: `Analyzed ${functionData.totalVideos} videos`,
+        title: functionData.cached ? "Loaded from Cache" : "Analysis Complete",
+        description: functionData.cached 
+          ? `Loaded ${functionData.totalVideos} videos instantly!`
+          : `Analyzed ${functionData.totalVideos} videos successfully!`,
       });
     } catch (error) {
       console.error('Error:', error);

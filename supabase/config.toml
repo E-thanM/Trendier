@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.analyze-tiktok-trends]
 verify_jwt = true
+
+[functions.scrape-common-hashtags]
+verify_jwt = false

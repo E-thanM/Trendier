@@ -286,6 +286,119 @@ export type Database = {
         }
         Relationships: []
       }
+      tiktok_detected_items: {
+        Row: {
+          category: string
+          confidence: number | null
+          created_at: string
+          id: string
+          item_name: string
+          matches_trend: string | null
+          trend_score: number
+          video_id: string
+        }
+        Insert: {
+          category: string
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          item_name: string
+          matches_trend?: string | null
+          trend_score: number
+          video_id: string
+        }
+        Update: {
+          category?: string
+          confidence?: number | null
+          created_at?: string
+          id?: string
+          item_name?: string
+          matches_trend?: string | null
+          trend_score?: number
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tiktok_detected_items_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "tiktok_videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tiktok_hashtags: {
+        Row: {
+          created_at: string
+          hashtag: string
+          id: string
+          is_common: boolean | null
+          last_scraped_at: string
+          video_count: number | null
+        }
+        Insert: {
+          created_at?: string
+          hashtag: string
+          id?: string
+          is_common?: boolean | null
+          last_scraped_at?: string
+          video_count?: number | null
+        }
+        Update: {
+          created_at?: string
+          hashtag?: string
+          id?: string
+          is_common?: boolean | null
+          last_scraped_at?: string
+          video_count?: number | null
+        }
+        Relationships: []
+      }
+      tiktok_videos: {
+        Row: {
+          author: string | null
+          created_at: string
+          description: string | null
+          hashtag: string
+          id: string
+          overall_trend_score: number | null
+          percentile: number | null
+          rank: number | null
+          thumbnail_url: string | null
+          updated_at: string
+          video_id: string
+          video_url: string
+        }
+        Insert: {
+          author?: string | null
+          created_at?: string
+          description?: string | null
+          hashtag: string
+          id?: string
+          overall_trend_score?: number | null
+          percentile?: number | null
+          rank?: number | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          video_id: string
+          video_url: string
+        }
+        Update: {
+          author?: string | null
+          created_at?: string
+          description?: string | null
+          hashtag?: string
+          id?: string
+          overall_trend_score?: number | null
+          percentile?: number | null
+          rank?: number | null
+          thumbnail_url?: string | null
+          updated_at?: string
+          video_id?: string
+          video_url?: string
+        }
+        Relationships: []
+      }
       trend_history: {
         Row: {
           created_at: string
