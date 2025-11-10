@@ -258,29 +258,47 @@ export default function Messages() {
   const markAsRead = async (conversationId: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        console.log('No user found, cannot mark as read');
+        return;
+      }
 
       // Get the latest message timestamp
-      const { data: latestMessage } = await supabase
+      const { data: latestMessages, error: messageError } = await supabase
         .from('messages')
         .select('created_at')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+        .limit(1);
 
-      const timestamp = latestMessage?.created_at || new Date().toISOString();
+      if (messageError) {
+        console.error('Error fetching latest message:', messageError);
+      }
 
-      const { error } = await supabase
+      const timestamp = latestMessages && latestMessages.length > 0 
+        ? latestMessages[0].created_at 
+        : new Date().toISOString();
+
+      console.log('Marking conversation as read:', conversationId, 'timestamp:', timestamp);
+
+      const { error: updateError, data: updateData } = await supabase
         .from('conversation_participants')
         .update({ last_read_at: timestamp })
         .eq('conversation_id', conversationId)
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .select();
 
-      if (error) {
-        console.error('Error updating last_read_at:', error);
+      if (updateError) {
+        console.error('Error updating last_read_at:', updateError);
+        toast({
+          title: "Error",
+          description: "Failed to mark messages as read",
+          variant: "destructive",
+        });
         return;
       }
+
+      console.log('Successfully marked as read:', updateData);
 
       // Update local state immediately
       setConversations(prev =>
@@ -292,21 +310,31 @@ export default function Messages() {
       }
     } catch (error) {
       console.error('Error marking as read:', error);
+      toast({
+        title: "Error",
+        description: "Failed to mark messages as read",
+        variant: "destructive",
+      });
     }
   };
 
   const markAllAsRead = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        console.log('No user found, cannot mark all as read');
+        return;
+      }
 
       const timestamp = new Date().toISOString();
+      console.log('Marking all conversations as read with timestamp:', timestamp);
 
       // Update all conversation participants for this user
-      const { error } = await supabase
+      const { error, data } = await supabase
         .from('conversation_participants')
         .update({ last_read_at: timestamp })
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .select();
 
       if (error) {
         console.error('Error marking all as read:', error);
@@ -317,6 +345,8 @@ export default function Messages() {
         });
         return;
       }
+
+      console.log('Successfully marked all as read:', data);
 
       // Update local state
       setConversations(prev =>
