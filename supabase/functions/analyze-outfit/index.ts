@@ -877,48 +877,51 @@ User's outfit (image 1) vs TikTok outfit (image 2)`;
 
     console.log(`Found ${tiktokMatches.length} visually-matched TikTok items with average score: ${tiktokTrendScore}`);
 
-    // Generate outfit recommendations using AI
-    const recommendationPrompt = `Based on this ${targetStyle} outfit analysis, suggest 2-3 specific clothing items or accessories that would:
-1. Complete or enhance this ${targetStyle} look
-2. Match current fashion trends
-3. Pair well with the existing outfit
+    // Generate detailed outfit element descriptions using AI
+    const elementPrompt = `Analyze this ${targetStyle} outfit and identify the 3 MOST IMPORTANT elements (clothing items, accessories, or style choices).
 
-Be specific (e.g., "white chunky sneakers" not just "shoes"). Return as array of recommendation objects.`;
+For each element, provide:
+1. Name of the item (e.g., "Oversized Denim Jacket", "Black Chelsea Boots")
+2. Why it's key to this ${targetStyle} aesthetic (2-3 sentences)
+3. How it contributes to the overall look
+4. A specific search term for shopping (e.g., "oversized light wash denim jacket women")
 
-    let recommendations: any[] = [];
+Focus on the most impactful pieces that define the outfit.`;
+
+    let outfitElements: any[] = [];
     
     // Try Gemini first
     if (geminiApiKey) {
       try {
-        const recResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
+        const elemResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [{
               parts: [
-                { text: `${recommendationPrompt}\n\nAnalysis: ${analysis.styleAnalysis}\n\nReturn JSON:\n{"recommendations": [{"item": "item name", "reason": "why it works"}]}` },
+                { text: `${elementPrompt}\n\nReturn JSON:\n{"elements": [{"name": "item name", "description": "why it's important", "searchTerm": "shopping search term"}]}` },
                 { inline_data: { mime_type: "image/jpeg", data: base64Image1 } }
               ]
             }],
             generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 512,
+              temperature: 0.3,
+              maxOutputTokens: 1024,
               responseMimeType: "application/json"
             }
           })
         });
 
-        if (recResponse.ok) {
-          const recData = await recResponse.json();
-          recommendations = JSON.parse(recData.candidates?.[0]?.content?.parts?.[0]?.text || '{"recommendations":[]}').recommendations;
+        if (elemResponse.ok) {
+          const elemData = await elemResponse.json();
+          outfitElements = JSON.parse(elemData.candidates?.[0]?.content?.parts?.[0]?.text || '{"elements":[]}').elements;
         }
       } catch (error) {
-        console.log('Gemini recommendations failed, trying Lovable AI');
+        console.log('Gemini elements failed, trying Lovable AI');
       }
     }
     
     // Fallback to Lovable AI
-    if (recommendations.length === 0 && lovableApiKey) {
+    if (outfitElements.length === 0 && lovableApiKey) {
       try {
         const lovableResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
@@ -931,34 +934,35 @@ Be specific (e.g., "white chunky sneakers" not just "shoes"). Return as array of
             messages: [{
               role: 'user',
               content: [
-                { type: 'text', text: `${recommendationPrompt}\n\nAnalysis: ${analysis.styleAnalysis}` },
+                { type: 'text', text: elementPrompt },
                 { type: 'image_url', image_url: { url: imageUrl } }
               ]
             }],
             tools: [{
               type: "function",
               function: {
-                name: "suggest_items",
-                description: "Suggest clothing items",
+                name: "analyze_elements",
+                description: "Analyze outfit elements",
                 parameters: {
                   type: "object",
                   properties: {
-                    recommendations: {
+                    elements: {
                       type: "array",
                       items: {
                         type: "object",
                         properties: {
-                          item: { type: "string" },
-                          reason: { type: "string" }
+                          name: { type: "string" },
+                          description: { type: "string" },
+                          searchTerm: { type: "string" }
                         }
                       }
                     }
                   },
-                  required: ["recommendations"]
+                  required: ["elements"]
                 }
               }
             }],
-            tool_choice: { type: "function", function: { name: "suggest_items" } }
+            tool_choice: { type: "function", function: { name: "analyze_elements" } }
           })
         });
 
@@ -966,13 +970,19 @@ Be specific (e.g., "white chunky sneakers" not just "shoes"). Return as array of
           const lovableData = await lovableResponse.json();
           const toolCall = lovableData.choices?.[0]?.message?.tool_calls?.[0];
           if (toolCall?.function?.arguments) {
-            recommendations = JSON.parse(toolCall.function.arguments).recommendations || [];
+            outfitElements = JSON.parse(toolCall.function.arguments).elements || [];
           }
         }
       } catch (error) {
-        console.error('Lovable AI recommendations failed:', error);
+        console.error('Lovable AI elements failed:', error);
       }
     }
+
+    // Add shopping links to elements
+    const elementsWithLinks = outfitElements.slice(0, 3).map(elem => ({
+      ...elem,
+      shopLink: `https://www.google.com/search?q=${encodeURIComponent(elem.searchTerm || elem.name)}&tbm=shop`
+    }));
 
     const finalResult = {
       success: true,
@@ -980,11 +990,11 @@ Be specific (e.g., "white chunky sneakers" not just "shoes"). Return as array of
       trendMatch: analysis.trendMatchScore,
       feedback: analysis.styleAnalysis,
       matchingTrends: analysis.matchedTrends,
-      extractedHashtags: searchTerms,
-      trendEstimates: trendEstimates,
+      outfitElements: elementsWithLinks,
       tiktokMatches: tiktokMatches.slice(0, 3),
       tiktokTrendScore: tiktokTrendScore,
-      recommendations: recommendations.slice(0, 3)
+      imageUrl: imageUrl,
+      targetStyle: targetStyle
     };
 
     // Cache the result in background (fire and forget)

@@ -129,6 +129,7 @@ export default function Analyzer() {
   const [result, setResult] = useState<any>(null);
   const [selectedTrend, setSelectedTrend] = useState<any>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -267,6 +268,52 @@ export default function Analyzer() {
     }
   };
 
+  const handleSaveOutfit = async () => {
+    if (!result || !imageFile) return;
+
+    setSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast({
+          title: "Authentication Required",
+          description: "Please sign in to save outfits",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Save to outfits table
+      const { error } = await supabase
+        .from('outfits')
+        .insert({
+          user_id: session.user.id,
+          image_url: result.imageUrl,
+          caption: `${result.targetStyle} outfit - ${result.rating}/100 style match`,
+          rating: result.rating,
+          trend_match_score: result.trendMatch,
+          style_tags: [result.targetStyle, ...(result.matchingTrends || [])].slice(0, 5)
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Outfit Saved!",
+        description: "Your analyzed outfit has been saved to your profile",
+      });
+    } catch (error: any) {
+      console.error("Error saving outfit:", error);
+      toast({
+        title: "Save Failed",
+        description: error.message || "Failed to save outfit",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleTrendClick = async (trendName: string) => {
     try {
       const { data, error } = await supabase
@@ -384,10 +431,30 @@ export default function Analyzer() {
 
       {result && (
         <Card className="p-6 border-primary/30 bg-gradient-to-br from-primary/5 to-secondary/5">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <Star className="h-5 w-5 text-primary" />
-            Analysis Results
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <Star className="h-5 w-5 text-primary" />
+              Analysis Results
+            </h2>
+            <Button 
+              onClick={handleSaveOutfit} 
+              disabled={saving}
+              variant="outline"
+              size="sm"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Star className="mr-2 h-4 w-4" />
+                  Save Outfit
+                </>
+              )}
+            </Button>
+          </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <MetricCircle 
@@ -423,6 +490,37 @@ export default function Analyzer() {
               <Card className="p-4 border-border">
                 <p className="text-sm leading-relaxed">{result.feedback}</p>
               </Card>
+            </div>
+          )}
+
+          {result.outfitElements && result.outfitElements.length > 0 && (
+            <div className="mb-6">
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <Sparkles className="h-4 w-4" />
+                Key Outfit Elements
+              </h3>
+              <div className="grid gap-4">
+                {result.outfitElements.map((element: any, index: number) => (
+                  <Card key={index} className="p-4 border-primary/20">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h4 className="font-semibold text-base mb-2">{element.name}</h4>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          {element.description}
+                        </p>
+                      </div>
+                    </div>
+                    <a
+                      href={element.shopLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-sm text-primary hover:underline font-medium"
+                    >
+                      Shop Similar <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </Card>
+                ))}
+              </div>
             </div>
           )}
 
@@ -470,29 +568,6 @@ export default function Analyzer() {
             </div>
           )}
 
-          {result.recommendations && result.recommendations.length > 0 && (
-            <div>
-              <h3 className="font-semibold mb-3 flex items-center gap-2">
-                <Sparkles className="h-4 w-4" />
-                Recommended to Pair With Your Outfit
-              </h3>
-              <div className="space-y-3">
-                {result.recommendations.map((rec: any, index: number) => (
-                  <Card key={index} className="p-4 border-primary/20">
-                    <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Star className="h-4 w-4 text-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-medium text-sm mb-1">{rec.item}</div>
-                        <p className="text-xs text-muted-foreground">{rec.reason}</p>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
         </Card>
       )}
 
