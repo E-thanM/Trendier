@@ -212,18 +212,47 @@ Return 5-8 general search terms that would work well in Google Search.`;
     console.log(`Extracted ${searchTerms.length} search terms:`, searchTerms);
 
     // Step 2: Use Gemini to estimate trend popularity (saves Serper API calls)
+    // Fetch recent TikTok trend data from database
+    console.log('Fetching TikTok trend data...');
+    const { data: tiktokItems, error: tiktokError } = await supabaseClient
+      .from('tiktok_detected_items')
+      .select(`
+        item_name,
+        category,
+        trend_score,
+        video:tiktok_videos(
+          video_id,
+          video_url,
+          author,
+          overall_trend_score,
+          hashtag
+        )
+      `)
+      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+      .order('trend_score', { ascending: false })
+      .limit(50);
+
+    if (tiktokError) {
+      console.error('Error fetching TikTok data:', tiktokError);
+    }
+
+    const tiktokItemNames = tiktokItems?.map((item: any) => item.item_name.toLowerCase()) || [];
+    console.log(`Found ${tiktokItemNames.length} trending items from TikTok`);
+
     console.log('Estimating trend popularity with Gemini...');
     
     const trendEstimationPrompt = `Based on your knowledge of current fashion trends (as of your training data), estimate the popularity and relevance of these fashion search terms on a scale of 0-100:
 
 Search terms: ${searchTerms.join(', ')}
 
+Trending on TikTok: ${tiktokItemNames.slice(0, 10).join(', ')}
+
 For each term, provide:
 1. Popularity score (0-100) - how trending is this term
 2. Brief context (why it's popular/not popular)
 3. Related trends
 
-Use your knowledge of TikTok, Instagram fashion trends, runway shows, and street style.`;
+Consider TikTok trends, Instagram fashion trends, runway shows, and street style.`;
 
     const estimationResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -481,6 +510,41 @@ Provide detailed analysis of how well the outfit matches the user's intended sty
 
     const analysis = JSON.parse(toolCall.function.arguments);
 
+    // Calculate TikTok trend matches
+    const tiktokMatches: any[] = [];
+    const matchedItems = new Set<string>();
+    
+    if (tiktokItems && tiktokItems.length > 0) {
+      for (const searchTerm of searchTerms) {
+        const termLower = searchTerm.toLowerCase();
+        const matchingTiktokItems = tiktokItems.filter((item: any) => 
+          item.item_name.toLowerCase().includes(termLower) || 
+          termLower.includes(item.item_name.toLowerCase())
+        );
+        
+        for (const match of matchingTiktokItems.slice(0, 3)) {
+          if (!matchedItems.has(match.item_name)) {
+            matchedItems.add(match.item_name);
+            const video = Array.isArray(match.video) ? match.video[0] : match.video;
+            tiktokMatches.push({
+              itemName: match.item_name,
+              category: match.category,
+              trendScore: match.trend_score,
+              videoUrl: video?.video_url,
+              author: video?.author,
+              hashtag: video?.hashtag
+            });
+          }
+        }
+      }
+    }
+
+    const tiktokTrendScore = tiktokMatches.length > 0
+      ? Math.round(tiktokMatches.reduce((sum, m) => sum + m.trendScore, 0) / tiktokMatches.length)
+      : 0;
+
+    console.log(`Found ${tiktokMatches.length} TikTok matches with average score: ${tiktokTrendScore}`);
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -491,7 +555,9 @@ Provide detailed analysis of how well the outfit matches the user's intended sty
         extractedHashtags: searchTerms,
         trendEstimates: trendEstimates,
         googleTrendsData: googleTrendsData,
-        verifiedTopTrend: verifiedTopTrend
+        verifiedTopTrend: verifiedTopTrend,
+        tiktokMatches: tiktokMatches.slice(0, 5),
+        tiktokTrendScore: tiktokTrendScore
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

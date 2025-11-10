@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, Loader2, TrendingUp, Star, Upload, X } from "lucide-react";
+import { Sparkles, Loader2, TrendingUp, Star, Upload, X, Video, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { z } from "zod";
 import { TrendDetailModal } from "@/components/TrendDetailModal";
@@ -282,7 +282,7 @@ export default function Analyzer() {
             Analysis Results
           </h2>
           
-          <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-3 gap-4 mb-6">
             <Card className="p-4 border-border text-center">
               <div className="text-3xl font-bold text-primary mb-1">
                 {result.rating || 0}/100
@@ -295,6 +295,16 @@ export default function Analyzer() {
                 {result.trendMatch || 0}%
               </div>
               <div className="text-sm text-muted-foreground">Trend Match</div>
+            </Card>
+
+            <Card className="p-4 border-border text-center">
+              <div className="text-3xl font-bold text-chart-1 mb-1">
+                {result.tiktokTrendScore || 0}/100
+              </div>
+              <div className="text-sm text-muted-foreground flex items-center justify-center gap-1">
+                <Video className="h-3 w-3" />
+                TikTok Trend
+              </div>
             </Card>
           </div>
 
@@ -449,6 +459,55 @@ export default function Analyzer() {
               </Card>
               <p className="text-xs text-muted-foreground mt-2 text-center">
                 Final verification search with Serper API
+              </p>
+            </div>
+          )}
+
+          {result.tiktokMatches && result.tiktokMatches.length > 0 && (
+            <div className="mb-6">
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <Video className="h-4 w-4 text-chart-1" />
+                Trending on TikTok
+              </h3>
+              <div className="space-y-3">
+                {result.tiktokMatches.map((match: any, index: number) => (
+                  <Card key={index} className="p-4 border-chart-1/30 bg-gradient-to-br from-chart-1/5 to-chart-2/5">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge className="text-xs bg-chart-1">
+                            {match.itemName}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {match.category}
+                          </Badge>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Featured in videos by <span className="font-medium">@{match.author}</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-chart-1">
+                          {match.trendScore}
+                        </div>
+                        <div className="text-xs text-muted-foreground">trend score</div>
+                      </div>
+                    </div>
+                    {match.videoUrl && (
+                      <a 
+                        href={match.videoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-chart-1 hover:underline inline-flex items-center gap-1"
+                      >
+                        Watch on TikTok <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
+                  </Card>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2 text-center">
+                Based on {result.tiktokMatches.length} matching items from recent TikTok fashion videos
               </p>
             </div>
           )}
