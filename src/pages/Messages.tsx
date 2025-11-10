@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowLeft, Search, Send, Plus, Loader2, Check, CheckCheck, MessageCircle } from "lucide-react";
+import { ArrowLeft, Search, Send, Plus, Loader2, Check, CheckCheck, MessageCircle, CheckCheck as MarkAllRead } from "lucide-react";
 import { MessageDropdown } from "@/components/MessageDropdown";
 import { UserSearchDialog } from "@/components/UserSearchDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -295,6 +295,52 @@ export default function Messages() {
     }
   };
 
+  const markAllAsRead = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const timestamp = new Date().toISOString();
+
+      // Update all conversation participants for this user
+      const { error } = await supabase
+        .from('conversation_participants')
+        .update({ last_read_at: timestamp })
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error marking all as read:', error);
+        toast({
+          title: "Error",
+          description: "Failed to mark all as read",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Update local state
+      setConversations(prev =>
+        prev.map(c => ({ ...c, unread_count: 0 }))
+      );
+
+      if (selectedConversation) {
+        setSelectedConversation(prev => prev ? { ...prev, unread_count: 0 } : null);
+      }
+
+      toast({
+        title: "Success",
+        description: "All conversations marked as read",
+      });
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+      toast({
+        title: "Error",
+        description: "Failed to mark all as read",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!messageInput.trim() || !selectedConversation) return;
 
@@ -403,6 +449,16 @@ export default function Messages() {
                   >
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Back
+                  </Button>
+                )}
+                {conversations.some(c => c.unread_count > 0) && (
+                  <Button 
+                    size="sm" 
+                    variant="ghost"
+                    onClick={markAllAsRead}
+                    title="Mark all as read"
+                  >
+                    <CheckCheck className="h-4 w-4" />
                   </Button>
                 )}
                 <Button size="sm" onClick={() => setSearchDialogOpen(true)}>
