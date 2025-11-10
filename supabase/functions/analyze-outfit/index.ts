@@ -155,7 +155,12 @@ Return 5-8 general search terms that would work well in Google Search.`;
     // Fetch image as base64
     const imageResponse1 = await fetch(imageUrl);
     const imageBuffer1 = await imageResponse1.arrayBuffer();
-    const base64Image1 = btoa(String.fromCharCode(...new Uint8Array(imageBuffer1)));
+    const uint8Array1 = new Uint8Array(imageBuffer1);
+    let binaryString1 = '';
+    for (let i = 0; i < uint8Array1.length; i++) {
+      binaryString1 += String.fromCharCode(uint8Array1[i]);
+    }
+    const base64Image1 = btoa(binaryString1);
 
     const hashtagResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
@@ -375,7 +380,12 @@ Provide detailed analysis of how well the outfit matches the user's intended sty
     // Fetch image as base64  
     const imageResponse2 = await fetch(imageUrl);
     const imageBuffer2 = await imageResponse2.arrayBuffer();
-    const base64Image2 = btoa(String.fromCharCode(...new Uint8Array(imageBuffer2)));
+    const uint8Array2 = new Uint8Array(imageBuffer2);
+    let binaryString2 = '';
+    for (let i = 0; i < uint8Array2.length; i++) {
+      binaryString2 += String.fromCharCode(uint8Array2[i]);
+    }
+    const base64Image2 = btoa(binaryString2);
 
     // Analyze outfit using Gemini API with vision
     const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
