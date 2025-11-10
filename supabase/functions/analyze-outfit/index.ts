@@ -148,7 +148,7 @@ Rules:
 4. Avoid brand names unless extremely visible
 5. Focus on what would get most Google search volume
 
-Return 5-8 general search terms that would work well in Google Search.`;
+Return 4-5 general search terms that would work well in Google Search.`;
 
     // Fetch image as base64
     const imageResponse1 = await fetch(imageUrl);
@@ -408,10 +408,10 @@ Consider TikTok trends, Instagram fashion trends, runway shows, and street style
     let verifiedTopTrend = null;
 
     if (SERPER_API_KEY && searchTerms.length > 0) {
-      console.log('Querying Google Trends for search terms...');
+      console.log('Querying Google Trends for search terms in parallel...');
       
-      // For each search term, query Google Trends to get trending information
-      for (const term of searchTerms) {
+      // Parallelize all Google Trends searches for speed
+      const trendsPromises = searchTerms.map(async (term) => {
         try {
           const trendsQuery = `${term} fashion trends site:trends.google.com`;
           console.log(`Searching Google Trends for: ${term}`);
@@ -424,7 +424,7 @@ Consider TikTok trends, Instagram fashion trends, runway shows, and street style
             },
             body: JSON.stringify({ 
               q: trendsQuery,
-              num: 5  // Get top 5 results from Google Trends
+              num: 5
             }),
           });
 
@@ -432,22 +432,24 @@ Consider TikTok trends, Instagram fashion trends, runway shows, and street style
             const trendsData = await trendsResponse.json();
             const trendingResults = trendsData.organic?.slice(0, 3) || [];
             
-            googleTrendsData.push({
+            console.log(`Found ${trendingResults.length} trending topics for "${term}"`);
+            
+            return {
               searchTerm: term,
               trendsUrl: trendingResults[0]?.link || null,
               trendingTopics: trendingResults.map((r: any) => r.title || ''),
               snippet: trendingResults[0]?.snippet || ''
-            });
-            
-            console.log(`Found ${trendingResults.length} trending topics for "${term}"`);
+            };
           }
-          
-          // Add small delay to avoid rate limiting
-          await new Promise(resolve => setTimeout(resolve, 100));
+          return null;
         } catch (error) {
           console.error(`Error querying trends for "${term}":`, error);
+          return null;
         }
-      }
+      });
+      
+      const trendsResults = await Promise.all(trendsPromises);
+      googleTrendsData.push(...trendsResults.filter(r => r !== null))
 
       // Step 4: Verify the top trending term with a final Serper search
       if (trendEstimates.length > 0) {
@@ -458,33 +460,33 @@ Consider TikTok trends, Instagram fashion trends, runway shows, and street style
         console.log(`Verifying top trend "${topEstimate.searchTerm}" with final search...`);
         
         try {
-          const searchQuery = `${topEstimate.searchTerm} fashion 2025`;
+          const searchQuery = `${topEstimate.searchTerm} fashion`;
           const response = await fetch('https://google.serper.dev/search', {
             method: 'POST',
             headers: {
               'X-API-KEY': SERPER_API_KEY,
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ q: searchQuery }),
+            body: JSON.stringify({ q: searchQuery, num: 10 }),
           });
 
           if (response.ok) {
             const data = await response.json();
-            const resultCount = data.searchInformation?.totalResults || 0;
+            const resultCount = data.searchParameters?.total || data.searchInformation?.totalResults || 0;
             
             // Find Google Trends data for this term
             const trendsInfo = googleTrendsData.find(t => t.searchTerm === topEstimate.searchTerm);
             
             verifiedTopTrend = {
               searchTerm: topEstimate.searchTerm,
-              resultCount: parseInt(resultCount),
+              resultCount: typeof resultCount === 'string' ? parseInt(resultCount.replace(/,/g, '')) : resultCount,
               topResult: data.organic?.[0]?.title || null,
               estimatedScore: topEstimate.popularityScore,
               trendsUrl: trendsInfo?.trendsUrl || null,
               trendingTopics: trendsInfo?.trendingTopics || []
             };
             
-            console.log(`Verified: Found ${resultCount} results for "${topEstimate.searchTerm}"`);
+            console.log(`Verified: Found ${verifiedTopTrend.resultCount} results for "${topEstimate.searchTerm}"`);
           }
         } catch (error) {
           console.error('Error verifying top trend:', error);

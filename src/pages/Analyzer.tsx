@@ -525,7 +525,7 @@ export default function Analyzer() {
             </div>
           )}
 
-          {result.verifiedTopTrend && (
+          {result.verifiedTopTrend && result.verifiedTopTrend.resultCount > 0 && (
             <div className="mb-6">
               <h3 className="font-semibold mb-3 flex items-center gap-2">
                 <TrendingUp className="h-4 w-4" />
@@ -534,11 +534,11 @@ export default function Analyzer() {
               <Card className="p-4 border-primary/30 bg-gradient-to-br from-primary/5 to-secondary/5">
                 <div className="flex items-center justify-between mb-3">
                   <Badge className="text-sm">
-                    #{result.verifiedTopTrend.searchTerm || result.verifiedTopTrend.hashtag}
+                    #{result.verifiedTopTrend.searchTerm}
                   </Badge>
                   <div className="text-right">
                     <div className="text-2xl font-bold text-primary">
-                      {result.verifiedTopTrend.resultCount?.toLocaleString() || 0}
+                      {result.verifiedTopTrend.resultCount.toLocaleString()}
                     </div>
                     <div className="text-xs text-muted-foreground">search results</div>
                   </div>
@@ -555,7 +555,7 @@ export default function Analyzer() {
                  result.verifiedTopTrend.trendingTopics.length > 0 && (
                   <div className="mt-3 space-y-1">
                     <div className="text-xs font-medium text-muted-foreground">
-                      Related Trending Topics from Google Trends:
+                      Related Trending Topics:
                     </div>
                     <div className="flex gap-1 flex-wrap">
                       {result.verifiedTopTrend.trendingTopics.slice(0, 3).map((topic: string, i: number) => (
@@ -568,7 +568,7 @@ export default function Analyzer() {
                 )}
               </Card>
               <p className="text-xs text-muted-foreground mt-2 text-center">
-                Final verification search with Serper API
+                Verified with real-time search data
               </p>
             </div>
           )}
@@ -577,8 +577,23 @@ export default function Analyzer() {
             <div className="mb-6">
               <h3 className="font-semibold mb-3 flex items-center gap-2">
                 <Video className="h-4 w-4 text-chart-1" />
-                Trending on TikTok
+                TikTok Viral Score Breakdown
               </h3>
+              
+              <Card className="p-4 mb-4 border-chart-1/30 bg-gradient-to-br from-chart-1/10 to-chart-2/10">
+                <div className="text-center mb-3">
+                  <div className="text-4xl font-bold text-chart-1 mb-1">
+                    {result.tiktokTrendScore}/100
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Average TikTok Trend Score
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Calculated from {result.tiktokMatches.length} matching items in real TikTok videos
+                  </p>
+                </div>
+              </Card>
+
               <div className="space-y-3">
                 {result.tiktokMatches.map((match: any, index: number) => (
                   <Card key={index} className="p-4 border-chart-1/30 bg-gradient-to-br from-chart-1/5 to-chart-2/5">
@@ -600,7 +615,7 @@ export default function Analyzer() {
                         <div className="text-2xl font-bold text-chart-1">
                           {match.trendScore}
                         </div>
-                        <div className="text-xs text-muted-foreground">trend score</div>
+                        <div className="text-xs text-muted-foreground">score</div>
                       </div>
                     </div>
                     {match.videoUrl && (
@@ -616,8 +631,9 @@ export default function Analyzer() {
                   </Card>
                 ))}
               </div>
-              <p className="text-xs text-muted-foreground mt-2 text-center">
-                Based on {result.tiktokMatches.length} matching items from recent TikTok fashion videos
+              
+              <p className="text-xs text-muted-foreground mt-3 text-center">
+                Items detected from analyzing actual TikTok fashion video content
               </p>
             </div>
           )}
