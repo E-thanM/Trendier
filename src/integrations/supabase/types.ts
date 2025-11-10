@@ -149,6 +149,30 @@ export type Database = {
           },
         ]
       }
+      outfit_analysis_cache: {
+        Row: {
+          cache_key: string
+          created_at: string
+          id: string
+          result: Json
+          user_id: string
+        }
+        Insert: {
+          cache_key: string
+          created_at?: string
+          id?: string
+          result: Json
+          user_id: string
+        }
+        Update: {
+          cache_key?: string
+          created_at?: string
+          id?: string
+          result?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
       outfit_comments: {
         Row: {
           comment_text: string

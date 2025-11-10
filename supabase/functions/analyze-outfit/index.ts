@@ -93,6 +93,26 @@ serve(async (req) => {
     
     const { imageUrl, targetStyle } = validation.data;
 
+    // Check cache first - use image URL + target style as cache key
+    const cacheKey = `${imageUrl}_${targetStyle}`;
+    const { data: cachedResult } = await supabaseClient
+      .from('outfit_analysis_cache')
+      .select('*')
+      .eq('cache_key', cacheKey)
+      .gte('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString()) // 1 hour cache
+      .single();
+
+    if (cachedResult) {
+      console.log('Returning cached analysis result');
+      return new Response(
+        JSON.stringify(cachedResult.result),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
+        }
+      );
+    }
+
     // Validate image format - Gemini doesn't support AVIF
     const imageExtension = imageUrl.split('.').pop()?.toLowerCase();
     const supportedFormats = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
@@ -183,7 +203,7 @@ Return 4-5 general search terms that would work well in Google Search.`;
               ]
             }],
             generationConfig: {
-              temperature: 0.4,
+              temperature: 0.1,
               topK: 32,
               topP: 1,
               maxOutputTokens: 2048,
@@ -321,7 +341,7 @@ Consider TikTok trends, Instagram fashion trends, runway shows, and street style
               ]
             }],
             generationConfig: {
-              temperature: 0.4,
+              temperature: 0.1,
               topK: 32,
               topP: 1,
               maxOutputTokens: 2048,
@@ -545,7 +565,7 @@ Provide detailed analysis of how well the outfit matches the user's intended sty
               ]
             }],
             generationConfig: {
-              temperature: 0.4,
+              temperature: 0.1,
               topK: 32,
               topP: 1,
               maxOutputTokens: 2048,
@@ -665,20 +685,37 @@ Provide detailed analysis of how well the outfit matches the user's intended sty
 
     console.log(`Found ${tiktokMatches.length} TikTok matches with average score: ${tiktokTrendScore}`);
 
+    const finalResult = {
+      success: true,
+      rating: analysis.rating,
+      trendMatch: analysis.trendMatchScore,
+      feedback: analysis.styleAnalysis,
+      matchingTrends: analysis.matchedTrends,
+      extractedHashtags: searchTerms,
+      trendEstimates: trendEstimates,
+      tiktokMatches: tiktokMatches.slice(0, 5),
+      tiktokTrendScore: tiktokTrendScore
+    };
+
+    // Cache the result in background (fire and forget)
+    (async () => {
+      try {
+        await supabaseClient
+          .from('outfit_analysis_cache')
+          .upsert({
+            cache_key: cacheKey,
+            user_id: user.id,
+            result: finalResult,
+            created_at: new Date().toISOString()
+          });
+        console.log('Result cached successfully');
+      } catch {
+        console.log('Cache operation failed');
+      }
+    })();
+
     return new Response(
-      JSON.stringify({
-        success: true,
-        rating: analysis.rating,
-        trendMatch: analysis.trendMatchScore,
-        feedback: analysis.styleAnalysis,
-        matchingTrends: analysis.matchedTrends,
-        extractedHashtags: searchTerms,
-        trendEstimates: trendEstimates,
-        googleTrendsData: googleTrendsData,
-        verifiedTopTrend: verifiedTopTrend,
-        tiktokMatches: tiktokMatches.slice(0, 5),
-        tiktokTrendScore: tiktokTrendScore
-      }),
+      JSON.stringify(finalResult),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200
