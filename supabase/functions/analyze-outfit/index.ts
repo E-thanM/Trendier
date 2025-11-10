@@ -109,9 +109,9 @@ serve(async (req) => {
       );
     }
 
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-    if (!lovableApiKey) {
-      throw new Error('LOVABLE_API_KEY is not configured');
+    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+    if (!geminiApiKey) {
+      throw new Error('GEMINI_API_KEY is not configured');
     }
 
     console.log('Fetching current trends...');
@@ -152,51 +152,35 @@ Rules:
 
 Return 5-8 general search terms that would work well in Google Search.`;
 
-    const hashtagResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    // Fetch image as base64
+    const imageResponse1 = await fetch(imageUrl);
+    const imageBuffer1 = await imageResponse1.arrayBuffer();
+    const base64Image1 = btoa(String.fromCharCode(...new Uint8Array(imageBuffer1)));
+
+    const hashtagResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: extractionPrompt
-              },
-              {
-                type: 'image_url',
-                image_url: { url: imageUrl }
-              }
-            ]
-          }
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "extract_search_terms",
-              description: "Extract broad fashion search terms from outfit",
-              parameters: {
-                type: "object",
-                properties: {
-                  searchTerms: {
-                    type: "array",
-                    items: { type: "string" },
-                    description: "List of general search terms (2-3 words each)"
-                  }
-                },
-                required: ["searchTerms"],
-                additionalProperties: false
+        contents: [{
+          parts: [
+            { text: extractionPrompt },
+            {
+              inline_data: {
+                mime_type: "image/jpeg",
+                data: base64Image1
               }
             }
-          }
-        ],
-        tool_choice: { type: "function", function: { name: "extract_search_terms" } }
+          ]
+        }],
+        generationConfig: {
+          temperature: 0.4,
+          topK: 32,
+          topP: 1,
+          maxOutputTokens: 2048,
+          responseMimeType: "application/json"
+        }
       }),
     });
 
@@ -207,7 +191,7 @@ Return 5-8 general search terms that would work well in Google Search.`;
     }
 
     const hashtagData = await hashtagResponse.json();
-    const searchTerms = JSON.parse(hashtagData.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments || '{"searchTerms":[]}').searchTerms;
+    const searchTerms = JSON.parse(hashtagData.candidates?.[0]?.content?.parts?.[0]?.text || '{"searchTerms":[]}').searchTerms;
     
     console.log(`Extracted ${searchTerms.length} search terms:`, searchTerms);
 
@@ -254,55 +238,29 @@ For each term, provide:
 
 Consider TikTok trends, Instagram fashion trends, runway shows, and street style.`;
 
-    const estimationResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const estimationResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          {
-            role: 'user',
-            content: trendEstimationPrompt
-          }
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "estimate_trend_popularity",
-              description: "Estimate popularity of fashion search terms",
-              parameters: {
-                type: "object",
-                properties: {
-                  estimates: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        searchTerm: { type: "string" },
-                        popularityScore: { type: "number", minimum: 0, maximum: 100 },
-                        context: { type: "string" },
-                        relatedTrends: { type: "array", items: { type: "string" } }
-                      },
-                      required: ["searchTerm", "popularityScore", "context"]
-                    }
-                  }
-                },
-                required: ["estimates"],
-                additionalProperties: false
-              }
-            }
-          }
-        ],
-        tool_choice: { type: "function", function: { name: "estimate_trend_popularity" } }
+        contents: [{
+          parts: [
+            { text: `${trendEstimationPrompt}\n\nReturn a JSON object with this structure:\n{\n  "estimates": [\n    {\n      "searchTerm": "term",\n      "popularityScore": 0-100,\n      "context": "explanation",\n      "relatedTrends": ["trend1", "trend2"]\n    }\n  ]\n}` }
+          ]
+        }],
+        generationConfig: {
+          temperature: 0.4,
+          topK: 32,
+          topP: 1,
+          maxOutputTokens: 2048,
+          responseMimeType: "application/json"
+        }
       }),
     });
 
     const estimationData = await estimationResponse.json();
-    const trendEstimates = JSON.parse(estimationData.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments || '{"estimates":[]}').estimates;
+    const trendEstimates = JSON.parse(estimationData.candidates?.[0]?.content?.parts?.[0]?.text || '{"estimates":[]}').estimates;
 
     console.log('Trend estimates:', trendEstimates);
 
@@ -414,75 +372,36 @@ Provide detailed analysis of how well the outfit matches the user's intended sty
 4. Suggested tags
 5. Trend match score (0-100) indicating how trendy/current the outfit is`;
 
-    // Analyze outfit using Lovable AI with vision
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    // Fetch image as base64  
+    const imageResponse2 = await fetch(imageUrl);
+    const imageBuffer2 = await imageResponse2.arrayBuffer();
+    const base64Image2 = btoa(String.fromCharCode(...new Uint8Array(imageBuffer2)));
+
+    // Analyze outfit using Gemini API with vision
+    const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          {
-            role: 'system',
-            content: systemPrompt
-          },
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: userPrompt
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: imageUrl
-                }
-              }
-            ]
-          }
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "analyze_outfit",
-              description: "Analyze an outfit and provide structured feedback",
-              parameters: {
-                type: "object",
-                properties: {
-                  rating: {
-                    type: "number",
-                    description: "Overall fashion rating from 1-100"
-                  },
-                  matchedTrends: {
-                    type: "array",
-                    items: { type: "string" },
-                    description: "Names of trends that match this outfit"
-                  },
-                  styleAnalysis: {
-                    type: "string",
-                    description: "Brief analysis of the outfit style"
-                  },
-                  suggestedTags: {
-                    type: "array",
-                    items: { type: "string" },
-                    description: "Suggested style tags for this outfit"
-                  },
-                  trendMatchScore: {
-                    type: "number",
-                    description: "How well it matches current trends (0-100)"
-                  }
-                },
-                required: ["rating", "matchedTrends", "styleAnalysis", "suggestedTags", "trendMatchScore"],
-                additionalProperties: false
+        contents: [{
+          parts: [
+            { text: `${systemPrompt}\n\n${userPrompt}\n\nReturn a JSON object with this structure:\n{\n  "rating": 1-100,\n  "matchedTrends": ["trend1", "trend2"],\n  "styleAnalysis": "analysis text",\n  "suggestedTags": ["tag1", "tag2"],\n  "trendMatchScore": 0-100\n}` },
+            {
+              inline_data: {
+                mime_type: "image/jpeg",
+                data: base64Image2
               }
             }
-          }
-        ],
-        tool_choice: { type: "function", function: { name: "analyze_outfit" } }
+          ]
+        }],
+        generationConfig: {
+          temperature: 0.4,
+          topK: 32,
+          topP: 1,
+          maxOutputTokens: 2048,
+          responseMimeType: "application/json"
+        }
       }),
     });
 
@@ -503,12 +422,12 @@ Provide detailed analysis of how well the outfit matches the user's intended sty
     const aiData = await aiResponse.json();
     console.log('AI response received');
 
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) {
+    const responseText = aiData.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!responseText) {
       throw new Error('No analysis result from AI');
     }
 
-    const analysis = JSON.parse(toolCall.function.arguments);
+    const analysis = JSON.parse(responseText);
 
     // Calculate TikTok trend matches
     const tiktokMatches: any[] = [];

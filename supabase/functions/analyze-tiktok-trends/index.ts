@@ -131,9 +131,9 @@ serve(async (req) => {
       );
     }
 
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-    if (!lovableApiKey) {
-      throw new Error('LOVABLE_API_KEY is not configured');
+    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+    if (!geminiApiKey) {
+      throw new Error('GEMINI_API_KEY is not configured');
     }
 
     // Analyze ALL videos in parallel with batching for speed
@@ -147,7 +147,7 @@ serve(async (req) => {
       const batch = videos.slice(i, i + batchSize);
       console.log(`📊 Analyzing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(videos.length / batchSize)} (${batch.length} videos)...`);
       
-      const batchPromises = batch.map(video => analyzeVideo(video, trendsList, lovableApiKey));
+      const batchPromises = batch.map(video => analyzeVideo(video, trendsList, geminiApiKey));
       const batchResults = await Promise.all(batchPromises);
       
       // Filter out failed analyses
@@ -220,7 +220,7 @@ serve(async (req) => {
 import { scrapeTikTokVideos } from './tiktok-scraper.ts';
 
 
-async function analyzeVideo(video: TikTokVideo, trendsList: string, lovableApiKey: string): Promise<AnalysisResult | null> {
+async function analyzeVideo(video: TikTokVideo, trendsList: string, geminiApiKey: string): Promise<AnalysisResult | null> {
   try {
     console.log(`Analyzing video ${video.id} - Thumbnail: ${video.thumbnailUrl.substring(0, 60)}...`);
     
@@ -239,67 +239,67 @@ Your task:
 
 Categories: tops, bottoms, shoes, accessories, outerwear, brand
 
-Focus on VISUAL CONTENT in the thumbnail. What do you actually SEE the person wearing?`;
+Focus on VISUAL CONTENT in the thumbnail. What do you actually SEE the person wearing?
 
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+Return a JSON object with this structure:
+{
+  "items": [
+    {
+      "name": "item name",
+      "category": "tops|bottoms|shoes|accessories|outerwear|brand",
+      "trendScore": 0-100,
+      "matchesTrend": "matching trend name if applicable"
+    }
+  ]
+}`;
+
+    // Fetch the image as base64
+    const imageResponse = await fetch(video.thumbnailUrl);
+    const imageBuffer = await imageResponse.arrayBuffer();
+    const base64Image = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
+
+    const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'text', text: analysisPrompt },
-            { type: 'image_url', image_url: { url: video.thumbnailUrl } }
+        contents: [{
+          parts: [
+            { text: analysisPrompt },
+            {
+              inline_data: {
+                mime_type: "image/jpeg",
+                data: base64Image
+              }
+            }
           ]
         }],
-        tools: [{
-          type: "function",
-          function: {
-            name: "analyze_fashion_items",
-            description: "Identify and rate fashion items",
-            parameters: {
-              type: "object",
-              properties: {
-                items: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      name: { type: "string" },
-                      category: { type: "string" },
-                      trendScore: { type: "number" },
-                      matchesTrend: { type: "string" }
-                    },
-                    required: ["name", "category", "trendScore"]
-                  }
-                }
-              },
-              required: ["items"],
-              additionalProperties: false
-            }
-          }
-        }],
-        tool_choice: { type: "function", function: { name: "analyze_fashion_items" } }
+        generationConfig: {
+          temperature: 0.4,
+          topK: 32,
+          topP: 1,
+          maxOutputTokens: 2048,
+          responseMimeType: "application/json"
+        }
       }),
     });
 
     if (!aiResponse.ok) {
-      console.error('AI API error:', aiResponse.status, await aiResponse.text());
+      const errorText = await aiResponse.text();
+      console.error('Gemini API error:', aiResponse.status, errorText);
       return null;
     }
 
     const aiData = await aiResponse.json();
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) {
+    const responseText = aiData.candidates?.[0]?.content?.parts?.[0]?.text;
+    
+    if (!responseText) {
       console.error('No analysis result for video:', video.id);
       return null;
     }
 
-    const analysis = JSON.parse(toolCall.function.arguments);
+    const analysis = JSON.parse(responseText);
     const detectedItems: ClothingItem[] = analysis.items.map((item: any) => ({
       name: item.name,
       category: item.category,
