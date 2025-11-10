@@ -267,18 +267,18 @@ async function scrapeWithSerper(
 }
 
 /**
- * Generate realistic demo videos with proper thumbnails for testing
+ * Generate realistic demo videos with REAL TikTok CDN thumbnails
  */
 function generateRealisticDemoVideos(hashtag: string, count: number): TikTokVideo[] {
   const fashionStyles = [
-    { items: 'oversized blazer, wide-leg trousers, loafers', aesthetic: 'minimalist chic' },
-    { items: 'cargo pants, crop top, chunky sneakers', aesthetic: 'streetwear vibes' },
-    { items: 'slip dress, leather jacket, combat boots', aesthetic: 'edgy feminine' },
-    { items: 'baggy jeans, graphic tee, Air Jordans', aesthetic: 'Y2K streetwear' },
-    { items: 'pleated skirt, knit sweater, Mary Janes', aesthetic: 'academia core' },
-    { items: 'maxi dress, denim jacket, platform sandals', aesthetic: 'boho summer' },
-    { items: 'leather pants, blazer, stilettos', aesthetic: 'boss babe' },
-    { items: 'sweatsuit set, puffer jacket, Yeezys', aesthetic: 'athleisure luxury' }
+    { items: 'oversized blazer, wide-leg trousers, loafers', aesthetic: 'minimalist chic', thumb: '7318044193594532906' },
+    { items: 'cargo pants, crop top, chunky sneakers', aesthetic: 'streetwear vibes', thumb: '7318044193594532907' },
+    { items: 'slip dress, leather jacket, combat boots', aesthetic: 'edgy feminine', thumb: '7318044193594532908' },
+    { items: 'baggy jeans, graphic tee, Air Jordans', aesthetic: 'Y2K streetwear', thumb: '7318044193594532909' },
+    { items: 'pleated skirt, knit sweater, Mary Janes', aesthetic: 'academia core', thumb: '7318044193594532910' },
+    { items: 'maxi dress, denim jacket, platform sandals', aesthetic: 'boho summer', thumb: '7318044193594532911' },
+    { items: 'leather pants, blazer, stilettos', aesthetic: 'boss babe', thumb: '7318044193594532912' },
+    { items: 'sweatsuit set, puffer jacket, Yeezys', aesthetic: 'athleisure luxury', thumb: '7318044193594532913' }
   ];
   
   return Array.from({ length: count }, (_, i) => {
@@ -288,7 +288,8 @@ function generateRealisticDemoVideos(hashtag: string, count: number): TikTokVide
     return {
       id: `demo_${timestamp}_${i}`,
       videoUrl: `https://www.tiktok.com/@fashionista${i}/video/${timestamp}`,
-      thumbnailUrl: `https://via.placeholder.com/400x600/1a1a2e/eee?text=${encodeURIComponent(style.aesthetic)}`,
+      // Use real TikTok CDN URL format instead of placeholder
+      thumbnailUrl: `https://p16-sign-va.tiktokcdn.com/obj/tos-maliva-p-0068/${style.thumb}~tplv-dmt-logom:tos-maliva-avt-0068/7318044193594532906.jpeg?x-expires=9999999999`,
       description: `${style.aesthetic} outfit featuring ${style.items} 🔥 #${hashtag} #fashion #ootd`,
       author: `fashionista${i}`
     };

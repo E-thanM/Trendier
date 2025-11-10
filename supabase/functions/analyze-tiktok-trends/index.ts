@@ -132,13 +132,15 @@ serve(async (req) => {
     }
 
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
-    if (!geminiApiKey) {
-      throw new Error('GEMINI_API_KEY is not configured');
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    
+    if (!geminiApiKey && !lovableApiKey) {
+      throw new Error('Neither GEMINI_API_KEY nor LOVABLE_API_KEY is configured');
     }
 
     // Analyze ALL videos in parallel with batching for speed
     const startTime = Date.now();
-    const batchSize = 5; // Analyze 5 videos at a time to avoid overwhelming the AI API
+    const batchSize = 10; // Increased to 10 for maximum throughput
     const allAnalyses: AnalysisResult[] = [];
     
     console.log(`🚀 Starting parallel batch analysis of ${videos.length} videos (batches of ${batchSize})...`);
@@ -147,7 +149,7 @@ serve(async (req) => {
       const batch = videos.slice(i, i + batchSize);
       console.log(`📊 Analyzing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(videos.length / batchSize)} (${batch.length} videos)...`);
       
-      const batchPromises = batch.map(video => analyzeVideo(video, trendsList, geminiApiKey));
+      const batchPromises = batch.map(video => analyzeVideo(video, trendsList, geminiApiKey, lovableApiKey));
       const batchResults = await Promise.all(batchPromises);
       
       // Filter out failed analyses
@@ -220,7 +222,7 @@ serve(async (req) => {
 import { scrapeTikTokVideos } from './tiktok-scraper.ts';
 
 
-async function analyzeVideo(video: TikTokVideo, trendsList: string, geminiApiKey: string): Promise<AnalysisResult | null> {
+async function analyzeVideo(video: TikTokVideo, trendsList: string, geminiApiKey: string | undefined, lovableApiKey: string | undefined): Promise<AnalysisResult | null> {
   try {
     console.log(`Analyzing video ${video.id} - Thumbnail: ${video.thumbnailUrl.substring(0, 60)}...`);
     
@@ -239,67 +241,121 @@ Your task:
 
 Categories: tops, bottoms, shoes, accessories, outerwear, brand
 
-Focus on VISUAL CONTENT in the thumbnail. What do you actually SEE the person wearing?
+Focus on VISUAL CONTENT in the thumbnail. What do you actually SEE the person wearing?`;
 
-Return a JSON object with this structure:
-{
-  "items": [
-    {
-      "name": "item name",
-      "category": "tops|bottoms|shoes|accessories|outerwear|brand",
-      "trendScore": 0-100,
-      "matchesTrend": "matching trend name if applicable"
-    }
-  ]
-}`;
-
-    // Fetch the image as base64
-    const imageResponse = await fetch(video.thumbnailUrl);
-    const imageBuffer = await imageResponse.arrayBuffer();
-    const base64Image = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
-
-    const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: analysisPrompt },
-            {
-              inline_data: {
-                mime_type: "image/jpeg",
-                data: base64Image
-              }
-            }
-          ]
-        }],
-        generationConfig: {
-          temperature: 0.4,
-          topK: 32,
-          topP: 1,
-          maxOutputTokens: 2048,
-          responseMimeType: "application/json"
-        }
-      }),
-    });
-
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error('Gemini API error:', aiResponse.status, errorText);
-      return null;
-    }
-
-    const aiData = await aiResponse.json();
-    const responseText = aiData.candidates?.[0]?.content?.parts?.[0]?.text;
+    let analysis: any = null;
     
-    if (!responseText) {
+    // Try Gemini first (free tier: 1500/day)
+    if (geminiApiKey) {
+      try {
+        const imageResponse = await fetch(video.thumbnailUrl);
+        const imageBuffer = await imageResponse.arrayBuffer();
+        const base64Image = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
+
+        const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: `${analysisPrompt}\n\nReturn JSON: {"items":[{"name":"","category":"","trendScore":0-100,"matchesTrend":""}]}` },
+                { inline_data: { mime_type: "image/jpeg", data: base64Image } }
+              ]
+            }],
+            generationConfig: {
+              temperature: 0.4,
+              topK: 32,
+              topP: 1,
+              maxOutputTokens: 2048,
+              responseMimeType: "application/json"
+            }
+          }),
+        });
+
+        if (aiResponse.ok) {
+          const aiData = await aiResponse.json();
+          const responseText = aiData.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (responseText) {
+            analysis = JSON.parse(responseText);
+            console.log(`✅ Gemini analysis successful for ${video.id}`);
+          }
+        } else if (aiResponse.status === 429) {
+          console.log(`⚠️ Gemini rate limit hit, falling back to Lovable AI`);
+        }
+      } catch (error) {
+        console.log(`⚠️ Gemini failed for ${video.id}, trying Lovable AI:`, error);
+      }
+    }
+
+    // Fallback to Lovable AI if Gemini fails or rate limited
+    if (!analysis && lovableApiKey) {
+      try {
+        const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${lovableApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages: [{
+              role: 'user',
+              content: [
+                { type: 'text', text: analysisPrompt },
+                { type: 'image_url', image_url: { url: video.thumbnailUrl } }
+              ]
+            }],
+            tools: [{
+              type: "function",
+              function: {
+                name: "analyze_fashion_items",
+                description: "Identify and rate fashion items",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    items: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          name: { type: "string" },
+                          category: { type: "string" },
+                          trendScore: { type: "number" },
+                          matchesTrend: { type: "string" }
+                        },
+                        required: ["name", "category", "trendScore"]
+                      }
+                    }
+                  },
+                  required: ["items"],
+                  additionalProperties: false
+                }
+              }
+            }],
+            tool_choice: { type: "function", function: { name: "analyze_fashion_items" } }
+          }),
+        });
+
+        if (aiResponse.ok) {
+          const aiData = await aiResponse.json();
+          const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+          if (toolCall) {
+            analysis = JSON.parse(toolCall.function.arguments);
+            console.log(`✅ Lovable AI analysis successful for ${video.id}`);
+          }
+        }
+      } catch (error) {
+        console.error(`❌ Both Gemini and Lovable AI failed for ${video.id}`);
+        return null;
+      }
+    }
+
+    if (!analysis) {
       console.error('No analysis result for video:', video.id);
       return null;
     }
-
-    const analysis = JSON.parse(responseText);
     const detectedItems: ClothingItem[] = analysis.items.map((item: any) => ({
       name: item.name,
       category: item.category,
