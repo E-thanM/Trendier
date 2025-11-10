@@ -379,7 +379,7 @@ Extracted outfit search terms: ${searchTerms.join(', ')}
 Provide detailed analysis of how well the outfit matches the user's intended style and current trends.`;
 
     const userPrompt = `The user wants to achieve a "${targetStyle}" style aesthetic. Analyze this outfit image and provide:
-1. Overall rating (1-10) for how well it achieves the "${targetStyle}" aesthetic
+1. Overall rating (1-100) for how well it achieves the "${targetStyle}" aesthetic
 2. Which current trends it matches from the list
 3. Style analysis and feedback
 4. Suggested tags
@@ -426,7 +426,7 @@ Provide detailed analysis of how well the outfit matches the user's intended sty
                 properties: {
                   rating: {
                     type: "number",
-                    description: "Overall fashion rating from 1-10"
+                    description: "Overall fashion rating from 1-100"
                   },
                   matchedTrends: {
                     type: "array",
