@@ -57,7 +57,7 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             hashtag: hashtag.hashtag,
-            maxVideos: 20, // Analyze more videos per hashtag
+            maxVideos: 30, // Analyze 30 videos per hashtag for comprehensive data
             forceRefresh: true
           })
         });

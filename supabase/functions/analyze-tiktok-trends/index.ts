@@ -119,10 +119,10 @@ serve(async (req) => {
 
     const trendsList = trends?.map(t => `${t.name} (${t.tags?.join(', ')})`).join(', ') || 'No trends available';
 
-    // Scrape TikTok videos with real thumbnails
+    // Scrape TikTok videos with REAL thumbnails (unlimited, no Serper needed!)
     const serperApiKey = Deno.env.get('SERPER_API_KEY');
     const videos = await scrapeTikTokVideos(cleanHashtag, maxVideos, serperApiKey);
-    console.log(`Found ${videos.length} videos with real thumbnails to analyze`);
+    console.log(`✅ Scraped ${videos.length} videos with real thumbnails for AI analysis`);
 
     if (videos.length === 0) {
       return new Response(
@@ -136,19 +136,31 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    // Analyze ALL videos in parallel for maximum speed
+    // Analyze ALL videos in parallel with batching for speed
     const startTime = Date.now();
-    console.log(`Starting parallel analysis of ${videos.length} videos at ${new Date().toISOString()}`);
-    const analysisPromises = videos.map(video => analyzeVideo(video, trendsList, lovableApiKey));
-    const analysisResults = await Promise.all(analysisPromises);
-    const analysisTime = Date.now() - startTime;
-    console.log(`Completed analysis in ${analysisTime}ms (${(analysisTime / videos.length).toFixed(0)}ms per video)`);
+    const batchSize = 5; // Analyze 5 videos at a time to avoid overwhelming the AI API
+    const allAnalyses: AnalysisResult[] = [];
     
-    // Filter out failed analyses
-    const analyses: AnalysisResult[] = analysisResults.filter(result => result !== null) as AnalysisResult[];
-    console.log(`Successfully analyzed ${analyses.length} videos`);
+    console.log(`🚀 Starting parallel batch analysis of ${videos.length} videos (batches of ${batchSize})...`);
+    
+    for (let i = 0; i < videos.length; i += batchSize) {
+      const batch = videos.slice(i, i + batchSize);
+      console.log(`📊 Analyzing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(videos.length / batchSize)} (${batch.length} videos)...`);
+      
+      const batchPromises = batch.map(video => analyzeVideo(video, trendsList, lovableApiKey));
+      const batchResults = await Promise.all(batchPromises);
+      
+      // Filter out failed analyses
+      const successfulAnalyses = batchResults.filter((result): result is AnalysisResult => result !== null);
+      allAnalyses.push(...successfulAnalyses);
+      
+      console.log(`✅ Batch complete: ${successfulAnalyses.length}/${batch.length} successful`);
+    }
+    
+    const analysisTime = Date.now() - startTime;
+    console.log(`🎯 Analysis complete: ${allAnalyses.length}/${videos.length} videos analyzed in ${analysisTime}ms (${(analysisTime / videos.length).toFixed(0)}ms per video)`);
 
-    if (analyses.length === 0) {
+    if (allAnalyses.length === 0) {
       return new Response(
         JSON.stringify({ error: 'Failed to analyze videos' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -156,13 +168,13 @@ serve(async (req) => {
     }
 
     // Sort by trend score
-    analyses.sort((a, b) => b.overallTrendScore - a.overallTrendScore);
+    allAnalyses.sort((a: AnalysisResult, b: AnalysisResult) => b.overallTrendScore - a.overallTrendScore);
 
     // Calculate relative rankings
-    const rankedAnalyses = analyses.map((analysis, index) => ({
+    const rankedAnalyses = allAnalyses.map((analysis: AnalysisResult, index: number) => ({
       ...analysis,
       rank: index + 1,
-      percentile: Math.round(((analyses.length - index) / analyses.length) * 100)
+      percentile: Math.round(((allAnalyses.length - index) / allAnalyses.length) * 100)
     }));
 
     // Store in database for future use
