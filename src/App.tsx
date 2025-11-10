@@ -12,6 +12,7 @@ import Feed from "./pages/Feed";
 import Messages from "./pages/Messages";
 import Analyzer from "./pages/Analyzer";
 import Trends from "./pages/Trends";
+import TikTokTrends from "./pages/TikTokTrends";
 import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -85,6 +86,16 @@ const App = () => (
               <ProtectedRoute>
                 <AppLayout>
                   <Trends />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/tiktok-trends"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <TikTokTrends />
                 </AppLayout>
               </ProtectedRoute>
             }
