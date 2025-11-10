@@ -340,20 +340,33 @@ Focus on VISUAL CONTENT in the thumbnail. What do you actually SEE the person we
 
         if (aiResponse.ok) {
           const aiData = await aiResponse.json();
+          console.log(`📝 Lovable AI response for ${video.id}:`, JSON.stringify(aiData).substring(0, 200));
+          
           const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-          if (toolCall) {
-            analysis = JSON.parse(toolCall.function.arguments);
-            console.log(`✅ Lovable AI analysis successful for ${video.id}`);
+          if (toolCall?.function?.arguments) {
+            try {
+              analysis = JSON.parse(toolCall.function.arguments);
+              console.log(`✅ Lovable AI analysis successful for ${video.id} - found ${analysis.items?.length || 0} items`);
+            } catch (parseError) {
+              console.error(`❌ Failed to parse Lovable AI response for ${video.id}:`, parseError);
+              console.error('Raw arguments:', toolCall.function.arguments);
+            }
+          } else {
+            console.error(`❌ No tool call in Lovable AI response for ${video.id}`);
+            console.error('Full response:', JSON.stringify(aiData));
           }
+        } else {
+          const errorText = await aiResponse.text();
+          console.error(`❌ Lovable AI request failed for ${video.id} (${aiResponse.status}):`, errorText);
         }
       } catch (error) {
-        console.error(`❌ Both Gemini and Lovable AI failed for ${video.id}`);
-        return null;
+        console.error(`❌ Lovable AI exception for ${video.id}:`, error);
       }
     }
 
+    // If still no analysis, log and return null
     if (!analysis) {
-      console.error('No analysis result for video:', video.id);
+      console.error(`❌ All AI methods failed for video ${video.id}`);
       return null;
     }
     const detectedItems: ClothingItem[] = analysis.items.map((item: any) => ({

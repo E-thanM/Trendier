@@ -1013,11 +1013,14 @@ Be specific (e.g., "chunky white sneakers" not just "shoes"). For each suggestio
       }
     }
 
-    // Add shopping links to pairing recommendations
-    const pairingsWithLinks = pairingRecommendations.slice(0, 3).map(rec => ({
-      ...rec,
-      shopLink: `https://www.google.com/search?q=${encodeURIComponent(rec.searchTerm || rec.item)}&tbm=shop`
-    }));
+    // Add shopping links to pairing recommendations - use Amazon for better product availability  
+    const pairingsWithLinks = pairingRecommendations.slice(0, 3).map(rec => {
+      const searchQuery = rec.searchTerm || rec.item;
+      return {
+        ...rec,
+        shopLink: `https://www.amazon.com/s?k=${encodeURIComponent(searchQuery)}&tag=fashiontrend-20`
+      };
+    });
 
     // Generate detailed outfit element descriptions using AI
     const elementPrompt = `Analyze this ${targetStyle} outfit and identify the 3 MOST IMPORTANT elements (clothing items, accessories, or style choices).
@@ -1120,11 +1123,14 @@ Focus on the most impactful pieces that define the outfit.`;
       }
     }
 
-    // Add shopping links to elements
-    const elementsWithLinks = outfitElements.slice(0, 3).map(elem => ({
-      ...elem,
-      shopLink: `https://www.google.com/search?q=${encodeURIComponent(elem.searchTerm || elem.name)}&tbm=shop`
-    }));
+    // Add shopping links to elements - use Amazon for better product availability
+    const elementsWithLinks = outfitElements.slice(0, 3).map(elem => {
+      const searchQuery = elem.searchTerm || elem.name;
+      return {
+        ...elem,
+        shopLink: `https://www.amazon.com/s?k=${encodeURIComponent(searchQuery)}&tag=fashiontrend-20`
+      };
+    });
 
     const finalResult = {
       success: true,
