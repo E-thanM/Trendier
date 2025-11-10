@@ -72,6 +72,11 @@ export default function Messages() {
             ...prev,
             messages: messages,
           } : null);
+          // Mark as read if viewing this conversation
+          const newMessage = payload.new as any;
+          if (newMessage.conversation_id === selectedConversation.id) {
+            await markAsRead(selectedConversation.id);
+          }
         }
       })
       .subscribe();
@@ -255,16 +260,24 @@ export default function Messages() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      await supabase
+      const { error } = await supabase
         .from('conversation_participants')
         .update({ last_read_at: new Date().toISOString() })
         .eq('conversation_id', conversationId)
         .eq('user_id', user.id);
 
+      if (error) {
+        console.error('Error updating last_read_at:', error);
+        return;
+      }
+
       // Update local state
       setConversations(prev =>
         prev.map(c => c.id === conversationId ? { ...c, unread_count: 0 } : c)
       );
+      
+      // Force a small delay to ensure the update propagates
+      await new Promise(resolve => setTimeout(resolve, 100));
     } catch (error) {
       console.error('Error marking as read:', error);
     }
