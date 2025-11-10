@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,113 @@ import { TrendDetailModal } from "@/components/TrendDetailModal";
 const targetStyleSchema = z.object({
   targetStyle: z.string().trim().min(1, "Target style is required").max(100, "Target style must be less than 100 characters")
 });
+
+interface MetricCircleProps {
+  value: number;
+  maxValue: number;
+  label: string;
+  description: string;
+  color: string;
+  icon: React.ReactNode;
+}
+
+const MetricCircle = ({ value, maxValue, label, description, color, icon }: MetricCircleProps) => {
+  const [displayValue, setDisplayValue] = useState(0);
+  const percentage = (value / maxValue) * 100;
+  const circumference = 2 * Math.PI * 54; // radius = 54
+  const strokeDashoffset = circumference - (percentage / 100) * circumference;
+
+  useEffect(() => {
+    const duration = 1500; // 1.5 seconds
+    const steps = 60;
+    const increment = value / steps;
+    let current = 0;
+
+    const timer = setInterval(() => {
+      current += increment;
+      if (current >= value) {
+        setDisplayValue(value);
+        clearInterval(timer);
+      } else {
+        setDisplayValue(Math.floor(current));
+      }
+    }, duration / steps);
+
+    return () => clearInterval(timer);
+  }, [value]);
+
+  const colorClasses = {
+    primary: {
+      text: "text-primary",
+      stroke: "stroke-primary",
+      bg: "from-primary/10 to-primary/5"
+    },
+    secondary: {
+      text: "text-secondary",
+      stroke: "stroke-secondary",
+      bg: "from-secondary/10 to-secondary/5"
+    },
+    "chart-1": {
+      text: "text-chart-1",
+      stroke: "stroke-chart-1",
+      bg: "from-chart-1/10 to-chart-1/5"
+    }
+  };
+
+  const colors = colorClasses[color as keyof typeof colorClasses] || colorClasses.primary;
+
+  return (
+    <Card className={`p-6 border-border bg-gradient-to-br ${colors.bg}`}>
+      <div className="flex flex-col items-center">
+        <div className="relative w-32 h-32 mb-4">
+          <svg className="transform -rotate-90 w-32 h-32">
+            <circle
+              cx="64"
+              cy="64"
+              r="54"
+              stroke="currentColor"
+              strokeWidth="8"
+              fill="transparent"
+              className="text-muted/20"
+            />
+            <circle
+              cx="64"
+              cy="64"
+              r="54"
+              stroke="currentColor"
+              strokeWidth="8"
+              fill="transparent"
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              className={`${colors.stroke} transition-all duration-1000 ease-out`}
+              strokeLinecap="round"
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <div className={`mb-1 ${colors.text}`}>
+              {icon}
+            </div>
+            <div className={`text-3xl font-bold ${colors.text}`}>
+              {displayValue}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              / {maxValue}
+            </div>
+          </div>
+        </div>
+        
+        <div className="text-center">
+          <div className="font-semibold mb-1">
+            {label}
+          </div>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            {description}
+          </p>
+        </div>
+      </div>
+    </Card>
+  );
+};
 
 export default function Analyzer() {
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -282,30 +389,33 @@ export default function Analyzer() {
             Analysis Results
           </h2>
           
-          <div className="grid grid-cols-3 gap-4 mb-6">
-            <Card className="p-4 border-border text-center">
-              <div className="text-3xl font-bold text-primary mb-1">
-                {result.rating || 0}/100
-              </div>
-              <div className="text-sm text-muted-foreground">Style Rating</div>
-            </Card>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <MetricCircle 
+              value={result.rating || 0}
+              maxValue={100}
+              label="Style Match"
+              description="How well your outfit matches your target style aesthetic"
+              color="primary"
+              icon={<Star className="h-5 w-5" />}
+            />
             
-            <Card className="p-4 border-border text-center">
-              <div className="text-3xl font-bold text-secondary mb-1">
-                {result.trendMatch || 0}%
-              </div>
-              <div className="text-sm text-muted-foreground">Trend Match</div>
-            </Card>
+            <MetricCircle 
+              value={result.trendMatch || 0}
+              maxValue={100}
+              label="Trend Score"
+              description="Overall trendiness based on current fashion trends"
+              color="secondary"
+              icon={<TrendingUp className="h-5 w-5" />}
+            />
 
-            <Card className="p-4 border-border text-center">
-              <div className="text-3xl font-bold text-chart-1 mb-1">
-                {result.tiktokTrendScore || 0}/100
-              </div>
-              <div className="text-sm text-muted-foreground flex items-center justify-center gap-1">
-                <Video className="h-3 w-3" />
-                TikTok Trend
-              </div>
-            </Card>
+            <MetricCircle 
+              value={result.tiktokTrendScore || 0}
+              maxValue={100}
+              label="TikTok Viral"
+              description={`Based on ${result.tiktokMatches?.length || 0} items trending in real TikTok videos`}
+              color="chart-1"
+              icon={<Video className="h-5 w-5" />}
+            />
           </div>
 
           {result.extractedHashtags && result.extractedHashtags.length > 0 && (
