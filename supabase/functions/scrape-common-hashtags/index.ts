@@ -18,12 +18,15 @@ serve(async (req) => {
 
     console.log('Starting background scraping of common hashtags...');
 
-    // Fetch common hashtags that haven't been scraped in the last 12 hours
+    // Fetch common hashtags that haven't been scraped in the last 6 hours (for more frequent updates)
+    const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
     const { data: hashtags, error: hashtagError } = await supabaseClient
       .from('tiktok_hashtags')
       .select('*')
       .eq('is_common', true)
-      .or(`last_scraped_at.is.null,last_scraped_at.lt.${new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()}`);
+      .or(`last_scraped_at.is.null,last_scraped_at.lt.${sixHoursAgo.toISOString()}`)
+      .order('last_scraped_at', { ascending: true, nullsFirst: true })
+      .limit(5); // Process 5 hashtags at a time for faster updates
 
     if (hashtagError) {
       console.error('Error fetching hashtags:', hashtagError);
@@ -54,7 +57,7 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             hashtag: hashtag.hashtag,
-            maxVideos: 15,
+            maxVideos: 20, // Analyze more videos per hashtag
             forceRefresh: true
           })
         });
@@ -76,8 +79,8 @@ serve(async (req) => {
           });
         }
 
-        // Wait a bit between hashtags to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Shorter wait between hashtags for faster background scraping
+        await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (error) {
         console.error(`Error scraping ${hashtag.hashtag}:`, error);
         results.push({

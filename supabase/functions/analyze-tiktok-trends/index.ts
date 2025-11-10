@@ -119,9 +119,10 @@ serve(async (req) => {
 
     const trendsList = trends?.map(t => `${t.name} (${t.tags?.join(', ')})`).join(', ') || 'No trends available';
 
-    // Scrape TikTok videos
-    const videos = await scrapeTikTokVideos(cleanHashtag, maxVideos);
-    console.log(`Found ${videos.length} videos to analyze`);
+    // Scrape TikTok videos with real thumbnails
+    const serperApiKey = Deno.env.get('SERPER_API_KEY');
+    const videos = await scrapeTikTokVideos(cleanHashtag, maxVideos, serperApiKey);
+    console.log(`Found ${videos.length} videos with real thumbnails to analyze`);
 
     if (videos.length === 0) {
       return new Response(
@@ -204,131 +205,29 @@ serve(async (req) => {
   }
 });
 
-async function scrapeTikTokVideos(hashtag: string, maxVideos: number): Promise<TikTokVideo[]> {
-  try {
-    const serperApiKey = Deno.env.get('SERPER_API_KEY');
-    
-    if (serperApiKey) {
-      console.log('Using Serper API to search TikTok videos');
-      
-      const response = await fetch('https://google.serper.dev/search', {
-        method: 'POST',
-        headers: {
-          'X-API-KEY': serperApiKey,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          q: `site:tiktok.com ${hashtag} fashion outfit`,
-          num: maxVideos
-        })
-      });
+import { scrapeTikTokVideos } from './tiktok-scraper.ts';
 
-      if (response.ok) {
-        const data = await response.json();
-        const videos: TikTokVideo[] = [];
-        
-        if (data.organic) {
-          for (const result of data.organic.slice(0, maxVideos)) {
-            const videoIdMatch = result.link.match(/video\/(\d+)/);
-            if (videoIdMatch) {
-              // Use a placeholder thumbnail - significantly speeds up scraping
-              const thumbnailUrl = `https://picsum.photos/400/600?random=${videos.length}`;
-              
-              videos.push({
-                id: videoIdMatch[1],
-                videoUrl: result.link,
-                thumbnailUrl,
-                description: result.snippet || result.title || '',
-                author: result.link.match(/@([^/]+)/)?.[1] || 'unknown'
-              });
-            }
-          }
-        }
-        
-        if (videos.length > 0) {
-          console.log(`Found ${videos.length} videos via Serper`);
-          return videos;
-        }
-      }
-    }
-
-    // Try direct TikTok API as fallback
-    const cleanHashtag = hashtag.replace('#', '');
-    const apiUrl = `https://www.tiktok.com/api/challenge/item_list/?challengeName=${encodeURIComponent(cleanHashtag)}&count=${maxVideos}`;
-    
-    console.log('Trying TikTok API:', apiUrl);
-    
-    const response = await fetch(apiUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      }
-    });
-
-    if (!response.ok) {
-      console.error('TikTok API error:', response.status);
-      return generateMockVideos(hashtag, Math.min(maxVideos, 5));
-    }
-
-    const data = await response.json();
-    const videos: TikTokVideo[] = [];
-
-    if (data.itemList) {
-      for (const item of data.itemList.slice(0, maxVideos)) {
-        videos.push({
-          id: item.id,
-          videoUrl: `https://www.tiktok.com/@${item.author.uniqueId}/video/${item.id}`,
-          thumbnailUrl: item.video.cover || item.video.dynamicCover || item.video.originCover,
-          description: item.desc || '',
-          author: item.author.uniqueId
-        });
-      }
-    }
-
-    if (videos.length === 0) {
-      return generateMockVideos(hashtag, Math.min(maxVideos, 5));
-    }
-
-    return videos;
-  } catch (error) {
-    console.error('Error scraping TikTok:', error);
-    return generateMockVideos(hashtag, Math.min(maxVideos, 5));
-  }
-}
-
-function generateMockVideos(hashtag: string, count: number): TikTokVideo[] {
-  console.log('Generating mock videos for demonstration');
-  const mockVideos: TikTokVideo[] = [];
-  
-  for (let i = 0; i < count; i++) {
-    mockVideos.push({
-      id: `mock_${Date.now()}_${i}`,
-      videoUrl: `https://www.tiktok.com/demo/${i}`,
-      thumbnailUrl: `https://picsum.photos/400/600?random=${i}`,
-      description: `Fashion video for ${hashtag} #${i + 1}`,
-      author: `fashionuser${i + 1}`
-    });
-  }
-  
-  return mockVideos;
-}
 
 async function analyzeVideo(video: TikTokVideo, trendsList: string, lovableApiKey: string): Promise<AnalysisResult | null> {
   try {
-    console.log(`Analyzing video: ${video.id}`);
+    console.log(`Analyzing video ${video.id} - Thumbnail: ${video.thumbnailUrl.substring(0, 60)}...`);
     
-    const analysisPrompt = `Analyze this TikTok video image and description to identify clothing items and fashion accessories.
+    const analysisPrompt = `CRITICAL: Analyze the ACTUAL IMAGE/THUMBNAIL to identify what clothing the person is wearing.
 
-Video Description: "${video.description}"
+Video Details:
+- URL: ${video.videoUrl}
+- Author: @${video.author}
+- Description: "${video.description}"
 
-Current trending items: ${trendsList}
+Your task:
+1. LOOK AT THE IMAGE - identify all visible clothing items
+2. Be specific about styles (e.g., "oversized denim jacket", "pleated mini skirt", "chunky platform sneakers")
+3. Rate each item's trend score (0-100) based on current fashion trends
+4. Match items against these trending pieces: ${trendsList}
 
-For each clothing item (from BOTH image AND description):
-1. Name the item (e.g., "oversized blazer", "cargo pants")
-2. Categorize it (tops, bottoms, shoes, accessories, outerwear)
-3. Rate trendiness (0-100)
-4. Note if it matches any trending items
+Categories: tops, bottoms, shoes, accessories, outerwear, brand
 
-Be quick and accurate. Focus on visible items and mentioned brands/styles.`;
+Focus on VISUAL CONTENT in the thumbnail. What do you actually SEE the person wearing?`;
 
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
