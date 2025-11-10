@@ -649,30 +649,82 @@ Provide detailed analysis of how well the outfit matches the user's intended sty
       throw new Error('Failed to analyze outfit with both Gemini and Lovable AI');
     }
 
-    // Calculate TikTok trend matches - minimum 10 videos per search term
+    // Calculate TikTok trend matches with improved flexible matching
     const tiktokMatches: any[] = [];
     const matchedItems = new Set<string>();
     
     if (tiktokItems && tiktokItems.length > 0) {
-      for (const searchTerm of searchTerms) {
-        const termLower = searchTerm.toLowerCase();
-        const matchingTiktokItems = tiktokItems.filter((item: any) => 
-          item.item_name.toLowerCase().includes(termLower) || 
-          termLower.includes(item.item_name.toLowerCase())
+      // Create word-based matching for better results
+      const searchWords = searchTerms.flatMap(term => 
+        term.toLowerCase().split(/\s+/).filter(w => w.length > 2)
+      );
+      
+      // Category mappings for smart matching
+      const categoryMap: Record<string, string[]> = {
+        'shoes': ['sneakers', 'boots', 'loafers', 'heels', 'sandals'],
+        'pants': ['jeans', 'trousers', 'bottoms', 'slacks'],
+        'shirt': ['t-shirt', 'top', 'blouse', 'tee'],
+        'jacket': ['outerwear', 'coat', 'blazer'],
+        'dress': ['gown', 'frock']
+      };
+      
+      for (const item of tiktokItems) {
+        const itemNameLower = item.item_name.toLowerCase();
+        const itemWords = itemNameLower.split(/\s+/);
+        
+        // Check for direct word matches
+        const hasDirectMatch = searchWords.some((word: string) => 
+          itemWords.some((itemWord: string) => 
+            itemWord.includes(word) || word.includes(itemWord)
+          )
         );
         
-        // Use minimum 10 videos per search term as requested
-        for (const match of matchingTiktokItems.slice(0, 10)) {
-          if (!matchedItems.has(match.item_name)) {
-            matchedItems.add(match.item_name);
-            const video = Array.isArray(match.video) ? match.video[0] : match.video;
+        // Check for category-based matches
+        const hasCategoryMatch = searchWords.some(word => {
+          const relatedCategories = categoryMap[word] || [];
+          return relatedCategories.some(cat => itemNameLower.includes(cat));
+        });
+        
+        // Check if TikTok item category matches any search term
+        const categoryLower = item.category?.toLowerCase() || '';
+        const hasCategoryWordMatch = searchWords.some(word => 
+          categoryLower.includes(word) || word.includes(categoryLower)
+        );
+        
+        if ((hasDirectMatch || hasCategoryMatch || hasCategoryWordMatch) && !matchedItems.has(item.item_name)) {
+          matchedItems.add(item.item_name);
+          const video = Array.isArray(item.video) ? item.video[0] : item.video;
+          tiktokMatches.push({
+            itemName: item.item_name,
+            category: item.category,
+            trendScore: item.trend_score,
+            videoUrl: video?.video_url,
+            author: video?.author,
+            hashtag: video?.hashtag,
+            matchReason: hasDirectMatch ? 'direct' : (hasCategoryMatch ? 'category' : 'category-word')
+          });
+          
+          // Limit to top 10 matches for performance
+          if (tiktokMatches.length >= 10) break;
+        }
+      }
+      
+      // If still no matches, try fuzzy matching on popular items
+      if (tiktokMatches.length === 0) {
+        console.log('No strict matches found, using popular TikTok items as fallback');
+        const popularItems = tiktokItems.slice(0, 5);
+        for (const item of popularItems) {
+          if (!matchedItems.has(item.item_name)) {
+            matchedItems.add(item.item_name);
+            const video = Array.isArray(item.video) ? item.video[0] : item.video;
             tiktokMatches.push({
-              itemName: match.item_name,
-              category: match.category,
-              trendScore: match.trend_score,
+              itemName: item.item_name,
+              category: item.category,
+              trendScore: Math.round(item.trend_score * 0.7), // Reduced score for fallback matches
               videoUrl: video?.video_url,
               author: video?.author,
-              hashtag: video?.hashtag
+              hashtag: video?.hashtag,
+              matchReason: 'popular-fallback'
             });
           }
         }
