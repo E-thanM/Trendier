@@ -96,13 +96,13 @@ const MetricCircle = ({ value, maxValue, label, description, color, icon }: Metr
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <div className={`mb-1 ${colors.text}`}>
+            <div className={`flex items-center justify-center mb-1 ${colors.text}`}>
               {icon}
             </div>
-            <div className={`text-3xl font-bold ${colors.text}`}>
+            <div className={`text-3xl font-bold leading-none ${colors.text}`}>
               {displayValue}
             </div>
-            <div className="text-xs text-muted-foreground">
+            <div className="text-xs text-muted-foreground leading-tight">
               / {maxValue}
             </div>
           </div>
