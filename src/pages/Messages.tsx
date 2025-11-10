@@ -170,6 +170,29 @@ export default function Messages() {
         }
       });
 
+      // Get user's last_read_at for each conversation
+      const { data: userParticipants } = await supabase
+        .from("conversation_participants")
+        .select("conversation_id, last_read_at")
+        .eq("user_id", userId)
+        .in("conversation_id", validConversationIds);
+
+      // Calculate unread counts
+      const unreadCountsMap = new Map();
+      for (const conv of validConversationIds) {
+        const userPart = userParticipants?.find(p => p.conversation_id === conv);
+        const lastReadAt = userPart?.last_read_at || '1970-01-01';
+        
+        const { count } = await supabase
+          .from("messages")
+          .select("*", { count: 'exact', head: true })
+          .eq("conversation_id", conv)
+          .neq("sender_id", userId)
+          .gt("created_at", lastReadAt);
+        
+        unreadCountsMap.set(conv, count || 0);
+      }
+
       const convData: ConversationData[] = validConversationIds.map((convId) => {
         const participant = otherParticipants.find(
           (p) => p.conversation_id === convId
@@ -186,7 +209,7 @@ export default function Messages() {
           },
           last_message: lastMsg?.content || null,
           last_message_at: lastMsg?.created_at || new Date().toISOString(),
-          unread_count: 0,
+          unread_count: unreadCountsMap.get(convId) || 0,
           messages: [],
         };
       }).filter(conv => conv.other_user.id); // Filter out any with missing users
