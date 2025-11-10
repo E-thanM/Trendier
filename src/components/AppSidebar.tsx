@@ -24,7 +24,6 @@ const items = [
   { title: "Feed", url: "/", icon: Home },
   { title: "Analyzer", url: "/analyzer", icon: Sparkles },
   { title: "Trends", url: "/trends", icon: TrendingUp },
-  { title: "TikTok Trends", url: "/tiktok-trends", icon: TrendingUp },
   { title: "Messages", url: "/messages", icon: MessageCircle },
   { title: "Profile", url: "/profile", icon: User },
 ];
@@ -121,7 +120,7 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu className="gap-1 px-2">
                 {items.map((item) => {
-                  const isRestricted = ["Analyzer", "TikTok Trends", "Messages", "Profile"].includes(item.title);
+                  const isRestricted = ["Analyzer", "Messages", "Profile"].includes(item.title);
                   return (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton asChild size="default">
