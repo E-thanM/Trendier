@@ -479,15 +479,28 @@ export default function Analyzer() {
             <div className="mb-6">
               <h3 className="font-semibold mb-3 flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-chart-2" />
-                Google Trends Search Results
+                Google Trends Insights
               </h3>
               <div className="space-y-3">
-                {result.googleTrendsData.map((trend: any, index: number) => (
+                {result.googleTrendsData
+                  .filter((trend: any) => trend.snippet || trend.trendingTopics?.length > 0 || trend.trendsUrl)
+                  .map((trend: any, index: number) => (
                   <Card key={index} className="p-4 border-chart-2/30 bg-gradient-to-br from-chart-2/5 to-chart-1/5">
                     <div className="flex items-center justify-between mb-2">
                       <Badge variant="outline" className="text-sm border-chart-2">
                         #{trend.searchTerm}
                       </Badge>
+                      {trend.trendsUrl && (
+                        <a 
+                          href={trend.trendsUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-xs text-chart-2 hover:underline flex items-center gap-1"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          View Trends
+                        </a>
+                      )}
                     </div>
                     {trend.snippet && (
                       <p className="text-xs text-muted-foreground mb-2 leading-relaxed">
@@ -495,32 +508,24 @@ export default function Analyzer() {
                       </p>
                     )}
                     {trend.trendingTopics && trend.trendingTopics.length > 0 && (
-                      <div className="space-y-1 mt-3">
-                        <div className="text-xs font-medium text-muted-foreground">
-                          Trending Topics:
+                      <div className="mt-3">
+                        <div className="text-xs font-medium text-muted-foreground mb-1">
+                          Related Topics:
                         </div>
-                        {trend.trendingTopics.slice(0, 3).map((topic: string, i: number) => (
-                          <div key={i} className="text-xs pl-2 text-foreground/80">
-                            • {topic}
-                          </div>
-                        ))}
+                        <div className="flex flex-wrap gap-1">
+                          {trend.trendingTopics.slice(0, 3).map((topic: string, i: number) => (
+                            <span key={i} className="text-xs bg-chart-2/20 text-foreground px-2 py-1 rounded">
+                              {topic}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                    )}
-                    {trend.trendsUrl && (
-                      <a 
-                        href={trend.trendsUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-xs text-chart-2 hover:underline mt-2 inline-block"
-                      >
-                        View on Google Trends →
-                      </a>
                     )}
                   </Card>
                 ))}
               </div>
               <p className="text-xs text-muted-foreground mt-2 text-center">
-                Google Trends data from Serper API
+                Real-time trend data from Google Trends
               </p>
             </div>
           )}

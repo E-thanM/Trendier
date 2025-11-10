@@ -280,7 +280,7 @@ Return 4-5 general search terms that would work well in Google Search.`;
       `)
       .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
       .order('trend_score', { ascending: false })
-      .limit(50);
+      .limit(200);
 
     if (tiktokError) {
       console.error('Error fetching TikTok data:', tiktokError);
@@ -629,7 +629,7 @@ Provide detailed analysis of how well the outfit matches the user's intended sty
       throw new Error('Failed to analyze outfit with both Gemini and Lovable AI');
     }
 
-    // Calculate TikTok trend matches
+    // Calculate TikTok trend matches - minimum 10 videos per search term
     const tiktokMatches: any[] = [];
     const matchedItems = new Set<string>();
     
@@ -641,7 +641,8 @@ Provide detailed analysis of how well the outfit matches the user's intended sty
           termLower.includes(item.item_name.toLowerCase())
         );
         
-        for (const match of matchingTiktokItems.slice(0, 3)) {
+        // Use minimum 10 videos per search term as requested
+        for (const match of matchingTiktokItems.slice(0, 10)) {
           if (!matchedItems.has(match.item_name)) {
             matchedItems.add(match.item_name);
             const video = Array.isArray(match.video) ? match.video[0] : match.video;
