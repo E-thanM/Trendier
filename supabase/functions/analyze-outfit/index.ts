@@ -649,17 +649,18 @@ Provide detailed analysis of how well the outfit matches the user's intended sty
       throw new Error('Failed to analyze outfit with both Gemini and Lovable AI');
     }
 
-    // Calculate TikTok trend matches with improved flexible matching
+    // Calculate TikTok trend matches with visual-based AI comparison
     const tiktokMatches: any[] = [];
     const matchedItems = new Set<string>();
     
     if (tiktokItems && tiktokItems.length > 0) {
-      // Create word-based matching for better results
+      console.log('🎯 Starting visual-based TikTok matching...');
+      
+      // Step 1: Keyword filtering to get candidates
       const searchWords = searchTerms.flatMap(term => 
         term.toLowerCase().split(/\s+/).filter(w => w.length > 2)
       );
       
-      // Category mappings for smart matching
       const categoryMap: Record<string, string[]> = {
         'shoes': ['sneakers', 'boots', 'loafers', 'heels', 'sandals'],
         'pants': ['jeans', 'trousers', 'bottoms', 'slacks'],
@@ -668,24 +669,22 @@ Provide detailed analysis of how well the outfit matches the user's intended sty
         'dress': ['gown', 'frock']
       };
       
+      const candidates: any[] = [];
       for (const item of tiktokItems) {
         const itemNameLower = item.item_name.toLowerCase();
         const itemWords = itemNameLower.split(/\s+/);
         
-        // Check for direct word matches
         const hasDirectMatch = searchWords.some((word: string) => 
           itemWords.some((itemWord: string) => 
             itemWord.includes(word) || word.includes(itemWord)
           )
         );
         
-        // Check for category-based matches
         const hasCategoryMatch = searchWords.some(word => {
           const relatedCategories = categoryMap[word] || [];
           return relatedCategories.some(cat => itemNameLower.includes(cat));
         });
         
-        // Check if TikTok item category matches any search term
         const categoryLower = item.category?.toLowerCase() || '';
         const hasCategoryWordMatch = searchWords.some(word => 
           categoryLower.includes(word) || word.includes(categoryLower)
@@ -693,49 +692,170 @@ Provide detailed analysis of how well the outfit matches the user's intended sty
         
         if ((hasDirectMatch || hasCategoryMatch || hasCategoryWordMatch) && !matchedItems.has(item.item_name)) {
           matchedItems.add(item.item_name);
-          const video = Array.isArray(item.video) ? item.video[0] : item.video;
-          tiktokMatches.push({
+          const video: any = Array.isArray(item.video) ? item.video[0] : item.video;
+          candidates.push({
             itemName: item.item_name,
             category: item.category,
             trendScore: item.trend_score,
             videoUrl: video?.video_url,
+            thumbnailUrl: video?.thumbnail_url,
             author: video?.author,
             hashtag: video?.hashtag,
             matchReason: hasDirectMatch ? 'direct' : (hasCategoryMatch ? 'category' : 'category-word')
           });
           
-          // Limit to top 10 matches for performance
-          if (tiktokMatches.length >= 10) break;
+          if (candidates.length >= 15) break; // Get top 15 candidates for visual analysis
         }
       }
       
-      // If still no matches, try fuzzy matching on popular items
-      if (tiktokMatches.length === 0) {
-        console.log('No strict matches found, using popular TikTok items as fallback');
-        const popularItems = tiktokItems.slice(0, 5);
+      // Fallback to popular items if no keyword matches
+      if (candidates.length === 0) {
+        console.log('No keyword matches, using popular items for visual analysis');
+        const popularItems = tiktokItems.slice(0, 8);
         for (const item of popularItems) {
-          if (!matchedItems.has(item.item_name)) {
-            matchedItems.add(item.item_name);
-            const video = Array.isArray(item.video) ? item.video[0] : item.video;
-            tiktokMatches.push({
-              itemName: item.item_name,
-              category: item.category,
-              trendScore: Math.round(item.trend_score * 0.7), // Reduced score for fallback matches
-              videoUrl: video?.video_url,
-              author: video?.author,
-              hashtag: video?.hashtag,
-              matchReason: 'popular-fallback'
-            });
-          }
+          const video: any = Array.isArray(item.video) ? item.video[0] : item.video;
+          candidates.push({
+            itemName: item.item_name,
+            category: item.category,
+            trendScore: Math.round(item.trend_score * 0.7),
+            videoUrl: video?.video_url,
+            thumbnailUrl: video?.thumbnail_url,
+            author: video?.author,
+            hashtag: video?.hashtag,
+            matchReason: 'popular-fallback'
+          });
         }
       }
+      
+      console.log(`📋 Got ${candidates.length} candidates, performing visual AI analysis...`);
+      
+      // Step 2: Visual comparison using Gemini Vision for top candidates
+      const visualComparisonPromises = candidates.slice(0, 8).map(async (candidate) => {
+        if (!candidate.thumbnailUrl) {
+          return { ...candidate, visualScore: 0, finalScore: candidate.trendScore };
+        }
+        
+        try {
+          const visualPrompt = `Compare these two fashion images and rate the visual similarity of the outfits/clothing items on a scale of 0-100.
+Focus on:
+- Color similarity (30% weight)
+- Style/aesthetic match (30% weight)  
+- Clothing item type match (40% weight)
+
+Return ONLY a number between 0-100. No explanation needed.
+
+User's outfit (image 1) vs TikTok outfit (image 2)`;
+
+          const requestBody = {
+            contents: [{
+              parts: [
+                { text: visualPrompt },
+                { 
+                  inline_data: {
+                    mime_type: imageUrl.startsWith('data:') 
+                      ? imageUrl.split(';')[0].split(':')[1]
+                      : 'image/jpeg',
+                    data: imageUrl.startsWith('data:')
+                      ? imageUrl.split(',')[1]
+                      : imageUrl
+                  }
+                },
+                {
+                  inline_data: {
+                    mime_type: 'image/jpeg',
+                    data: candidate.thumbnailUrl.startsWith('data:')
+                      ? candidate.thumbnailUrl.split(',')[1]
+                      : candidate.thumbnailUrl
+                  }
+                }
+              ]
+            }],
+            generationConfig: {
+              temperature: 0.1,
+              maxOutputTokens: 10
+            }
+          };
+
+          let visualScore = 0;
+          
+          // Try Gemini first
+          try {
+            const geminiResponse = await fetch(
+              `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody)
+              }
+            );
+
+            if (geminiResponse.ok) {
+              const geminiData = await geminiResponse.json();
+              const scoreText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+              visualScore = parseInt(scoreText) || 0;
+              console.log(`✅ Visual match for "${candidate.itemName}": ${visualScore}/100`);
+            }
+          } catch (geminiError) {
+            console.log('Gemini visual comparison failed, trying Lovable AI...');
+            
+            // Fallback to Lovable AI
+            const lovableResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${lovableApiKey}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                model: 'google/gemini-2.5-flash',
+                messages: [{
+                  role: 'user',
+                  content: [
+                    { type: 'text', text: visualPrompt },
+                    { type: 'image_url', image_url: { url: imageUrl } },
+                    { type: 'image_url', image_url: { url: candidate.thumbnailUrl } }
+                  ]
+                }],
+                temperature: 0.1,
+                max_tokens: 10
+              })
+            });
+
+            if (lovableResponse.ok) {
+              const lovableData = await lovableResponse.json();
+              const scoreText = lovableData.choices?.[0]?.message?.content?.trim();
+              visualScore = parseInt(scoreText) || 0;
+              console.log(`✅ Visual match (Lovable AI) for "${candidate.itemName}": ${visualScore}/100`);
+            }
+          }
+          
+          // Combine visual score with trend score (60% visual, 40% trend)
+          const finalScore = Math.round(visualScore * 0.6 + candidate.trendScore * 0.4);
+          
+          return {
+            ...candidate,
+            visualScore,
+            finalScore
+          };
+        } catch (error) {
+          console.error(`Visual comparison failed for ${candidate.itemName}:`, error);
+          return { ...candidate, visualScore: 0, finalScore: candidate.trendScore };
+        }
+      });
+      
+      // Wait for all visual comparisons
+      const visualResults = await Promise.all(visualComparisonPromises);
+      
+      // Sort by final score and take top 5
+      tiktokMatches.push(...visualResults.sort((a, b) => b.finalScore - a.finalScore).slice(0, 5));
+      
+      console.log(`🎨 Visual analysis complete: ${tiktokMatches.length} matches with visual scoring`);
     }
 
     const tiktokTrendScore = tiktokMatches.length > 0
-      ? Math.round(tiktokMatches.reduce((sum, m) => sum + m.trendScore, 0) / tiktokMatches.length)
+      ? Math.round(tiktokMatches.reduce((sum, m) => sum + m.finalScore, 0) / tiktokMatches.length)
       : 0;
 
-    console.log(`Found ${tiktokMatches.length} TikTok matches with average score: ${tiktokTrendScore}`);
+    console.log(`Found ${tiktokMatches.length} visually-matched TikTok items with average score: ${tiktokTrendScore}`);
 
     const finalResult = {
       success: true,
