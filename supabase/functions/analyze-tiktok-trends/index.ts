@@ -1,19 +1,20 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { scrapeTikTokVideos, type TikTokVideo } from "./tiktok-scraper.ts";
+
+// Rotating user agents for thumbnail fetching
+const USER_AGENTS = [
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1',
+  'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.43 Mobile Safari/537.36',
+];
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-interface TikTokVideo {
-  id: string;
-  videoUrl: string;
-  thumbnailUrl: string;
-  description: string;
-  author: string;
-}
 
 interface ClothingItem {
   name: string;
@@ -224,8 +225,6 @@ serve(async (req) => {
   }
 });
 
-import { scrapeTikTokVideos } from './tiktok-scraper.ts';
-
 /**
  * OPTIMIZED: Combined filtering + analysis in one AI call for speed
  */
@@ -251,18 +250,43 @@ Return JSON: {"appropriate": true/false, "items": [{"name":"","category":"","tre
 
     let result: any = null;
     
-    // Try Gemini first
+    // Try Gemini first with retry logic
     if (geminiApiKey) {
       try {
-        const imageResponse = await fetch(video.thumbnailUrl, { 
-          signal: AbortSignal.timeout(5000) // 5 second timeout
-        });
-        if (!imageResponse.ok) {
-          console.log(`⚠️ Skipping ${video.id}: thumbnail not accessible`);
-          return null; // Skip videos with invalid thumbnails
+        // Fetch thumbnail with retry and rotating user agents
+        const headers = {
+          'User-Agent': USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
+          'Accept': 'image/*',
+          'Referer': 'https://www.tiktok.com/',
+        };
+        
+        let imageBuffer: ArrayBuffer | null = null;
+        
+        // Try up to 3 times with different user agents
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            const imageResponse = await fetch(video.thumbnailUrl, {
+              headers,
+              signal: AbortSignal.timeout(8000)
+            });
+            
+            if (imageResponse.ok) {
+              imageBuffer = await imageResponse.arrayBuffer();
+              break;
+            }
+            
+            // Rotate user agent for next attempt
+            headers['User-Agent'] = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+            await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
+          } catch (e) {
+            if (attempt === 2) throw e;
+          }
         }
         
-        const imageBuffer = await imageResponse.arrayBuffer();
+        if (!imageBuffer) {
+          console.log(`⚠️ Skipping ${video.id}: thumbnail not accessible after retries`);
+          return null;
+        }
         
         // Efficient base64 encoding for large images (avoids stack overflow)
         const bytes = new Uint8Array(imageBuffer);

@@ -8,6 +8,89 @@ export interface TikTokVideo {
   author: string;
 }
 
+// Rotating user agents to bypass detection
+const USER_AGENTS = [
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15',
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1',
+  'Mozilla/5.0 (iPad; CPU OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1',
+  'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.43 Mobile Safari/537.36',
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+];
+
+// Get random user agent
+function getRandomUserAgent(): string {
+  return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+}
+
+// Get realistic browser headers
+function getBrowserHeaders(mobile: boolean = false): Record<string, string> {
+  const headers: Record<string, string> = {
+    'User-Agent': getRandomUserAgent(),
+    'Accept': mobile ? 'application/json, text/plain, */*' : 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'DNT': '1',
+    'Connection': 'keep-alive',
+    'Upgrade-Insecure-Requests': '1',
+    'Sec-Fetch-Dest': mobile ? 'empty' : 'document',
+    'Sec-Fetch-Mode': 'navigate',
+    'Sec-Fetch-Site': 'none',
+    'Cache-Control': 'max-age=0',
+  };
+  
+  if (mobile) {
+    headers['Referer'] = 'https://www.tiktok.com/';
+    headers['Origin'] = 'https://www.tiktok.com';
+  }
+  
+  return headers;
+}
+
+// Retry fetch with exponential backoff
+async function fetchWithRetry(
+  url: string, 
+  options: RequestInit, 
+  maxRetries: number = 3
+): Promise<Response> {
+  let lastError: Error | null = null;
+  
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: AbortSignal.timeout(10000), // 10 second timeout
+      });
+      
+      if (response.ok) return response;
+      
+      // If rate limited, wait longer
+      if (response.status === 429) {
+        const waitTime = Math.min(1000 * Math.pow(2, i), 8000);
+        console.log(`Rate limited, waiting ${waitTime}ms...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        continue;
+      }
+      
+      // Don't retry on 404
+      if (response.status === 404) {
+        throw new Error(`Not found: ${url}`);
+      }
+      
+    } catch (error) {
+      lastError = error as Error;
+      if (i < maxRetries - 1) {
+        const waitTime = Math.min(500 * Math.pow(2, i), 4000);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+    }
+  }
+  
+  throw lastError || new Error('Fetch failed after retries');
+}
+
 /**
  * Main scraping function - SIMPLIFIED for speed and reliability
  * Uses direct video discovery with Gemini validation
@@ -79,22 +162,19 @@ async function scrapeMobileAPI(
   try {
     const cleanHashtag = hashtag.replace('#', '');
     
-    // Try multiple API endpoints
+    // Try multiple API endpoints with different formats
     const endpoints = [
       `https://www.tiktok.com/api/challenge/detail/?challengeName=${encodeURIComponent(cleanHashtag)}`,
       `https://m.tiktok.com/api/challenge/item_list/?challengeID=${encodeURIComponent(cleanHashtag)}&count=${maxVideos}`,
+      `https://www.tiktok.com/tag/${encodeURIComponent(cleanHashtag)}`,
     ];
     
     for (const endpoint of endpoints) {
       try {
         console.log(`📡 Trying API endpoint: ${endpoint}`);
         
-        const response = await fetch(endpoint, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
-            'Accept': 'application/json',
-            'Referer': 'https://www.tiktok.com/',
-          }
+        const response = await fetchWithRetry(endpoint, {
+          headers: getBrowserHeaders(true)
         });
         
         if (response.ok) {
@@ -143,14 +223,8 @@ async function scrapeHashtagPage(
     
     console.log(`📡 Fetching hashtag page: ${url}`);
     
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'none',
-      }
+    const response = await fetchWithRetry(url, {
+      headers: getBrowserHeaders(false)
     });
 
     if (!response.ok) {
@@ -351,19 +425,16 @@ async function fetchVideosWithThumbnails(
 }
 
 /**
- * Fetch REAL thumbnail using multiple methods
+ * Fetch REAL thumbnail using multiple methods with retry logic
  */
 async function fetchRealThumbnail(videoUrl: string, videoId: string): Promise<string> {
   // Method 1: TikTok oembed API (most reliable)
   try {
     const oembedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(videoUrl)}`;
     
-    const response = await fetch(oembedUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; TrendBot/1.0)',
-        'Accept': 'application/json',
-      }
-    });
+    const response = await fetchWithRetry(oembedUrl, {
+      headers: getBrowserHeaders(true)
+    }, 2);
     
     if (response.ok) {
       const data = await response.json();
@@ -373,16 +444,14 @@ async function fetchRealThumbnail(videoUrl: string, videoId: string): Promise<st
       }
     }
   } catch (error) {
-    console.log(`oembed failed for ${videoId}:`, error);
+    console.log(`oembed failed for ${videoId}`);
   }
   
   // Method 2: Try to fetch video page and extract thumbnail
   try {
-    const response = await fetch(videoUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15',
-      }
-    });
+    const response = await fetchWithRetry(videoUrl, {
+      headers: getBrowserHeaders(false)
+    }, 2);
     
     if (response.ok) {
       const html = await response.text();
@@ -426,7 +495,7 @@ async function scrapeWithSerper(
   apiKey: string
 ): Promise<TikTokVideo[]> {
   try {
-    const response = await fetch('https://google.serper.dev/search', {
+    const response = await fetchWithRetry('https://google.serper.dev/search', {
       method: 'POST',
       headers: {
         'X-API-KEY': apiKey,
@@ -436,7 +505,7 @@ async function scrapeWithSerper(
         q: `site:tiktok.com ${hashtag} fashion outfit`,
         num: maxVideos
       })
-    });
+    }, 2);
 
     if (!response.ok) return [];
 
