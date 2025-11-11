@@ -589,64 +589,103 @@ Provide detailed analysis of how well the outfit matches the user's intended sty
       }
     }
 
-    // Fallback to Lovable AI
+    // Fallback to Lovable AI with retry mechanism
     if (!analysis && lovableApiKey) {
-      try {
-        const lovableResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${lovableApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'google/gemini-2.5-flash',
-            messages: [{
-              role: 'system',
-              content: systemPrompt
-            }, {
-              role: 'user',
-              content: [
-                { type: 'text', text: userPrompt },
-                { type: 'image_url', image_url: { url: imageUrl } }
-              ]
-            }],
-            tools: [{
-              type: "function",
-              function: {
-                name: "analyze_outfit",
-                description: "Analyze outfit and provide ratings",
-                parameters: {
-                  type: "object",
-                  properties: {
-                    rating: { type: "number", minimum: 1, maximum: 100 },
-                    matchedTrends: { type: "array", items: { type: "string" } },
-                    styleAnalysis: { type: "string" },
-                    suggestedTags: { type: "array", items: { type: "string" } },
-                    trendMatchScore: { type: "number", minimum: 0, maximum: 100 }
-                  },
-                  required: ["rating", "matchedTrends", "styleAnalysis", "suggestedTags", "trendMatchScore"]
+      console.log('🔄 Trying Lovable AI for outfit analysis...');
+      
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          console.log(`Lovable AI attempt ${attempt}/3`);
+          
+          const lovableResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${lovableApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'google/gemini-2.5-flash',
+              messages: [{
+                role: 'system',
+                content: systemPrompt
+              }, {
+                role: 'user',
+                content: [
+                  { type: 'text', text: userPrompt },
+                  { type: 'image_url', image_url: { url: imageUrl } }
+                ]
+              }],
+              tools: [{
+                type: "function",
+                function: {
+                  name: "analyze_outfit",
+                  description: "Analyze outfit and provide ratings",
+                  parameters: {
+                    type: "object",
+                    properties: {
+                      rating: { type: "number", minimum: 1, maximum: 100 },
+                      matchedTrends: { type: "array", items: { type: "string" } },
+                      styleAnalysis: { type: "string" },
+                      suggestedTags: { type: "array", items: { type: "string" } },
+                      trendMatchScore: { type: "number", minimum: 0, maximum: 100 }
+                    },
+                    required: ["rating", "matchedTrends", "styleAnalysis", "suggestedTags", "trendMatchScore"]
+                  }
                 }
-              }
-            }],
-            tool_choice: { type: "function", function: { name: "analyze_outfit" } }
-          }),
-        });
+              }],
+              tool_choice: { type: "function", function: { name: "analyze_outfit" } }
+            }),
+          });
 
-        if (lovableResponse.ok) {
-          const lovableData = await lovableResponse.json();
-          const toolCall = lovableData.choices?.[0]?.message?.tool_calls?.[0];
-          if (toolCall?.function?.arguments) {
-            analysis = JSON.parse(toolCall.function.arguments);
-            console.log(`✅ Lovable AI analysis successful`);
+          if (!lovableResponse.ok) {
+            const errorText = await lovableResponse.text();
+            console.error(`❌ Lovable AI HTTP ${lovableResponse.status}: ${errorText}`);
+            
+            if (lovableResponse.status === 429) {
+              console.log('⏳ Rate limited, waiting before retry...');
+              await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
+              continue;
+            }
+            if (lovableResponse.status === 402) {
+              console.error('💳 Payment required - out of Lovable AI credits');
+              break;
+            }
+            // For other errors, continue to next attempt
+            if (attempt < 3) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              continue;
+            }
+          } else {
+            const lovableData = await lovableResponse.json();
+            console.log('📦 Lovable AI response structure:', JSON.stringify(lovableData).substring(0, 150));
+            
+            const toolCall = lovableData.choices?.[0]?.message?.tool_calls?.[0];
+            if (toolCall?.function?.arguments) {
+              analysis = JSON.parse(toolCall.function.arguments);
+              console.log(`✅ Lovable AI analysis successful on attempt ${attempt}`);
+              break;
+            } else {
+              console.error('❌ No tool call in response. Full response:', JSON.stringify(lovableData));
+              if (attempt < 3) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+              }
+            }
+          }
+        } catch (error) {
+          console.error(`❌ Lovable AI attempt ${attempt} exception:`, error);
+          if (attempt < 3) {
+            console.log('Retrying after delay...');
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+          } else {
+            console.error('All Lovable AI attempts exhausted');
           }
         }
-      } catch (error) {
-        console.error('Lovable AI fallback failed for analysis:', error);
       }
     }
 
     if (!analysis) {
-      throw new Error('Failed to analyze outfit with both Gemini and Lovable AI');
+      console.error('❌ CRITICAL: Both Gemini and Lovable AI failed to analyze outfit');
+      throw new Error('Failed to analyze outfit. The AI services are temporarily unavailable. Please try again in a moment.');
     }
 
     // Calculate TikTok trend matches with visual-based AI comparison
