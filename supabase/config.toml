@@ -11,3 +11,9 @@ verify_jwt = false
 
 [functions.scrape-common-hashtags]
 verify_jwt = false
+
+[functions.scraper-health-check]
+verify_jwt = false
+
+[functions.populate-tiktok-videos]
+verify_jwt = false

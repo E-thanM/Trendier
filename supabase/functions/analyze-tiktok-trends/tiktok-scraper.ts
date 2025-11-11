@@ -181,19 +181,33 @@ async function scrapeMobileAPI(
           const data = await response.json();
           console.log('API response structure:', JSON.stringify(data).substring(0, 200));
           
-          // Extract videos from various possible structures
-          let items = data.itemList || data.items || data.body?.itemList || [];
+          // Extract videos from various possible structures - be VERY aggressive
+          let items = 
+            data.itemList || 
+            data.items || 
+            data.body?.itemList || 
+            data.challengeInfo?.itemList ||
+            data.challengeInfo?.items ||
+            data.itemModule || 
+            [];
           
-          if (items.length > 0) {
+          // If itemModule is an object, convert to array
+          if (items && typeof items === 'object' && !Array.isArray(items)) {
+            items = Object.values(items);
+          }
+          
+          console.log(`📦 Found ${Array.isArray(items) ? items.length : 0} potential items in API response`);
+          
+          if (Array.isArray(items) && items.length > 0) {
             const videos = items.slice(0, maxVideos).map((item: any) => ({
-              id: item.id || item.video?.id || String(Math.random()).slice(2),
-              videoUrl: `https://www.tiktok.com/@${item.author?.uniqueId || 'user'}/video/${item.id}`,
-              thumbnailUrl: item.video?.cover || item.video?.dynamicCover || item.video?.originCover || '',
-              description: item.desc || item.description || '',
-              author: item.author?.uniqueId || item.author?.nickname || 'unknown'
-            })).filter((v: TikTokVideo) => v.thumbnailUrl); // Only keep videos with thumbnails
+              id: item.id || item.video?.id || item.itemInfos?.id || String(Math.random()).slice(2),
+              videoUrl: `https://www.tiktok.com/@${item.author?.uniqueId || item.authorInfos?.uniqueId || 'user'}/video/${item.id || item.itemInfos?.id}`,
+              thumbnailUrl: item.video?.cover || item.video?.dynamicCover || item.video?.originCover || item.itemInfos?.covers?.[0] || '',
+              description: item.desc || item.description || item.itemInfos?.text || '',
+              author: item.author?.uniqueId || item.author?.nickname || item.authorInfos?.uniqueId || 'unknown'
+            })).filter((v: TikTokVideo) => v.id && v.id !== 'undefined'); // Keep videos with valid IDs
             
-            console.log(`✅ API returned ${videos.length} videos`);
+            console.log(`✅ API returned ${videos.length} valid videos`);
             return videos;
           }
         }
@@ -269,62 +283,104 @@ function extractVideoIdsFromHTML(html: string): Array<{id: string, author: strin
       const data = JSON.parse(universalMatch[1]);
       console.log('✅ Found __UNIVERSAL_DATA_FOR_REHYDRATION__');
       
-      // Try multiple paths in the data structure
+      // Deep inspection - log the structure to understand TikTok's current format
       const defaultScope = data.__DEFAULT_SCOPE__ || {};
+      const scopeKeys = Object.keys(defaultScope);
+      console.log(`📋 Available scopes: ${scopeKeys.join(', ')}`);
       
-      // Path 1: Challenge detail page
-      const challengeDetail = defaultScope['webapp.challenge-detail'];
-      if (challengeDetail) {
-        const itemList = challengeDetail.itemList || challengeDetail.items || [];
-        if (Array.isArray(itemList) && itemList.length > 0) {
-          console.log(`Found ${itemList.length} items in challenge-detail`);
-          itemList.forEach((item: any) => {
-            if (item.id && !seenIds.has(item.id)) {
+      // Try ALL possible paths more aggressively
+      for (const [scopeName, scopeData] of Object.entries(defaultScope)) {
+        const scope = scopeData as any;
+        
+        // Path 1: Direct itemList at root
+        if (scope?.itemList && Array.isArray(scope.itemList)) {
+          console.log(`✅ Found itemList in ${scopeName} with ${scope.itemList.length} items`);
+          scope.itemList.forEach((item: any) => {
+            if (item?.id && !seenIds.has(item.id)) {
               seenIds.add(item.id);
               videos.push({
                 id: item.id,
                 author: item.author?.uniqueId || item.author?.nickname || 'unknown',
-                description: item.desc || item.contents?.[0]?.desc || ''
+                description: item.desc || item.description || item.contents?.[0]?.desc || ''
               });
             }
           });
         }
-      }
-      
-      // Path 2: Video detail (fallback)
-      const videoDetail = defaultScope['webapp.video-detail'];
-      if (videoDetail?.itemInfo?.itemStruct && videos.length === 0) {
-        const item = videoDetail.itemInfo.itemStruct;
-        if (item.id && !seenIds.has(item.id)) {
+        
+        // Path 2: Nested in itemInfo
+        if (scope?.itemInfo?.itemStruct && !seenIds.has(scope.itemInfo.itemStruct.id)) {
+          const item = scope.itemInfo.itemStruct;
+          console.log(`✅ Found single item in ${scopeName}.itemInfo.itemStruct`);
           seenIds.add(item.id);
           videos.push({
             id: item.id,
-            author: item.author?.uniqueId || 'unknown',
-            description: item.desc || ''
+            author: item.author?.uniqueId || item.author?.nickname || 'unknown',
+            description: item.desc || item.description || ''
           });
         }
-      }
-      
-      // Path 3: Search deep in all keys
-      if (videos.length === 0) {
-        Object.values(defaultScope).forEach((scope: any) => {
-          if (scope?.itemList) {
-            const items = scope.itemList;
-            if (Array.isArray(items)) {
-              items.forEach((item: any) => {
-                if (item?.id && !seenIds.has(item.id)) {
+        
+        // Path 3: Items array
+        if (scope?.items && Array.isArray(scope.items)) {
+          console.log(`✅ Found items array in ${scopeName} with ${scope.items.length} items`);
+          scope.items.forEach((item: any) => {
+            if (item?.id && !seenIds.has(item.id)) {
+              seenIds.add(item.id);
+              videos.push({
+                id: item.id,
+                author: item.author?.uniqueId || item.author?.nickname || 'unknown',
+                description: item.desc || item.description || ''
+              });
+            }
+          });
+        }
+        
+        // Path 4: videoList
+        if (scope?.videoList && Array.isArray(scope.videoList)) {
+          console.log(`✅ Found videoList in ${scopeName} with ${scope.videoList.length} items`);
+          scope.videoList.forEach((item: any) => {
+            if (item?.id && !seenIds.has(item.id)) {
+              seenIds.add(item.id);
+              videos.push({
+                id: item.id,
+                author: item.author?.uniqueId || item.author?.nickname || 'unknown',
+                description: item.desc || item.description || ''
+              });
+            }
+          });
+        }
+        
+        // Path 5: Deep nested search in any object/array
+        const searchForItems = (obj: any, depth = 0): void => {
+          if (depth > 5 || !obj || typeof obj !== 'object') return;
+          
+          if (Array.isArray(obj)) {
+            obj.forEach(item => {
+              if (item?.id && typeof item.id === 'string' && item.id.match(/^\d{19}$/)) {
+                if (!seenIds.has(item.id)) {
                   seenIds.add(item.id);
                   videos.push({
                     id: item.id,
-                    author: item.author?.uniqueId || 'unknown',
-                    description: item.desc || ''
+                    author: item.author?.uniqueId || item.author?.nickname || 'unknown',
+                    description: item.desc || item.description || ''
                   });
                 }
-              });
-            }
+              } else {
+                searchForItems(item, depth + 1);
+              }
+            });
+          } else {
+            Object.values(obj).forEach(val => searchForItems(val, depth + 1));
           }
-        });
+        };
+        
+        if (videos.length < 5) {
+          searchForItems(scope, 0);
+        }
       }
+      
+      console.log(`📦 Extracted ${videos.length} videos from __UNIVERSAL_DATA_FOR_REHYDRATION__`);
+    } else {
+      console.warn('⚠️ __UNIVERSAL_DATA_FOR_REHYDRATION__ not found in HTML');
     }
   } catch (e) {
     console.error('UNIVERSAL_DATA parsing error:', e);
