@@ -42,7 +42,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { hashtag, maxVideos = 10, forceRefresh = false } = await req.json();
+    const { hashtag, maxVideos = 50, forceRefresh = false } = await req.json();
     
     if (!hashtag) {
       return new Response(
@@ -138,16 +138,21 @@ serve(async (req) => {
       throw new Error('Neither GEMINI_API_KEY nor LOVABLE_API_KEY is configured');
     }
 
+    // Filter out inappropriate content BEFORE analysis
+    console.log('🔍 Filtering videos for fashion relevance...');
+    const filteredVideos = await filterFashionContent(videos, geminiApiKey, lovableApiKey);
+    console.log(`✅ Kept ${filteredVideos.length}/${videos.length} fashion-appropriate videos`);
+
     // Analyze ALL videos in parallel with batching for speed
     const startTime = Date.now();
-    const batchSize = 10; // Increased to 10 for maximum throughput
+    const batchSize = 15; // Increased for faster processing
     const allAnalyses: AnalysisResult[] = [];
     
-    console.log(`🚀 Starting parallel batch analysis of ${videos.length} videos (batches of ${batchSize})...`);
+    console.log(`🚀 Starting parallel batch analysis of ${filteredVideos.length} videos (batches of ${batchSize})...`);
     
-    for (let i = 0; i < videos.length; i += batchSize) {
-      const batch = videos.slice(i, i + batchSize);
-      console.log(`📊 Analyzing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(videos.length / batchSize)} (${batch.length} videos)...`);
+    for (let i = 0; i < filteredVideos.length; i += batchSize) {
+      const batch = filteredVideos.slice(i, i + batchSize);
+      console.log(`📊 Analyzing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(filteredVideos.length / batchSize)} (${batch.length} videos)...`);
       
       const batchPromises = batch.map(video => analyzeVideo(video, trendsList, geminiApiKey, lovableApiKey));
       const batchResults = await Promise.all(batchPromises);
@@ -160,7 +165,7 @@ serve(async (req) => {
     }
     
     const analysisTime = Date.now() - startTime;
-    console.log(`🎯 Analysis complete: ${allAnalyses.length}/${videos.length} videos analyzed in ${analysisTime}ms (${(analysisTime / videos.length).toFixed(0)}ms per video)`);
+    console.log(`🎯 Analysis complete: ${allAnalyses.length}/${filteredVideos.length} videos analyzed in ${analysisTime}ms (${(analysisTime / filteredVideos.length).toFixed(0)}ms per video)`);
 
     if (allAnalyses.length === 0) {
       return new Response(
@@ -221,6 +226,105 @@ serve(async (req) => {
 
 import { scrapeTikTokVideos } from './tiktok-scraper.ts';
 
+/**
+ * Filter videos to keep only fashion-appropriate content (no sexual/inappropriate content)
+ */
+async function filterFashionContent(
+  videos: TikTokVideo[],
+  geminiApiKey: string | undefined,
+  lovableApiKey: string | undefined
+): Promise<TikTokVideo[]> {
+  // Filter in batches of 20 for speed
+  const batchSize = 20;
+  const filtered: TikTokVideo[] = [];
+  
+  for (let i = 0; i < videos.length; i += batchSize) {
+    const batch = videos.slice(i, i + batchSize);
+    
+    const batchResults = await Promise.all(
+      batch.map(video => checkFashionRelevance(video, geminiApiKey, lovableApiKey))
+    );
+    
+    // Keep only appropriate videos
+    batch.forEach((video, idx) => {
+      if (batchResults[idx]) {
+        filtered.push(video);
+      }
+    });
+  }
+  
+  return filtered;
+}
+
+/**
+ * Check if a single video is fashion-appropriate
+ */
+async function checkFashionRelevance(
+  video: TikTokVideo,
+  geminiApiKey: string | undefined,
+  lovableApiKey: string | undefined
+): Promise<boolean> {
+  try {
+    const filterPrompt = `Analyze this TikTok video thumbnail and description to determine if it's appropriate fashion content.
+
+Video: ${video.videoUrl}
+Description: ${video.description}
+
+Answer ONLY "yes" or "no":
+- Is this about fashion, clothing, outfits, or style? (yes)
+- Is this sexual, inappropriate, or not fashion-related? (no)
+
+Consider:
+✅ Fashion shows, outfit ideas, clothing reviews, styling tips
+❌ Sexual content, nudity, unrelated topics, spam
+
+Return JSON: {"appropriate": true/false, "reason": "brief explanation"}`;
+
+    // Try Gemini first
+    if (geminiApiKey) {
+      try {
+        const imageResponse = await fetch(video.thumbnailUrl);
+        const imageBuffer = await imageResponse.arrayBuffer();
+        const base64Image = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: filterPrompt },
+                { inline_data: { mime_type: "image/jpeg", data: base64Image } }
+              ]
+            }],
+            generationConfig: {
+              temperature: 0.1,
+              maxOutputTokens: 100,
+              responseMimeType: "application/json"
+            }
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const result = JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text || '{"appropriate":true}');
+          if (!result.appropriate) {
+            console.log(`❌ Filtered out ${video.id}: ${result.reason}`);
+          }
+          return result.appropriate;
+        }
+      } catch (e) {
+        console.log(`Filter check failed for ${video.id}, keeping video`);
+      }
+    }
+    
+    // Default to keeping video if filtering fails (to avoid false positives)
+    return true;
+  } catch (error) {
+    console.log(`Filter error for ${video.id}, keeping video`);
+    return true;
+  }
+}
 
 async function analyzeVideo(video: TikTokVideo, trendsList: string, geminiApiKey: string | undefined, lovableApiKey: string | undefined): Promise<AnalysisResult | null> {
   try {

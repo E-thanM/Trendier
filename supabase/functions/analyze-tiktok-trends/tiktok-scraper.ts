@@ -19,23 +19,23 @@ export async function scrapeTikTokVideos(
   const startTime = Date.now();
   console.log(`🎯 Scraping #${hashtag} for ${maxVideos} videos...`);
   
-  // Method 1: TikTok mobile web API (most reliable)
-  let videos = await scrapeMobileAPI(hashtag, maxVideos);
+  // Method 1: TikTok mobile web API (most reliable, faster)
+  let videos = await scrapeMobileAPI(hashtag, maxVideos * 2); // Get 2x for filtering
   console.log(`Method 1 (Mobile API): ${videos.length} videos`);
   
-  // Method 2: Direct hashtag page scraping
-  if (videos.length < maxVideos / 2) {
+  // Method 2: Direct hashtag page scraping (if needed)
+  if (videos.length < maxVideos) {
     console.log('Trying hashtag page scraping...');
-    const pageVideos = await scrapeHashtagPage(hashtag, maxVideos);
-    videos = [...videos, ...pageVideos].slice(0, maxVideos);
+    const pageVideos = await scrapeHashtagPage(hashtag, maxVideos * 2);
+    videos = [...videos, ...pageVideos].slice(0, maxVideos * 2);
     console.log(`Method 2 (Page scraping): Total ${videos.length} videos`);
   }
   
   // Method 3: Search engine backup
-  if (videos.length < maxVideos / 3 && serperApiKey) {
+  if (videos.length < maxVideos / 2 && serperApiKey) {
     console.log('Trying Serper as backup...');
     const serperVideos = await scrapeWithSerper(hashtag, maxVideos, serperApiKey);
-    videos = [...videos, ...serperVideos].slice(0, maxVideos);
+    videos = [...videos, ...serperVideos].slice(0, maxVideos * 2);
     console.log(`Method 3 (Serper): Total ${videos.length} videos`);
   }
   
@@ -308,8 +308,8 @@ async function fetchVideosWithThumbnails(
 ): Promise<TikTokVideo[]> {
   console.log(`🖼️ Fetching real thumbnails for ${videoData.length} videos...`);
   
-  // Process in batches of 10 for optimal speed
-  const batchSize = 10;
+  // Process in batches of 20 for optimal speed (increased from 10)
+  const batchSize = 20;
   const allVideos: TikTokVideo[] = [];
   
   for (let i = 0; i < videoData.length; i += batchSize) {

@@ -420,7 +420,38 @@ Consider TikTok trends, Instagram fashion trends, runway shows, and street style
 
     console.log('Trend estimates:', trendEstimates);
 
-    // Step 3: Query Google Trends through Serper, then verify top trend
+    // Step 3: Get MORE TikTok matches with content filtering
+    console.log('Finding diverse TikTok matches...');
+    let allTikTokItems = tiktokItems || [];
+    
+    // Fetch MORE TikTok data if needed for variety
+    if (allTikTokItems.length < 50) {
+      const { data: moreItems } = await supabaseClient
+        .from('tiktok_detected_items')
+        .select(`
+          item_name,
+          category,
+          trend_score,
+          video:tiktok_videos(
+            video_id,
+            video_url,
+            thumbnail_url,
+            author,
+            overall_trend_score,
+            hashtag,
+            description
+          )
+        `)
+        .gte('created_at', new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString())
+        .order('trend_score', { ascending: false })
+        .limit(200);
+      
+      if (moreItems) {
+        allTikTokItems = moreItems;
+      }
+    }
+
+    // Step 4: Query Google Trends through Serper, then verify top trend
     const SERPER_API_KEY = Deno.env.get('SERPER_API_KEY');
     const googleTrendsData: any[] = [];
     let verifiedTopTrend = null;
@@ -818,10 +849,16 @@ Provide detailed analysis of how well the outfit matches the user's intended sty
         }
       }
       
-      console.log(`📋 Got ${candidates.length} candidates, performing visual AI analysis...`);
+      console.log(`📋 Got ${candidates.length} candidates, adding randomization for variety...`);
       
-      // Step 2: Visual comparison using Gemini Vision for top 3 candidates (faster)
-      const visualComparisonPromises = candidates.slice(0, 3).map(async (candidate) => {
+      // Randomize candidates to avoid showing same videos every time
+      const shuffled = [...candidates].sort(() => Math.random() - 0.5);
+      
+      // Step 2: Visual comparison using Gemini Vision for top 8 candidates (more variety)
+      const topCandidates = shuffled.slice(0, 8);
+      console.log(`🎯 Analyzing ${topCandidates.length} diverse candidates...`);
+      
+      const visualComparisonPromises = topCandidates.map(async (candidate) => {
         if (!candidate.thumbnailUrl) {
           return { ...candidate, visualScore: 0, finalScore: candidate.trendScore };
         }
