@@ -35,65 +35,43 @@ const requestSchema = z.object({
     )
 });
 
-// Rate limiting configuration
-const rateLimiter = {
-  concurrent: 0,
-  maxConcurrent: 3,
-  requestsPerMinute: 10,
-  timestamps: [] as number[],
-};
+// Queue system placeholder - will be processed by frontend polling
+// Rate limiting is handled at the application level
 
-function canProcessNow(): boolean {
-  const now = Date.now();
-  rateLimiter.timestamps = rateLimiter.timestamps.filter(t => now - t < 60000);
-  return rateLimiter.concurrent < rateLimiter.maxConcurrent && 
-         rateLimiter.timestamps.length < rateLimiter.requestsPerMinute;
-}
-
-async function processQueueItem(supabaseClient: any, queueItem: any) {
-  if (!canProcessNow()) {
-    console.log('Rate limit reached, waiting...');
-    return;
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
   }
-  
-  rateLimiter.concurrent++;
-  rateLimiter.timestamps.push(Date.now());
-  
+
   try {
-    await supabaseClient
-      .from('outfit_analysis_queue')
-      .update({ status: 'processing', started_at: new Date().toISOString() })
-      .eq('id', queueItem.id);
+    const authHeader = req.headers.get('Authorization');
     
-    const { imageUrl, targetStyle } = JSON.parse(queueItem.image_data);
-    const result = await analyzeOutfitFull(imageUrl, targetStyle, supabaseClient);
-    
-    await supabaseClient
-      .from('outfit_analysis_queue')
-      .update({ 
-        status: 'completed',
-        result,
-        completed_at: new Date().toISOString()
-      })
-      .eq('id', queueItem.id);
-      
-    console.log(`Queue item ${queueItem.id} completed`);
-  } catch (error: any) {
-    console.error(`Queue item ${queueItem.id} failed:`, error);
-    await supabaseClient
-      .from('outfit_analysis_queue')
-      .update({ 
-        status: 'failed',
-        error_message: error.message,
-        completed_at: new Date().toISOString()
-      })
-      .eq('id', queueItem.id);
-  } finally {
-    rateLimiter.concurrent--;
-  }
-}
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-async function analyzeOutfitFull(imageUrl: string, targetStyle: string, supabaseClient: any) {
+    const token = authHeader.replace('Bearer ', '');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
+    
+    if (authError || !user) {
+      console.error('Auth error:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid or expired token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`Request from authenticated user: ${user.id}`);
+
+    const body = await req.json();
+    const validation = requestSchema.safeParse(body);
     
     if (!validation.success) {
       return new Response(
