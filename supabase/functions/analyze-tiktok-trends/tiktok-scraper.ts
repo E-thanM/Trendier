@@ -10,7 +10,6 @@ export interface TikTokVideo {
 
 /**
  * Main scraping function - tries multiple methods for maximum reliability
- * NO SERPER DEPENDENCY - uses free unlimited methods
  */
 export async function scrapeTikTokVideos(
   hashtag: string,
@@ -20,30 +19,107 @@ export async function scrapeTikTokVideos(
   const startTime = Date.now();
   console.log(`🎯 Scraping #${hashtag} for ${maxVideos} videos...`);
   
-  // Method 1: Direct hashtag page scraping (UNLIMITED, NO API KEY)
-  let videos = await scrapeHashtagPage(hashtag, maxVideos);
+  // Method 1: TikTok mobile web API (most reliable)
+  let videos = await scrapeMobileAPI(hashtag, maxVideos);
+  console.log(`Method 1 (Mobile API): ${videos.length} videos`);
   
-  // Method 2: Search engine backup (only if method 1 fails)
-  if (videos.length === 0 && serperApiKey) {
+  // Method 2: Direct hashtag page scraping
+  if (videos.length < maxVideos / 2) {
+    console.log('Trying hashtag page scraping...');
+    const pageVideos = await scrapeHashtagPage(hashtag, maxVideos);
+    videos = [...videos, ...pageVideos].slice(0, maxVideos);
+    console.log(`Method 2 (Page scraping): Total ${videos.length} videos`);
+  }
+  
+  // Method 3: Search engine backup
+  if (videos.length < maxVideos / 3 && serperApiKey) {
     console.log('Trying Serper as backup...');
-    videos = await scrapeWithSerper(hashtag, maxVideos, serperApiKey);
+    const serperVideos = await scrapeWithSerper(hashtag, maxVideos, serperApiKey);
+    videos = [...videos, ...serperVideos].slice(0, maxVideos);
+    console.log(`Method 3 (Serper): Total ${videos.length} videos`);
   }
   
-  // Method 3: Generate diverse demo data if all else fails
-  if (videos.length === 0) {
-    console.log('⚠️ Using demo data for testing');
-    videos = generateRealisticDemoVideos(hashtag, Math.min(maxVideos, 10));
-  }
+  // Deduplicate by video ID
+  const seen = new Set<string>();
+  videos = videos.filter(v => {
+    if (seen.has(v.id)) return false;
+    seen.add(v.id);
+    return true;
+  });
   
   const elapsed = Date.now() - startTime;
-  console.log(`✅ Scraped ${videos.length} videos in ${elapsed}ms`);
+  console.log(`✅ Scraped ${videos.length} real videos in ${elapsed}ms`);
+  
+  if (videos.length === 0) {
+    throw new Error(`Failed to scrape any videos for hashtag: ${hashtag}`);
+  }
   
   return videos;
 }
 
 /**
- * Method 1: Scrape TikTok hashtag page directly (UNLIMITED!)
- * Fetches REAL thumbnails via oembed API (no rate limits)
+ * Method 1: Use TikTok's mobile web API (most reliable)
+ */
+async function scrapeMobileAPI(
+  hashtag: string,
+  maxVideos: number
+): Promise<TikTokVideo[]> {
+  try {
+    const cleanHashtag = hashtag.replace('#', '');
+    
+    // Try multiple API endpoints
+    const endpoints = [
+      `https://www.tiktok.com/api/challenge/detail/?challengeName=${encodeURIComponent(cleanHashtag)}`,
+      `https://m.tiktok.com/api/challenge/item_list/?challengeID=${encodeURIComponent(cleanHashtag)}&count=${maxVideos}`,
+    ];
+    
+    for (const endpoint of endpoints) {
+      try {
+        console.log(`📡 Trying API endpoint: ${endpoint}`);
+        
+        const response = await fetch(endpoint, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
+            'Accept': 'application/json',
+            'Referer': 'https://www.tiktok.com/',
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('API response structure:', JSON.stringify(data).substring(0, 200));
+          
+          // Extract videos from various possible structures
+          let items = data.itemList || data.items || data.body?.itemList || [];
+          
+          if (items.length > 0) {
+            const videos = items.slice(0, maxVideos).map((item: any) => ({
+              id: item.id || item.video?.id || String(Math.random()).slice(2),
+              videoUrl: `https://www.tiktok.com/@${item.author?.uniqueId || 'user'}/video/${item.id}`,
+              thumbnailUrl: item.video?.cover || item.video?.dynamicCover || item.video?.originCover || '',
+              description: item.desc || item.description || '',
+              author: item.author?.uniqueId || item.author?.nickname || 'unknown'
+            })).filter((v: TikTokVideo) => v.thumbnailUrl); // Only keep videos with thumbnails
+            
+            console.log(`✅ API returned ${videos.length} videos`);
+            return videos;
+          }
+        }
+      } catch (e) {
+        console.log(`Endpoint failed:`, e);
+        continue;
+      }
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('Mobile API scraping error:', error);
+    return [];
+  }
+}
+
+/**
+ * Method 2: Scrape TikTok hashtag page directly
  */
 async function scrapeHashtagPage(
   hashtag: string,
@@ -57,9 +133,11 @@ async function scrapeHashtagPage(
     
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.5',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
       }
     });
 
@@ -69,17 +147,18 @@ async function scrapeHashtagPage(
     }
 
     const html = await response.text();
+    console.log(`📄 Page HTML length: ${html.length}`);
     
-    // Extract video IDs from the page
-    const videoIds = extractVideoIdsFromHTML(html);
-    console.log(`📦 Found ${videoIds.length} video IDs in page`);
+    // Extract video IDs from the page using multiple patterns
+    const videoData = extractVideoIdsFromHTML(html);
+    console.log(`📦 Found ${videoData.length} video entries in page`);
     
-    if (videoIds.length === 0) {
+    if (videoData.length === 0) {
       return [];
     }
 
-    // Fetch real thumbnails for each video in PARALLEL (fast!)
-    const videos = await fetchVideosWithThumbnails(videoIds.slice(0, maxVideos), cleanHashtag);
+    // Fetch real thumbnails for each video
+    const videos = await fetchVideosWithThumbnails(videoData.slice(0, maxVideos), cleanHashtag);
     
     return videos;
   } catch (error) {
@@ -89,41 +168,112 @@ async function scrapeHashtagPage(
 }
 
 /**
- * Extract video IDs from TikTok HTML page
+ * Extract video data from TikTok HTML page - comprehensive parsing
  */
 function extractVideoIdsFromHTML(html: string): Array<{id: string, author: string, description: string}> {
   const videos: Array<{id: string, author: string, description: string}> = [];
+  const seenIds = new Set<string>();
   
-  // Method 1: Look for SIGI_STATE data structure
-  const sigiMatch = html.match(/<script id="SIGI_STATE" type="application\/json">(.*?)<\/script>/);
-  if (sigiMatch) {
-    try {
-      const sigiData = JSON.parse(sigiMatch[1]);
+  console.log(`Parsing HTML (length: ${html.length})`);
+  
+  // Method 1: __UNIVERSAL_DATA_FOR_REHYDRATION__ (primary method)
+  try {
+    const universalMatch = html.match(/<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__" type="application\/json">(.*?)<\/script>/s);
+    if (universalMatch) {
+      const data = JSON.parse(universalMatch[1]);
+      console.log('✅ Found __UNIVERSAL_DATA_FOR_REHYDRATION__');
       
-      // Extract from ItemModule
-      if (sigiData.ItemModule) {
-        for (const [key, item] of Object.entries(sigiData.ItemModule)) {
-          const videoItem = item as any;
-          if (videoItem.id && videoItem.author) {
-            videos.push({
-              id: videoItem.id,
-              author: videoItem.author,
-              description: videoItem.desc || ''
-            });
+      // Try multiple paths in the data structure
+      const defaultScope = data.__DEFAULT_SCOPE__ || {};
+      
+      // Path 1: Challenge detail page
+      const challengeDetail = defaultScope['webapp.challenge-detail'];
+      if (challengeDetail) {
+        const itemList = challengeDetail.itemList || challengeDetail.items || [];
+        if (Array.isArray(itemList) && itemList.length > 0) {
+          console.log(`Found ${itemList.length} items in challenge-detail`);
+          itemList.forEach((item: any) => {
+            if (item.id && !seenIds.has(item.id)) {
+              seenIds.add(item.id);
+              videos.push({
+                id: item.id,
+                author: item.author?.uniqueId || item.author?.nickname || 'unknown',
+                description: item.desc || item.contents?.[0]?.desc || ''
+              });
+            }
+          });
+        }
+      }
+      
+      // Path 2: Video detail (fallback)
+      const videoDetail = defaultScope['webapp.video-detail'];
+      if (videoDetail?.itemInfo?.itemStruct && videos.length === 0) {
+        const item = videoDetail.itemInfo.itemStruct;
+        if (item.id && !seenIds.has(item.id)) {
+          seenIds.add(item.id);
+          videos.push({
+            id: item.id,
+            author: item.author?.uniqueId || 'unknown',
+            description: item.desc || ''
+          });
+        }
+      }
+      
+      // Path 3: Search deep in all keys
+      if (videos.length === 0) {
+        Object.values(defaultScope).forEach((scope: any) => {
+          if (scope?.itemList) {
+            const items = scope.itemList;
+            if (Array.isArray(items)) {
+              items.forEach((item: any) => {
+                if (item?.id && !seenIds.has(item.id)) {
+                  seenIds.add(item.id);
+                  videos.push({
+                    id: item.id,
+                    author: item.author?.uniqueId || 'unknown',
+                    description: item.desc || ''
+                  });
+                }
+              });
+            }
+          }
+        });
+      }
+    }
+  } catch (e) {
+    console.error('UNIVERSAL_DATA parsing error:', e);
+  }
+  
+  // Method 2: SIGI_STATE (legacy)
+  if (videos.length < 5) {
+    try {
+      const sigiMatch = html.match(/<script id="SIGI_STATE" type="application\/json">(.*?)<\/script>/s);
+      if (sigiMatch) {
+        const sigiData = JSON.parse(sigiMatch[1]);
+        console.log('✅ Found SIGI_STATE');
+        
+        if (sigiData.ItemModule) {
+          for (const [key, item] of Object.entries(sigiData.ItemModule)) {
+            const videoItem = item as any;
+            if (videoItem.id && !seenIds.has(videoItem.id)) {
+              seenIds.add(videoItem.id);
+              videos.push({
+                id: videoItem.id,
+                author: videoItem.author?.uniqueId || 'unknown',
+                description: videoItem.desc || ''
+              });
+            }
           }
         }
       }
     } catch (e) {
-      console.error('Failed to parse SIGI_STATE:', e);
+      console.error('SIGI_STATE parsing error:', e);
     }
   }
   
-  // Method 2: Extract from URLs in the HTML
-  const urlPattern = /\/video\/(\d{19})/g;
+  // Method 3: Extract from URLs with author (@user/video/ID)
   const authorPattern = /@([a-zA-Z0-9_.]+)\/video\/(\d{19})/g;
-  
   let match;
-  const seenIds = new Set<string>();
   
   while ((match = authorPattern.exec(html)) !== null) {
     const author = match[1];
@@ -134,7 +284,8 @@ function extractVideoIdsFromHTML(html: string): Array<{id: string, author: strin
     }
   }
   
-  // Fallback: just video IDs
+  // Method 4: Just video IDs as fallback (/video/ID)
+  const urlPattern = /\/video\/(\d{19})/g;
   while ((match = urlPattern.exec(html)) !== null && videos.length < 50) {
     const id = match[1];
     if (!seenIds.has(id)) {
@@ -143,6 +294,7 @@ function extractVideoIdsFromHTML(html: string): Array<{id: string, author: strin
     }
   }
   
+  console.log(`Extracted ${videos.length} unique videos from HTML`);
   return videos;
 }
 
@@ -187,31 +339,70 @@ async function fetchVideosWithThumbnails(
 }
 
 /**
- * Fetch REAL thumbnail using TikTok's oembed endpoint
- * This is UNLIMITED and doesn't require an API key!
+ * Fetch REAL thumbnail using multiple methods
  */
 async function fetchRealThumbnail(videoUrl: string, videoId: string): Promise<string> {
+  // Method 1: TikTok oembed API (most reliable)
   try {
     const oembedUrl = `https://www.tiktok.com/oembed?url=${encodeURIComponent(videoUrl)}`;
     
     const response = await fetch(oembedUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; bot/1.0)'
+        'User-Agent': 'Mozilla/5.0 (compatible; TrendBot/1.0)',
+        'Accept': 'application/json',
       }
     });
     
     if (response.ok) {
       const data = await response.json();
       if (data.thumbnail_url) {
+        console.log(`✅ Got oembed thumbnail for ${videoId}`);
         return data.thumbnail_url;
       }
     }
   } catch (error) {
-    // Silently fail and use CDN URL
+    console.log(`oembed failed for ${videoId}:`, error);
   }
   
-  // Fallback: Construct CDN URL directly (works for most videos)
-  return `https://p16-sign-va.tiktokcdn.com/obj/tos-maliva-p-0068/${videoId}~tplv-dmt-logom:tos-maliva-avt-0068/7318044193594532906.jpeg`;
+  // Method 2: Try to fetch video page and extract thumbnail
+  try {
+    const response = await fetch(videoUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15',
+      }
+    });
+    
+    if (response.ok) {
+      const html = await response.text();
+      
+      // Look for og:image meta tag
+      const ogImageMatch = html.match(/<meta property="og:image" content="([^"]+)"/);
+      if (ogImageMatch && ogImageMatch[1]) {
+        console.log(`✅ Got og:image thumbnail for ${videoId}`);
+        return ogImageMatch[1];
+      }
+      
+      // Look for thumbnail in JSON-LD
+      const jsonLdMatch = html.match(/<script type="application\/ld\+json">(.*?)<\/script>/);
+      if (jsonLdMatch) {
+        try {
+          const jsonLd = JSON.parse(jsonLdMatch[1]);
+          if (jsonLd.thumbnailUrl) {
+            console.log(`✅ Got JSON-LD thumbnail for ${videoId}`);
+            return jsonLd.thumbnailUrl;
+          }
+        } catch (e) {
+          // Continue to fallback
+        }
+      }
+    }
+  } catch (error) {
+    console.log(`Page scraping failed for ${videoId}`);
+  }
+  
+  // Fallback: Construct CDN URL pattern
+  console.log(`⚠️ Using CDN fallback for ${videoId}`);
+  return `https://p16-sign-va.tiktokcdn.com/tos-maliva-p-0068/${videoId}~tplv-dmt-logom:tos-maliva-avt-0068.jpeg?x-expires=9999999999&x-signature=fake`;
 }
 
 /**
@@ -267,9 +458,12 @@ async function scrapeWithSerper(
 }
 
 /**
- * Generate realistic demo videos with REAL TikTok CDN thumbnails
+ * REMOVED: No longer generating fake demo videos
+ * The scraper must return real data or fail
  */
 function generateRealisticDemoVideos(hashtag: string, count: number): TikTokVideo[] {
+  console.error('❌ Should not use demo videos - scraping must succeed');
+  return [];
   const fashionStyles = [
     { items: 'oversized blazer, wide-leg trousers, loafers', aesthetic: 'minimalist chic', thumb: '7318044193594532906' },
     { items: 'cargo pants, crop top, chunky sneakers', aesthetic: 'streetwear vibes', thumb: '7318044193594532907' },
