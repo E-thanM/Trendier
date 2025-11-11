@@ -145,33 +145,46 @@ serve(async (req) => {
     console.log(`🏥 Health check complete: ${overall}`);
     console.log(`📊 Total videos: ${totalVideos}, Last 24h: ${videosLast24h}`);
 
-    // If critical, attempt automatic recovery
+    // If critical, attempt automatic recovery using AI-adaptive scraper
     if (overall === 'critical' && hoursSinceLastSuccess && hoursSinceLastSuccess > 12) {
-      console.log('🔧 Attempting automatic recovery...');
+      console.log('🤖 Attempting AI-adaptive recovery...');
       
       try {
-        // Trigger immediate scrape
-        const response = await fetch(`${supabaseUrl}/functions/v1/scrape-common-hashtags`, {
+        // Use adaptive scraper that analyzes HTML structure with AI
+        const response = await fetch(`${supabaseUrl}/functions/v1/adaptive-tiktok-scraper`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${supabaseServiceKey}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ forceRefresh: true })
+          body: JSON.stringify({ hashtag: 'fashion', maxVideos: 30 })
         });
 
         const result = await response.json();
-        console.log('🔧 Recovery scrape result:', result);
+        console.log('🤖 AI recovery result:', result);
         
-        if (result.successfulScrapes > 0) {
-          recommendations.push(`✅ Auto-recovery successful: scraped ${result.successfulScrapes} hashtags`);
-          healthStatus.overall = 'degraded'; // Upgraded from critical
+        if (result.storedVideos > 0) {
+          recommendations.push(`✅ AI auto-recovery successful: ${result.storedVideos} videos added`);
+          healthStatus.overall = 'degraded';
+          
+          // Trigger for more hashtags
+          const hashtags = ['ootd', 'streetwear', 'outfitinspo'];
+          for (const tag of hashtags) {
+            fetch(`${supabaseUrl}/functions/v1/adaptive-tiktok-scraper`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${supabaseServiceKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ hashtag: tag, maxVideos: 20 })
+            }).catch(e => console.error(`Background scrape ${tag} failed:`, e));
+          }
         } else {
-          recommendations.push('❌ Auto-recovery failed: scraper still not working');
+          recommendations.push('❌ AI recovery found no videos - TikTok structure may have changed significantly');
         }
       } catch (error) {
-        console.error('Auto-recovery error:', error);
-        recommendations.push('❌ Auto-recovery attempt failed');
+        console.error('AI recovery error:', error);
+        recommendations.push('❌ AI auto-recovery failed');
       }
     }
 

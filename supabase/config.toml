@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.populate-tiktok-videos]
 verify_jwt = false
+
+[functions.adaptive-tiktok-scraper]
+verify_jwt = false
