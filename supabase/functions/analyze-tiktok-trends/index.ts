@@ -42,7 +42,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { hashtag, maxVideos = 50, forceRefresh = false } = await req.json();
+    const { hashtag, maxVideos = 20, forceRefresh = false } = await req.json(); // Reduced default for speed
     
     if (!hashtag) {
       return new Response(
@@ -119,10 +119,11 @@ serve(async (req) => {
 
     const trendsList = trends?.map(t => `${t.name} (${t.tags?.join(', ')})`).join(', ') || 'No trends available';
 
-    // Scrape TikTok videos with REAL thumbnails (unlimited, no Serper needed!)
+    // Scrape TikTok videos (optimized for speed: max 20 videos)
     const serperApiKey = Deno.env.get('SERPER_API_KEY');
-    const videos = await scrapeTikTokVideos(cleanHashtag, maxVideos, serperApiKey);
-    console.log(`✅ Scraped ${videos.length} videos with real thumbnails for AI analysis`);
+    const targetVideos = Math.min(maxVideos, 20);
+    const videos = await scrapeTikTokVideos(cleanHashtag, targetVideos, serperApiKey);
+    console.log(`✅ Scraped ${videos.length} videos for analysis`);
 
     if (videos.length === 0) {
       return new Response(
@@ -138,34 +139,28 @@ serve(async (req) => {
       throw new Error('Neither GEMINI_API_KEY nor LOVABLE_API_KEY is configured');
     }
 
-    // Filter out inappropriate content BEFORE analysis
-    console.log('🔍 Filtering videos for fashion relevance...');
-    const filteredVideos = await filterFashionContent(videos, geminiApiKey, lovableApiKey);
-    console.log(`✅ Kept ${filteredVideos.length}/${videos.length} fashion-appropriate videos`);
-
-    // Analyze ALL videos in parallel with batching for speed
+    // Combined filtering + analysis for speed (single AI call per video)
     const startTime = Date.now();
-    const batchSize = 15; // Increased for faster processing
+    const batchSize = 20; // Larger batches for max speed
     const allAnalyses: AnalysisResult[] = [];
     
-    console.log(`🚀 Starting parallel batch analysis of ${filteredVideos.length} videos (batches of ${batchSize})...`);
+    console.log(`🚀 Analyzing ${videos.length} videos (batches of ${batchSize})...`);
     
-    for (let i = 0; i < filteredVideos.length; i += batchSize) {
-      const batch = filteredVideos.slice(i, i + batchSize);
-      console.log(`📊 Analyzing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(filteredVideos.length / batchSize)} (${batch.length} videos)...`);
+    for (let i = 0; i < videos.length; i += batchSize) {
+      const batch = videos.slice(i, i + batchSize);
       
-      const batchPromises = batch.map(video => analyzeVideo(video, trendsList, geminiApiKey, lovableApiKey));
+      const batchPromises = batch.map(video => analyzeAndFilterVideo(video, trendsList, geminiApiKey, lovableApiKey));
       const batchResults = await Promise.all(batchPromises);
       
-      // Filter out failed analyses
+      // Filter out failed/inappropriate analyses
       const successfulAnalyses = batchResults.filter((result): result is AnalysisResult => result !== null);
       allAnalyses.push(...successfulAnalyses);
       
-      console.log(`✅ Batch complete: ${successfulAnalyses.length}/${batch.length} successful`);
+      console.log(`✅ Batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(videos.length / batchSize)}: ${successfulAnalyses.length}/${batch.length} valid`);
     }
     
     const analysisTime = Date.now() - startTime;
-    console.log(`🎯 Analysis complete: ${allAnalyses.length}/${filteredVideos.length} videos analyzed in ${analysisTime}ms (${(analysisTime / filteredVideos.length).toFixed(0)}ms per video)`);
+    console.log(`🎯 Analysis complete: ${allAnalyses.length}/${videos.length} videos in ${analysisTime}ms (${(analysisTime / videos.length).toFixed(0)}ms per video)`);
 
     if (allAnalyses.length === 0) {
       return new Response(
@@ -227,152 +222,61 @@ serve(async (req) => {
 import { scrapeTikTokVideos } from './tiktok-scraper.ts';
 
 /**
- * Filter videos to keep only fashion-appropriate content (no sexual/inappropriate content)
+ * OPTIMIZED: Combined filtering + analysis in one AI call for speed
  */
-async function filterFashionContent(
-  videos: TikTokVideo[],
-  geminiApiKey: string | undefined,
-  lovableApiKey: string | undefined
-): Promise<TikTokVideo[]> {
-  // Filter in batches of 20 for speed
-  const batchSize = 20;
-  const filtered: TikTokVideo[] = [];
-  
-  for (let i = 0; i < videos.length; i += batchSize) {
-    const batch = videos.slice(i, i + batchSize);
-    
-    const batchResults = await Promise.all(
-      batch.map(video => checkFashionRelevance(video, geminiApiKey, lovableApiKey))
-    );
-    
-    // Keep only appropriate videos
-    batch.forEach((video, idx) => {
-      if (batchResults[idx]) {
-        filtered.push(video);
-      }
-    });
-  }
-  
-  return filtered;
-}
-
-/**
- * Check if a single video is fashion-appropriate
- */
-async function checkFashionRelevance(
-  video: TikTokVideo,
-  geminiApiKey: string | undefined,
-  lovableApiKey: string | undefined
-): Promise<boolean> {
+async function analyzeAndFilterVideo(video: TikTokVideo, trendsList: string, geminiApiKey: string | undefined, lovableApiKey: string | undefined): Promise<AnalysisResult | null> {
   try {
-    const filterPrompt = `Analyze this TikTok video thumbnail and description to determine if it's appropriate fashion content.
+    // Combined prompt: filter + analyze in ONE call
+    const combinedPrompt = `Analyze this TikTok video for fashion content.
+
+1. FIRST: Check if appropriate
+   - Is this fashion/outfit content? (not sexual, spam, or unrelated)
+   - If NO, return {"appropriate": false}
+
+2. IF YES: Analyze clothing items
+   - Identify 3-5 visible items in thumbnail
+   - Rate trend score (60-95)
+   - Categories: tops, bottoms, shoes, accessories, outerwear
 
 Video: ${video.videoUrl}
 Description: ${video.description}
+Trends: ${trendsList}
 
-Answer ONLY "yes" or "no":
-- Is this about fashion, clothing, outfits, or style? (yes)
-- Is this sexual, inappropriate, or not fashion-related? (no)
+Return JSON: {"appropriate": true/false, "items": [{"name":"","category":"","trendScore":0-100,"matchesTrend":""}]}`;
 
-Consider:
-✅ Fashion shows, outfit ideas, clothing reviews, styling tips
-❌ Sexual content, nudity, unrelated topics, spam
-
-Return JSON: {"appropriate": true/false, "reason": "brief explanation"}`;
-
+    let result: any = null;
+    
     // Try Gemini first
     if (geminiApiKey) {
       try {
         const imageResponse = await fetch(video.thumbnailUrl);
+        if (!imageResponse.ok) throw new Error('Failed to fetch thumbnail');
+        
         const imageBuffer = await imageResponse.arrayBuffer();
-        const base64Image = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
+        
+        // Efficient base64 encoding for large images (avoids stack overflow)
+        const bytes = new Uint8Array(imageBuffer);
+        let binary = '';
+        const chunkSize = 8192;
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          const chunk = bytes.subarray(i, i + chunkSize);
+          binary += String.fromCharCode.apply(null, Array.from(chunk));
+        }
+        const base64Image = btoa(binary);
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
+        const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [{
               parts: [
-                { text: filterPrompt },
+                { text: combinedPrompt },
                 { inline_data: { mime_type: "image/jpeg", data: base64Image } }
               ]
             }],
             generationConfig: {
               temperature: 0.1,
-              maxOutputTokens: 100,
-              responseMimeType: "application/json"
-            }
-          })
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          const result = JSON.parse(data.candidates?.[0]?.content?.parts?.[0]?.text || '{"appropriate":true}');
-          if (!result.appropriate) {
-            console.log(`❌ Filtered out ${video.id}: ${result.reason}`);
-          }
-          return result.appropriate;
-        }
-      } catch (e) {
-        console.log(`Filter check failed for ${video.id}, keeping video`);
-      }
-    }
-    
-    // Default to keeping video if filtering fails (to avoid false positives)
-    return true;
-  } catch (error) {
-    console.log(`Filter error for ${video.id}, keeping video`);
-    return true;
-  }
-}
-
-async function analyzeVideo(video: TikTokVideo, trendsList: string, geminiApiKey: string | undefined, lovableApiKey: string | undefined): Promise<AnalysisResult | null> {
-  try {
-    console.log(`Analyzing video ${video.id} - Thumbnail: ${video.thumbnailUrl.substring(0, 60)}...`);
-    
-    const analysisPrompt = `CRITICAL: Analyze the ACTUAL IMAGE/THUMBNAIL to identify what clothing the person is wearing.
-
-Video Details:
-- URL: ${video.videoUrl}
-- Author: @${video.author}
-- Description: "${video.description}"
-
-Your task:
-1. LOOK AT THE IMAGE - identify all visible clothing items
-2. Be specific about styles (e.g., "oversized denim jacket", "pleated mini skirt", "chunky platform sneakers")
-3. Rate each item's trend score (0-100) based on current fashion trends
-4. Match items against these trending pieces: ${trendsList}
-
-Categories: tops, bottoms, shoes, accessories, outerwear, brand
-
-Focus on VISUAL CONTENT in the thumbnail. What do you actually SEE the person wearing?`;
-
-    let analysis: any = null;
-    
-    // Try Gemini first (free tier: 1500/day)
-    if (geminiApiKey) {
-      try {
-        const imageResponse = await fetch(video.thumbnailUrl);
-        const imageBuffer = await imageResponse.arrayBuffer();
-        const base64Image = btoa(String.fromCharCode(...new Uint8Array(imageBuffer)));
-
-        const aiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            contents: [{
-              parts: [
-                { text: `${analysisPrompt}\n\nReturn JSON: {"items":[{"name":"","category":"","trendScore":0-100,"matchesTrend":""}]}` },
-                { inline_data: { mime_type: "image/jpeg", data: base64Image } }
-              ]
-            }],
-            generationConfig: {
-              temperature: 0.4,
-              topK: 32,
-              topP: 1,
-              maxOutputTokens: 2048,
+              maxOutputTokens: 500,
               responseMimeType: "application/json"
             }
           }),
@@ -382,19 +286,21 @@ Focus on VISUAL CONTENT in the thumbnail. What do you actually SEE the person we
           const aiData = await aiResponse.json();
           const responseText = aiData.candidates?.[0]?.content?.parts?.[0]?.text;
           if (responseText) {
-            analysis = JSON.parse(responseText);
-            console.log(`✅ Gemini analysis successful for ${video.id}`);
+            result = JSON.parse(responseText);
+            // Filter out inappropriate videos
+            if (!result.appropriate) {
+              console.log(`❌ Filtered ${video.id}: inappropriate`);
+              return null;
+            }
           }
-        } else if (aiResponse.status === 429) {
-          console.log(`⚠️ Gemini rate limit hit, falling back to Lovable AI`);
         }
       } catch (error) {
-        console.log(`⚠️ Gemini failed for ${video.id}, trying Lovable AI:`, error);
+        console.log(`⚠️ Gemini failed for ${video.id}:`, error);
       }
     }
 
-    // Fallback to Lovable AI if Gemini fails or rate limited
-    if (!analysis && lovableApiKey) {
+    // Fallback to Lovable AI
+    if (!result && lovableApiKey) {
       try {
         const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
@@ -407,18 +313,19 @@ Focus on VISUAL CONTENT in the thumbnail. What do you actually SEE the person we
             messages: [{
               role: 'user',
               content: [
-                { type: 'text', text: analysisPrompt },
+                { type: 'text', text: combinedPrompt },
                 { type: 'image_url', image_url: { url: video.thumbnailUrl } }
               ]
             }],
             tools: [{
               type: "function",
               function: {
-                name: "analyze_fashion_items",
-                description: "Identify and rate fashion items",
+                name: "filter_and_analyze",
+                description: "Filter and analyze fashion video",
                 parameters: {
                   type: "object",
                   properties: {
+                    appropriate: { type: "boolean" },
                     items: {
                       type: "array",
                       items: {
@@ -428,52 +335,40 @@ Focus on VISUAL CONTENT in the thumbnail. What do you actually SEE the person we
                           category: { type: "string" },
                           trendScore: { type: "number" },
                           matchesTrend: { type: "string" }
-                        },
-                        required: ["name", "category", "trendScore"]
+                        }
                       }
                     }
                   },
-                  required: ["items"],
+                  required: ["appropriate"],
                   additionalProperties: false
                 }
               }
             }],
-            tool_choice: { type: "function", function: { name: "analyze_fashion_items" } }
+            tool_choice: { type: "function", function: { name: "filter_and_analyze" } }
           }),
         });
 
         if (aiResponse.ok) {
           const aiData = await aiResponse.json();
-          console.log(`📝 Lovable AI response for ${video.id}:`, JSON.stringify(aiData).substring(0, 200));
-          
           const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
           if (toolCall?.function?.arguments) {
-            try {
-              analysis = JSON.parse(toolCall.function.arguments);
-              console.log(`✅ Lovable AI analysis successful for ${video.id} - found ${analysis.items?.length || 0} items`);
-            } catch (parseError) {
-              console.error(`❌ Failed to parse Lovable AI response for ${video.id}:`, parseError);
-              console.error('Raw arguments:', toolCall.function.arguments);
+            result = JSON.parse(toolCall.function.arguments);
+            if (!result.appropriate) {
+              console.log(`❌ Filtered ${video.id}`);
+              return null;
             }
-          } else {
-            console.error(`❌ No tool call in Lovable AI response for ${video.id}`);
-            console.error('Full response:', JSON.stringify(aiData));
           }
-        } else {
-          const errorText = await aiResponse.text();
-          console.error(`❌ Lovable AI request failed for ${video.id} (${aiResponse.status}):`, errorText);
         }
       } catch (error) {
-        console.error(`❌ Lovable AI exception for ${video.id}:`, error);
+        console.error(`Lovable AI failed for ${video.id}:`, error);
       }
     }
 
-    // If still no analysis, log and return null
-    if (!analysis) {
-      console.error(`❌ All AI methods failed for video ${video.id}`);
+    if (!result || !result.items || result.items.length === 0) {
       return null;
     }
-    const detectedItems: ClothingItem[] = analysis.items.map((item: any) => ({
+    
+    const detectedItems: ClothingItem[] = result.items.map((item: any) => ({
       name: item.name,
       category: item.category,
       confidence: 100,
@@ -484,7 +379,7 @@ Focus on VISUAL CONTENT in the thumbnail. What do you actually SEE the person we
       ? Math.round(detectedItems.reduce((sum, item) => sum + item.trendScore, 0) / detectedItems.length)
       : 0;
 
-    const trendingItems = analysis.items
+    const trendingItems = result.items
       .filter((item: any) => item.matchesTrend)
       .map((item: any) => item.matchesTrend);
 
