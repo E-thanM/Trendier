@@ -54,7 +54,7 @@ serve(async (req) => {
     const cleanHashtag = hashtag.replace('#', '').toLowerCase();
     console.log(`Analyzing TikTok trends for hashtag: ${cleanHashtag}`);
 
-    // Check if we have recent cached data (within 24 hours)
+    // Check if we have recent cached data (within 6 hours)
     if (!forceRefresh) {
       const { data: cachedVideos } = await supabaseClient
         .from('tiktok_videos')
@@ -63,7 +63,7 @@ serve(async (req) => {
           detected_items:tiktok_detected_items(*)
         `)
         .eq('hashtag', cleanHashtag)
-        .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+        .gte('created_at', new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString())
         .order('overall_trend_score', { ascending: false });
 
       if (cachedVideos && cachedVideos.length > 0) {
@@ -123,12 +123,17 @@ serve(async (req) => {
     const serperApiKey = Deno.env.get('SERPER_API_KEY');
     const targetVideos = Math.min(maxVideos, 20);
     const videos = await scrapeTikTokVideos(cleanHashtag, targetVideos, serperApiKey);
-    console.log(`✅ Scraped ${videos.length} videos for analysis`);
+    console.log(`📦 Scraped ${videos.length} videos for analysis`);
 
     if (videos.length === 0) {
       return new Response(
-        JSON.stringify({ error: 'No videos found for this hashtag' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          error: 'Failed to scrape videos - TikTok scraping currently unavailable',
+          hashtag: cleanHashtag,
+          totalVideos: 0,
+          analyses: []
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -249,8 +254,13 @@ Return JSON: {"appropriate": true/false, "items": [{"name":"","category":"","tre
     // Try Gemini first
     if (geminiApiKey) {
       try {
-        const imageResponse = await fetch(video.thumbnailUrl);
-        if (!imageResponse.ok) throw new Error('Failed to fetch thumbnail');
+        const imageResponse = await fetch(video.thumbnailUrl, { 
+          signal: AbortSignal.timeout(5000) // 5 second timeout
+        });
+        if (!imageResponse.ok) {
+          console.log(`⚠️ Skipping ${video.id}: thumbnail not accessible`);
+          return null; // Skip videos with invalid thumbnails
+        }
         
         const imageBuffer = await imageResponse.arrayBuffer();
         

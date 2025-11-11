@@ -60,10 +60,10 @@ export async function scrapeTikTokVideos(
   const elapsed = Date.now() - startTime;
   console.log(`✅ Scraped ${videos.length} videos in ${elapsed}ms`);
   
-  // If we still have nothing, generate some plausible video IDs to bootstrap
+  // If we still have nothing, don't generate bootstrap - return empty
   if (videos.length === 0) {
-    console.log('⚠️ All scraping failed, generating bootstrap videos...');
-    videos = generateBootstrapVideos(hashtag, Math.min(targetVideos, 10));
+    console.log('⚠️ All scraping methods failed, no videos found');
+    return [];
   }
   
   return videos.slice(0, targetVideos);
