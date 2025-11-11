@@ -5,10 +5,11 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, Loader2, TrendingUp, Star, Upload, X, Video, ExternalLink } from "lucide-react";
+import { Sparkles, Loader2, TrendingUp, Star, Upload, X, Video, ExternalLink, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { z } from "zod";
 import { TrendDetailModal } from "@/components/TrendDetailModal";
+import { Progress } from "@/components/ui/progress";
 
 const targetStyleSchema = z.object({
   targetStyle: z.string().trim().min(1, "Target style is required").max(100, "Target style must be less than 100 characters")
@@ -130,8 +131,10 @@ export default function Analyzer() {
   const [selectedTrend, setSelectedTrend] = useState<any>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [queueStatus, setQueueStatus] = useState<{position: number; status: string} | null>(null);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pollingIntervalRef = useRef<number | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -202,6 +205,82 @@ export default function Analyzer() {
     }
   };
 
+  const pollQueueStatus = async (queueId: string) => {
+    try {
+      const { data: queueItem } = await supabase
+        .from('outfit_analysis_queue')
+        .select('*')
+        .eq('id', queueId)
+        .single();
+
+      if (!queueItem) {
+        throw new Error('Queue item not found');
+      }
+
+      if (queueItem.status === 'completed') {
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+        setResult(queueItem.result);
+        setAnalyzing(false);
+        setQueueStatus(null);
+        toast({
+          title: "Analysis Complete!",
+          description: "Your outfit has been analyzed against current trends",
+        });
+        return;
+      }
+
+      if (queueItem.status === 'failed') {
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+        setAnalyzing(false);
+        setQueueStatus(null);
+        toast({
+          title: "Analysis Failed",
+          description: queueItem.error_message || "Failed to analyze outfit",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Get queue position for pending items
+      if (queueItem.status === 'pending') {
+        const { count } = await supabase
+          .from('outfit_analysis_queue')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'pending')
+          .lt('created_at', queueItem.created_at);
+
+        setQueueStatus({
+          position: (count || 0) + 1,
+          status: queueItem.status
+        });
+      } else {
+        setQueueStatus({
+          position: 0,
+          status: queueItem.status
+        });
+      }
+    } catch (error: any) {
+      console.error('Polling error:', error);
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      setAnalyzing(false);
+      setQueueStatus(null);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to check analysis status",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleAnalyze = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -216,6 +295,7 @@ export default function Analyzer() {
 
     setAnalyzing(true);
     setResult(null);
+    setQueueStatus(null);
 
     try {
       // Validate target style
@@ -240,21 +320,32 @@ export default function Analyzer() {
         throw new Error("Not authenticated");
       }
 
-      const { data, error } = await supabase.functions.invoke('analyze-outfit', {
-        body: { imageUrl, targetStyle: validation.data.targetStyle },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
-        }
-      });
+      // Add to queue
+      const { data: queueItem, error } = await supabase
+        .from('outfit_analysis_queue')
+        .insert({
+          user_id: session.user.id,
+          image_data: JSON.stringify({ imageUrl, targetStyle: validation.data.targetStyle }),
+          status: 'pending'
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
-      setResult(data);
-      
       toast({
-        title: "Analysis Complete!",
-        description: "Your outfit has been analyzed against current trends",
+        title: "Analysis Queued",
+        description: "Your outfit analysis has been queued. Please wait...",
       });
+
+      // Start polling
+      pollingIntervalRef.current = window.setInterval(() => {
+        pollQueueStatus(queueItem.id);
+      }, 2000); // Poll every 2 seconds
+
+      // Initial poll
+      pollQueueStatus(queueItem.id);
+
     } catch (error: any) {
       console.error("Error analyzing outfit:", error);
       const errorMessage = error?.message || error?.error || "Failed to analyze outfit. Please try again.";
@@ -263,10 +354,19 @@ export default function Analyzer() {
         description: errorMessage,
         variant: "destructive",
       });
-    } finally {
       setAnalyzing(false);
+      setQueueStatus(null);
     }
   };
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, []);
 
   const handleSaveOutfit = async () => {
     if (!result || !imageFile) return;
@@ -427,6 +527,25 @@ export default function Analyzer() {
             )}
           </Button>
         </form>
+
+        {queueStatus && (
+          <Card className="mt-4 p-4 border-primary/30 bg-primary/5">
+            <div className="flex items-center gap-3 mb-2">
+              <Clock className="h-5 w-5 text-primary animate-pulse" />
+              <div className="flex-1">
+                <p className="font-semibold text-sm">
+                  {queueStatus.status === 'pending' ? 'In Queue' : 'Processing...'}
+                </p>
+                {queueStatus.position > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Position: {queueStatus.position}
+                  </p>
+                )}
+              </div>
+            </div>
+            <Progress value={queueStatus.status === 'processing' ? 50 : 25} className="h-2" />
+          </Card>
+        )}
       </Card>
 
       {result && (

@@ -35,45 +35,65 @@ const requestSchema = z.object({
     )
 });
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+// Rate limiting configuration
+const rateLimiter = {
+  concurrent: 0,
+  maxConcurrent: 3,
+  requestsPerMinute: 10,
+  timestamps: [] as number[],
+};
+
+function canProcessNow(): boolean {
+  const now = Date.now();
+  rateLimiter.timestamps = rateLimiter.timestamps.filter(t => now - t < 60000);
+  return rateLimiter.concurrent < rateLimiter.maxConcurrent && 
+         rateLimiter.timestamps.length < rateLimiter.requestsPerMinute;
+}
+
+async function processQueueItem(supabaseClient: any, queueItem: any) {
+  if (!canProcessNow()) {
+    console.log('Rate limit reached, waiting...');
+    return;
   }
-
+  
+  rateLimiter.concurrent++;
+  rateLimiter.timestamps.push(Date.now());
+  
   try {
-    const authHeader = req.headers.get('Authorization');
+    await supabaseClient
+      .from('outfit_analysis_queue')
+      .update({ status: 'processing', started_at: new Date().toISOString() })
+      .eq('id', queueItem.id);
     
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Authentication required' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Extract JWT token from header
-    const token = authHeader.replace('Bearer ', '');
+    const { imageUrl, targetStyle } = JSON.parse(queueItem.image_data);
+    const result = await analyzeOutfitFull(imageUrl, targetStyle, supabaseClient);
     
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    await supabaseClient
+      .from('outfit_analysis_queue')
+      .update({ 
+        status: 'completed',
+        result,
+        completed_at: new Date().toISOString()
+      })
+      .eq('id', queueItem.id);
+      
+    console.log(`Queue item ${queueItem.id} completed`);
+  } catch (error: any) {
+    console.error(`Queue item ${queueItem.id} failed:`, error);
+    await supabaseClient
+      .from('outfit_analysis_queue')
+      .update({ 
+        status: 'failed',
+        error_message: error.message,
+        completed_at: new Date().toISOString()
+      })
+      .eq('id', queueItem.id);
+  } finally {
+    rateLimiter.concurrent--;
+  }
+}
 
-    // Create client with service role key
-    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Get authenticated user by passing the JWT token directly
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
-    
-    if (authError || !user) {
-      console.error('Auth error:', authError);
-      return new Response(
-        JSON.stringify({ error: 'Invalid or expired token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log(`Request from authenticated user: ${user.id}`);
-
-    const body = await req.json();
-    const validation = requestSchema.safeParse(body);
+async function analyzeOutfitFull(imageUrl: string, targetStyle: string, supabaseClient: any) {
     
     if (!validation.success) {
       return new Response(
