@@ -548,20 +548,35 @@ export default function Profile() {
       <Card className="p-6 mb-6 border-border">
         <div className="flex gap-4">
           <div className="relative w-20 h-20 flex-shrink-0">
-            {/* Crown decoration for own profile */}
+            {/* Royal elegance decoration for own profile */}
             {isOwnProfile && (
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 text-4xl animate-pulse z-10">
-                👑
-              </div>
+              <>
+                <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-5xl animate-pulse z-10">
+                  👑
+                </div>
+                <div className="absolute -top-2 -left-6 text-3xl animate-bounce" style={{ animationDelay: '0.1s' }}>✨</div>
+                <div className="absolute -top-2 -right-6 text-3xl animate-bounce" style={{ animationDelay: '0.3s' }}>✨</div>
+                <div className="absolute top-1/2 -left-8 text-2xl animate-pulse" style={{ animationDelay: '0.5s' }}>💎</div>
+                <div className="absolute top-1/2 -right-8 text-2xl animate-pulse" style={{ animationDelay: '0.7s' }}>💎</div>
+                <div className="absolute -bottom-3 -left-5 text-3xl animate-bounce" style={{ animationDelay: '0.9s' }}>⭐</div>
+                <div className="absolute -bottom-3 -right-5 text-3xl animate-bounce" style={{ animationDelay: '1.1s' }}>⭐</div>
+                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-2xl animate-pulse" style={{ animationDelay: '0.4s' }}>🏆</div>
+                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-yellow-400/20 via-amber-300/20 to-yellow-400/20 animate-pulse blur-xl" />
+              </>
             )}
             
-            {/* Vomit decoration for Benji's profile */}
+            {/* Disgust and vomit decoration for Benji's profile */}
             {profile?.username?.toLowerCase() === 'benji' && (
               <>
-                <div className="absolute -top-2 -left-2 text-2xl animate-bounce">🤮</div>
-                <div className="absolute -top-2 -right-2 text-2xl animate-bounce" style={{ animationDelay: '0.2s' }}>🤮</div>
-                <div className="absolute -bottom-2 -left-2 text-2xl animate-bounce" style={{ animationDelay: '0.4s' }}>🤮</div>
-                <div className="absolute -bottom-2 -right-2 text-2xl animate-bounce" style={{ animationDelay: '0.6s' }}>🤮</div>
+                <div className="absolute -top-4 -left-4 text-3xl animate-bounce">🤮</div>
+                <div className="absolute -top-4 -right-4 text-3xl animate-bounce" style={{ animationDelay: '0.2s' }}>🤮</div>
+                <div className="absolute -bottom-4 -left-4 text-3xl animate-bounce" style={{ animationDelay: '0.4s' }}>🤮</div>
+                <div className="absolute -bottom-4 -right-4 text-3xl animate-bounce" style={{ animationDelay: '0.6s' }}>🤮</div>
+                <div className="absolute top-1/2 -left-6 text-2xl animate-pulse" style={{ animationDelay: '0.3s' }}>🤢</div>
+                <div className="absolute top-1/2 -right-6 text-2xl animate-pulse" style={{ animationDelay: '0.5s' }}>🤢</div>
+                <div className="absolute -top-2 left-1/2 text-2xl animate-bounce" style={{ animationDelay: '0.7s' }}>💩</div>
+                <div className="absolute -bottom-2 left-1/2 text-2xl animate-bounce" style={{ animationDelay: '0.9s' }}>💩</div>
+                <div className="absolute inset-0 rounded-full bg-green-500/30 animate-pulse blur-xl" />
               </>
             )}
             
@@ -569,20 +584,20 @@ export default function Profile() {
               <img 
                 src={profile.avatar_url} 
                 alt={profile.username}
-                className={`w-20 h-20 rounded-full object-cover ${
+                className={`w-20 h-20 rounded-full object-cover relative z-10 ${
                   isOwnProfile 
-                    ? "ring-4 ring-yellow-400 shadow-lg shadow-yellow-400/50 animate-pulse" 
+                    ? "ring-8 ring-yellow-400 shadow-2xl shadow-yellow-400/80 animate-pulse border-4 border-amber-200" 
                     : profile?.username?.toLowerCase() === 'benji'
-                    ? "ring-4 ring-green-500 opacity-75 grayscale"
+                    ? "ring-8 ring-green-600 opacity-60 grayscale sepia brightness-75 blur-[1px]"
                     : "ring-2 ring-primary/20"
                 }`}
               />
             ) : (
-              <div className={`w-20 h-20 rounded-full bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center ${
+              <div className={`w-20 h-20 rounded-full bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center relative z-10 ${
                 isOwnProfile 
-                  ? "ring-4 ring-yellow-400 shadow-lg shadow-yellow-400/50 animate-pulse" 
+                  ? "ring-8 ring-yellow-400 shadow-2xl shadow-yellow-400/80 animate-pulse border-4 border-amber-200" 
                   : profile?.username?.toLowerCase() === 'benji'
-                  ? "ring-4 ring-green-500 opacity-75 grayscale"
+                  ? "ring-8 ring-green-600 opacity-60 grayscale sepia brightness-75 blur-[1px]"
                   : "ring-2 ring-primary/20"
               }`}>
                 <span className="text-3xl font-bold text-primary">
