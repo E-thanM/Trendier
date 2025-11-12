@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.adaptive-tiktok-scraper]
 verify_jwt = false
+
+[functions.scrape-youtube-fashion]
+verify_jwt = false
