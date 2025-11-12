@@ -548,14 +548,43 @@ export default function Profile() {
       <Card className="p-6 mb-6 border-border">
         <div className="flex gap-4">
           <div className="relative w-20 h-20 flex-shrink-0">
+            {/* Crown decoration for own profile */}
+            {isOwnProfile && (
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 text-4xl animate-pulse z-10">
+                👑
+              </div>
+            )}
+            
+            {/* Vomit decoration for Benji's profile */}
+            {profile?.username?.toLowerCase() === 'benji' && (
+              <>
+                <div className="absolute -top-2 -left-2 text-2xl animate-bounce">🤮</div>
+                <div className="absolute -top-2 -right-2 text-2xl animate-bounce" style={{ animationDelay: '0.2s' }}>🤮</div>
+                <div className="absolute -bottom-2 -left-2 text-2xl animate-bounce" style={{ animationDelay: '0.4s' }}>🤮</div>
+                <div className="absolute -bottom-2 -right-2 text-2xl animate-bounce" style={{ animationDelay: '0.6s' }}>🤮</div>
+              </>
+            )}
+            
             {profile?.avatar_url ? (
               <img 
                 src={profile.avatar_url} 
                 alt={profile.username}
-                className="w-20 h-20 rounded-full object-cover ring-2 ring-primary/20"
+                className={`w-20 h-20 rounded-full object-cover ${
+                  isOwnProfile 
+                    ? "ring-4 ring-yellow-400 shadow-lg shadow-yellow-400/50 animate-pulse" 
+                    : profile?.username?.toLowerCase() === 'benji'
+                    ? "ring-4 ring-green-500 opacity-75 grayscale"
+                    : "ring-2 ring-primary/20"
+                }`}
               />
             ) : (
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center ring-2 ring-primary/20">
+              <div className={`w-20 h-20 rounded-full bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center ${
+                isOwnProfile 
+                  ? "ring-4 ring-yellow-400 shadow-lg shadow-yellow-400/50 animate-pulse" 
+                  : profile?.username?.toLowerCase() === 'benji'
+                  ? "ring-4 ring-green-500 opacity-75 grayscale"
+                  : "ring-2 ring-primary/20"
+              }`}>
                 <span className="text-3xl font-bold text-primary">
                   {profile?.username?.charAt(0).toUpperCase() || "U"}
                 </span>
