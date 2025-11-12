@@ -203,7 +203,14 @@ export const OutfitCard = ({ outfit, isLiked, onLikeToggle }: OutfitCardProps) =
         </div>
 
         <div className="space-y-1">
-          <p className="font-semibold text-sm">{outfit.likes_count} likes</p>
+          <p className="font-semibold text-sm">
+            {outfit.likes_count >= 1000000 
+              ? `${(outfit.likes_count / 1000000).toFixed(1)}M`
+              : outfit.likes_count >= 1000
+              ? `${(outfit.likes_count / 1000).toFixed(1)}K`
+              : outfit.likes_count
+            } likes
+          </p>
           {outfit.caption && (
             <p className="text-sm leading-relaxed">
               <button 
