@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +50,7 @@ export default function Messages() {
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const isMobile = useIsMobile();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -245,6 +246,18 @@ export default function Messages() {
       return [];
     }
   };
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    // Scroll to bottom whenever messages change or conversation is selected
+    if (selectedConversation?.messages.length) {
+      // Small delay to ensure DOM is updated
+      setTimeout(() => scrollToBottom(), 100);
+    }
+  }, [selectedConversation?.messages]);
 
   const handleSelectConversation = async (conversation: ConversationData) => {
     const messages = await fetchMessages(conversation.id);
@@ -645,6 +658,7 @@ export default function Messages() {
                       </div>
                     );
                   })}
+                  <div ref={messagesEndRef} />
                 </div>
               </ScrollArea>
 
