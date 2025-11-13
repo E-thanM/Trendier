@@ -544,8 +544,20 @@ export default function Profile() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-4 pb-24 md:pb-6">
-      <Card className="p-6 mb-6 border-border">
+    <div className={`max-w-4xl mx-auto p-4 pb-24 md:pb-6 min-h-screen relative ${
+      isOwnProfile 
+        ? "before:absolute before:inset-0 before:bg-gradient-to-br before:from-amber-50/80 before:via-yellow-50/60 before:to-amber-100/80 dark:before:from-amber-950/30 dark:before:via-yellow-950/20 dark:before:to-amber-900/40 before:animate-[pulse_4s_ease-in-out_infinite] before:-z-10 after:absolute after:inset-0 after:bg-[radial-gradient(circle_at_50%_120%,rgba(251,191,36,0.1),transparent_50%)] after:animate-[pulse_6s_ease-in-out_infinite] after:-z-10" 
+        : profile?.username?.toLowerCase() === 'benji'
+        ? "before:absolute before:inset-0 before:bg-gradient-to-br before:from-green-900/40 before:via-lime-950/50 before:to-yellow-900/40 dark:before:from-green-950/60 dark:before:via-lime-950/70 dark:before:to-yellow-950/60 before:-z-10 after:absolute after:inset-0 after:bg-[radial-gradient(circle_at_50%_50%,rgba(34,197,94,0.15),transparent_70%)] after:blur-3xl after:-z-10 backdrop-blur-[2px] opacity-95"
+        : ""
+    }`}>
+      <Card className={`p-6 mb-6 border-border relative overflow-hidden ${
+        isOwnProfile 
+          ? "bg-gradient-to-br from-amber-50/90 via-yellow-50/70 to-white/90 dark:from-amber-950/40 dark:via-yellow-900/30 dark:to-background/90 border-amber-200/50 dark:border-amber-800/30 shadow-2xl shadow-amber-400/20 before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_20%_80%,rgba(251,191,36,0.2),transparent_50%)] before:animate-pulse" 
+          : profile?.username?.toLowerCase() === 'benji'
+          ? "bg-gradient-to-br from-green-950/60 via-lime-900/50 to-yellow-950/60 dark:from-green-950/80 dark:via-lime-950/70 dark:to-yellow-950/80 border-green-900/70 shadow-2xl shadow-green-900/50 before:absolute before:inset-0 before:bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiM0YTdjNTkiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yLjIxLTEuNzktNC00LTRzLTQgMS43OS00IDQgMS43OSA0IDQgNCA0LTEuNzkgNC00em0wLTEwYzAtMi4yMS0xLjc5LTQtNC00cy00IDEuNzktNCA0IDEuNzkgNCA0IDQgNC0xLjc5IDQtNHptMC0xMGMwLTIuMjEtMS43OS00LTQtNHMtNCAxLjc5LTQgNCAxLjc5IDQgNCA0IDQtMS43OSA0LTR6TTEyIDM0YzAtMi4yMS0xLjc5LTQtNC00cy00IDEuNzktNCA0IDEuNzkgNCA0IDQgNC0xLjc5IDQtNHptMC0xMGMwLTIuMjEtMS43OS00LTQtNHMtNCAxLjc5LTQgNCAxLjc5IDQgNCA0IDQtMS43OSA0LTR6bTAtMTBjMC0yLjIxLTEuNzktNC00LTRzLTQgMS43OS00IDQgMS43OSA0IDQgNCA0LTEuNzkgNC00eiIvPjwvZz48L2c+PC9zdmc+')] before:opacity-20"
+          : ""
+      }`}>
         <div className="flex gap-4">
           <div className="relative w-20 h-20 flex-shrink-0">
             {/* Royal elegance decoration for own profile */}
@@ -703,7 +715,7 @@ export default function Profile() {
       </Card>
 
       {isOwnProfile && (
-        <div className="mb-6">
+        <div className="mb-6 relative before:absolute before:inset-0 before:bg-gradient-to-r before:from-amber-100/30 before:via-yellow-100/20 before:to-amber-100/30 dark:before:from-amber-900/10 dark:before:via-yellow-900/5 dark:before:to-amber-900/10 before:rounded-lg before:-z-10 before:blur-xl">
           <PreferencesSurvey />
         </div>
       )}
@@ -716,7 +728,13 @@ export default function Profile() {
 
         <TabsContent value="outfits">
           {outfits.length === 0 ? (
-            <Card className="p-12 text-center border-border">
+            <Card className={`p-12 text-center border-border ${
+              isOwnProfile 
+                ? "bg-gradient-to-br from-amber-50/50 to-yellow-50/30 dark:from-amber-950/20 dark:to-yellow-900/10 border-amber-200/30 dark:border-amber-800/20" 
+                : profile?.username?.toLowerCase() === 'benji'
+                ? "bg-gradient-to-br from-green-950/30 to-lime-900/20 dark:from-green-950/50 dark:to-lime-950/30 border-green-900/40"
+                : ""
+            }`}>
               <p className="text-muted-foreground text-sm">
                 You haven't uploaded any outfits yet
               </p>
@@ -754,7 +772,11 @@ export default function Profile() {
         </TabsContent>
 
         <TabsContent value="upload">
-          <Card className="p-6 border-border">
+          <Card className={`p-6 border-border ${
+            isOwnProfile 
+              ? "bg-gradient-to-br from-amber-50/50 to-yellow-50/30 dark:from-amber-950/20 dark:to-yellow-900/10 border-amber-200/30 dark:border-amber-800/20" 
+              : ""
+          }`}>
             <form onSubmit={handleUpload} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="imageFile">Upload Image</Label>
