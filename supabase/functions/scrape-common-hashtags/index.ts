@@ -18,13 +18,13 @@ serve(async (req) => {
 
     console.log('Starting background scraping of common hashtags...');
 
-    // Fetch common hashtags that haven't been scraped in the last 2 hours (maximize daily usage)
-    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    // Fetch common hashtags that haven't been scraped in the last 6 hours
+    const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
     const { data: hashtags, error: hashtagError } = await supabaseClient
       .from('tiktok_hashtags')
       .select('*')
       .eq('is_common', true)
-      .or(`last_scraped_at.is.null,last_scraped_at.lt.${twoHoursAgo.toISOString()}`)
+      .or(`last_scraped_at.is.null,last_scraped_at.lt.${sixHoursAgo.toISOString()}`)
       .order('last_scraped_at', { ascending: true, nullsFirst: true })
       .limit(10); // Process 10 hashtags at a time for maximum throughput
 
@@ -43,13 +43,13 @@ serve(async (req) => {
 
     console.log(`Found ${hashtags.length} hashtags to scrape`);
 
-    // Scrape each hashtag by calling the analyze function
+    // Scrape each hashtag using YouTube scraper
     const results = [];
     for (const hashtag of hashtags) {
       try {
-        console.log(`Scraping hashtag: ${hashtag.hashtag}`);
+        console.log(`Scraping YouTube for hashtag: ${hashtag.hashtag}`);
         
-        const response = await fetch(`${supabaseUrl}/functions/v1/analyze-tiktok-trends`, {
+        const response = await fetch(`${supabaseUrl}/functions/v1/scrape-youtube-fashion`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${supabaseServiceKey}`,
@@ -57,8 +57,7 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             hashtag: hashtag.hashtag,
-            maxVideos: 50, // Analyze 50 videos per hashtag to maximize data collection
-            forceRefresh: true
+            maxVideos: 30 // Scrape 30 videos per hashtag
           })
         });
 
@@ -67,9 +66,9 @@ serve(async (req) => {
           results.push({
             hashtag: hashtag.hashtag,
             success: true,
-            videoCount: data.totalVideos
+            videoCount: data.storedVideos || 0
           });
-          console.log(`Successfully scraped ${data.totalVideos} videos for #${hashtag.hashtag}`);
+          console.log(`Successfully scraped ${data.storedVideos || 0} videos for #${hashtag.hashtag}`);
         } else {
           console.error(`Failed to scrape ${hashtag.hashtag}:`, await response.text());
           results.push({
