@@ -12,7 +12,31 @@ const HASHTAG_QUERY_MAP: Record<string, string> = {
   'streetwear': 'streetwear outfit inspo',
   'style': 'style guide clothing fashion',
   'outfitinspo': 'outfit inspiration ideas fashion',
-  'fashiontiktok': 'fashion haul trends lookbook'
+  'fashiontiktok': 'fashion haul trends lookbook',
+  'mensfashion': 'mens fashion outfit style 2024',
+  'womensfashion': 'womens fashion outfit style 2024',
+  'casualwear': 'casual outfit ideas everyday fashion',
+  'formalwear': 'formal outfit business professional attire',
+  'athleisure': 'athleisure sporty fashion activewear outfit',
+  'vintage': 'vintage fashion retro outfit thrift styling',
+  'minimalist': 'minimalist fashion clean outfit aesthetic',
+  'bohemian': 'bohemian boho fashion outfit style',
+  'grunge': 'grunge fashion outfit alternative style',
+  'preppy': 'preppy fashion outfit collegiate style',
+  'edgy': 'edgy fashion outfit dark alternative style',
+  'chic': 'chic fashion outfit elegant style',
+  'trendy': 'trendy fashion outfit latest trends 2024',
+  'summer': 'summer fashion outfit warm weather style',
+  'winter': 'winter fashion outfit cold weather style',
+  'spring': 'spring fashion outfit seasonal style',
+  'fall': 'fall fashion outfit autumn style',
+  'denim': 'denim outfit jeans fashion styling',
+  'blazer': 'blazer outfit professional fashion styling',
+  'dress': 'dress outfit fashion styling ideas',
+  'sneakers': 'sneakers outfit fashion styling ideas',
+  'accessories': 'fashion accessories styling outfit ideas',
+  'layering': 'layering outfit fashion styling guide',
+  'colorblock': 'color blocking outfit fashion styling'
 };
 
 interface YouTubeVideo {
@@ -105,11 +129,11 @@ async function analyzeVideoWithLovableAI(video: YouTubeVideo, lovableApiKey: str
           messages: [
             { 
               role: 'system', 
-              content: 'You analyze fashion videos. Return ONLY valid JSON: {"appropriate": boolean, "sexualContent": boolean, "items": [{"name": "string", "category": "string", "confidence": number, "trendScore": number}], "overallScore": number}' 
+              content: 'You analyze fashion video titles and descriptions to determine if they show actual clothing/outfits. Return ONLY valid JSON: {"appropriate": boolean, "sexualContent": boolean, "items": [{"name": "string", "category": "string", "confidence": number, "trendScore": number}], "overallScore": number}' 
             },
             { 
               role: 'user', 
-              content: `Title: "${video.title}"\nChannel: "${video.channelTitle}"\n\nFilter: Reject sexual/explicit content. Score 60-95 based on trend relevance. Extract 2-3 fashion items.` 
+              content: `Analyze this fashion video:\n\nTitle: "${video.title}"\nChannel: "${video.channelTitle}"\n\nCRITICAL ANALYSIS:\n1. Content Verification: Does the title clearly describe actual CLOTHING ITEMS or OUTFIT styling? (jeans, dresses, jackets, shoes, accessories, etc.)\n2. Sexual Content Check: Reject if title contains: "sexy", "hot body", "bikini", "lingerie", "revealing", "seductive", or implies sexual content\n3. Relevance Check: Must be about WEARING/STYLING clothes, not just fashion news, hauls without styling, or product reviews\n4. Extract 2-3 SPECIFIC clothing items mentioned (e.g., "black blazer", "wide leg jeans", "sneakers")\n5. Score 60-95 based on:\n   - High score (85-95): Viral trends, highly specific styling guides, current seasonal fashion\n   - Medium score (75-84): Popular outfit ideas, general styling tips, classic pieces\n   - Low score (60-74): Basic outfits, generic fashion advice, outdated trends\n\nIMPORTANT: Only approve videos that are clearly about styling/wearing specific clothing items. Reject:\n- Fashion news/gossip without outfit focus\n- Product hauls without styling demonstration\n- Body-focused content\n- Non-clothing topics\n- Clickbait without substance\n\nReturn JSON.` 
             }
           ],
           temperature: 0.2
