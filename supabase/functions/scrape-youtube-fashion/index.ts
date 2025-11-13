@@ -6,14 +6,14 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const FASHION_QUERIES = [
-  'fashion outfit ideas 2024',
-  'OOTD fashion style',
-  'streetwear outfit inspo',
-  'fashion haul trends',
-  'outfit of the day fashion',
-  'style guide clothing',
-];
+const HASHTAG_QUERY_MAP: Record<string, string> = {
+  'fashion': 'fashion outfit ideas 2024',
+  'ootd': 'OOTD outfit of the day fashion',
+  'streetwear': 'streetwear outfit inspo',
+  'style': 'style guide clothing fashion',
+  'outfitinspo': 'outfit inspiration ideas fashion',
+  'fashiontiktok': 'fashion haul trends lookbook'
+};
 
 interface YouTubeVideo {
   id: string;
@@ -90,71 +90,53 @@ async function searchYouTubeVideos(query: string, maxResults: number = 20): Prom
   return videos;
 }
 
-async function analyzeVideoWithGemini(video: YouTubeVideo, geminiApiKey: string) {
-  const prompt = `You are analyzing fashion/outfit content from YouTube. Be LENIENT - if the video has ANY fashion, clothing, style, or outfit content, mark it as appropriate.
-
-Title: "${video.title}"
-Channel: "${video.channelTitle}"
-
-Task 1: Is this fashion/clothing/style related content? Mark TRUE unless it's clearly NOT about fashion (cars, food, gaming, etc.). Fashion lookbooks, outfit ideas, styling videos, clothing hauls, fashion trends, street style - ALL should be TRUE.
-Task 2: Extract 2-4 clothing items or fashion elements from the title
-Task 3: Rate trend score (70-95 based on title keywords)
-
-Return ONLY valid JSON:
-{
-  "appropriate": true,
-  "items": [{"name": "blazer", "category": "outerwear", "confidence": 0.85, "trendScore": 82}],
-  "overallScore": 80
-}`;
-
+async function analyzeVideoWithLovableAI(video: YouTubeVideo, lovableApiKey: string) {
   try {
     const response = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent',
+      'https://ai.gateway.lovable.dev/v1/chat/completions',
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-goog-api-key': geminiApiKey,
+          'Authorization': `Bearer ${lovableApiKey}`,
         },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 400 },
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            { 
+              role: 'system', 
+              content: 'You analyze fashion videos. Return ONLY valid JSON: {"appropriate": boolean, "sexualContent": boolean, "items": [{"name": "string", "category": "string", "confidence": number, "trendScore": number}], "overallScore": number}' 
+            },
+            { 
+              role: 'user', 
+              content: `Title: "${video.title}"\nChannel: "${video.channelTitle}"\n\nFilter: Reject sexual/explicit content. Score 60-95 based on trend relevance. Extract 2-3 fashion items.` 
+            }
+          ],
+          temperature: 0.2
         }),
       }
     );
 
+    if (!response.ok) {
+      return { appropriate: false, sexualContent: false, reason: 'API error', items: [], overallScore: 0 };
+    }
+
     const result = await response.json();
-    let analysisText = result.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+    let text = result.choices?.[0]?.message?.content || '{}';
+    text = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     
-    if (analysisText.includes('```')) {
-      analysisText = analysisText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const analysis = JSON.parse(text);
+    
+    // Validate structure
+    if (typeof analysis.appropriate !== 'boolean' || !Array.isArray(analysis.items)) {
+      return { appropriate: false, sexualContent: false, reason: 'Invalid format', items: [], overallScore: 0 };
     }
     
-    const analysis = JSON.parse(analysisText);
-    
-    // Fallback: if Gemini fails to provide proper structure, assume appropriate fashion content
-    if (!analysis.appropriate && !analysis.items) {
-      console.log(`⚠️ Gemini returned unclear analysis for: ${video.title.slice(0, 50)}, defaulting to appropriate`);
-      return {
-        appropriate: true,
-        items: [
-          { name: "fashion outfit", category: "clothing", confidence: 0.7, trendScore: 75 }
-        ],
-        overallScore: 75
-      };
-    }
-    
+    console.log(`✓ ${video.title.slice(0, 30)}: score=${analysis.overallScore}, items=${analysis.items?.length || 0}`);
     return analysis;
   } catch (error) {
-    console.error('Gemini analysis error:', error);
-    // On error, assume it's fashion content to avoid losing videos
-    return {
-      appropriate: true,
-      items: [
-        { name: "outfit", category: "clothing", confidence: 0.6, trendScore: 70 }
-      ],
-      overallScore: 70
-    };
+    console.error(`Analysis error for ${video.title.slice(0, 30)}:`, error);
+    return { appropriate: false, sexualContent: false, reason: 'Parse error', items: [], overallScore: 0 };
   }
 }
 
@@ -166,15 +148,16 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY')!;
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const { hashtag = 'fashion', maxVideos = 30 } = await req.json().catch(() => ({}));
 
     console.log(`🎬 Scraping YouTube fashion videos for: ${hashtag}`);
 
-    // Select appropriate search query
-    const query = FASHION_QUERIES.find(q => q.includes(hashtag.toLowerCase())) || `${hashtag} fashion outfit`;
+    // Select appropriate search query from mapping
+    const query = HASHTAG_QUERY_MAP[hashtag.toLowerCase()] || `${hashtag} fashion outfit 2024`;
+    console.log(`🔍 Using search query: "${query}"`);
     
     const videos = await searchYouTubeVideos(query, maxVideos);
     
@@ -200,19 +183,21 @@ serve(async (req) => {
       
       await Promise.all(batch.map(async (video) => {
         try {
-          const analysis = await analyzeVideoWithGemini(video, geminiApiKey);
+          const analysis = await analyzeVideoWithLovableAI(video, lovableApiKey);
           
-          // Very lenient filtering - only reject if explicitly inappropriate
-          // Fashion content should almost always pass
-          if (!analysis || (analysis.appropriate === false && !analysis.items?.length)) {
-            console.log(`⚠️ Skipped video with no fashion content: ${video.title.slice(0, 50)}`);
+          // Strict filtering - reject inappropriate or sexual content
+          if (!analysis || analysis.appropriate === false || analysis.sexualContent === true) {
+            console.log(`🚫 Filtered out video: ${video.title.slice(0, 50)} - ${analysis?.reason || 'Inappropriate'}`);
             return;
           }
 
-          // If Gemini didn't provide items, create default items from title
-          const items = analysis.items && analysis.items.length > 0 ? analysis.items : [
-            { name: "fashion outfit", category: "clothing", confidence: 0.75, trendScore: 75 }
-          ];
+          // Require valid items and score
+          if (!analysis.items || analysis.items.length === 0 || !analysis.overallScore) {
+            console.log(`⚠️ Skipped video with incomplete analysis: ${video.title.slice(0, 50)}`);
+            return;
+          }
+
+          const items = analysis.items;
 
           // Store in tiktok_videos table (will rename later to video_trends)
           const { data: insertedVideo, error } = await supabase
