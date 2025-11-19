@@ -49,14 +49,77 @@ export default function CommunityPosts({ communityId }: CommunityPostsProps) {
   }
 
   if (!posts || posts.length === 0) {
+    // Fallback demo content so the Recommended feed is never empty
+    const demoPosts = [
+      {
+        id: "demo-1",
+        title: "Streetwear Essentials",
+        caption: "Oversized hoodie, cargo pants and chunky sneakers for a clean everyday look.",
+        created_at: new Date().toISOString(),
+        likes_count: 128,
+        comments_count: 32,
+        saves_count: 54,
+        post_images: [],
+      },
+      {
+        id: "demo-2",
+        title: "Minimal Office Fit",
+        caption: "Grey blazer, white tee and tailored trousers – simple but sharp.",
+        created_at: new Date().toISOString(),
+        likes_count: 94,
+        comments_count: 18,
+        saves_count: 41,
+        post_images: [],
+      },
+      {
+        id: "demo-3",
+        title: "Night Out All‑Black",
+        caption: "Monochrome all‑black outfit with leather jacket and boots.",
+        created_at: new Date().toISOString(),
+        likes_count: 210,
+        comments_count: 47,
+        saves_count: 88,
+        post_images: [],
+      },
+    ];
+
     return (
-      <Card className="p-12 text-center">
-        <MessageCircle className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-        <h3 className="text-xl font-semibold mb-2">No posts yet</h3>
-        <p className="text-muted-foreground">
-          Be the first to share something in this community!
-        </p>
-      </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {demoPosts.map((post) => (
+          <Card key={post.id} className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group">
+            <div className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                  <span className="text-xs font-medium">
+                    {post.title?.[0]?.toUpperCase() || "?"}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{post.title}</p>
+                  <p className="text-xs text-muted-foreground">just now • demo</p>
+                </div>
+              </div>
+              {post.caption && (
+                <p className="text-sm line-clamp-3 mb-3">{post.caption}</p>
+              )}
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <Heart className="w-4 h-4" />
+                  <span>{post.likes_count}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <MessageCircle className="w-4 h-4" />
+                  <span>{post.comments_count}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Bookmark className="w-4 h-4" />
+                  <span>{post.saves_count}</span>
+                </div>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
     );
   }
 
