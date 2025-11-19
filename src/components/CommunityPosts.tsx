@@ -2,14 +2,17 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Heart, MessageCircle, Bookmark } from "lucide-react";
-import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
+import { useState } from "react";
+import PostDetailDialog from "./PostDetailDialog";
 
 interface CommunityPostsProps {
   communityId: string | null;
 }
 
 export default function CommunityPosts({ communityId }: CommunityPostsProps) {
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+
   const { data: posts, isLoading } = useQuery({
     queryKey: ["community-posts", communityId],
     queryFn: async () => {
@@ -124,14 +127,18 @@ export default function CommunityPosts({ communityId }: CommunityPostsProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {posts.map((post: any) => {
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {posts.map((post: any) => {
         const firstImage = post.post_images?.[0];
         const imageCount = post.post_images?.length || 0;
 
         return (
-          <Link key={post.id} to={`/posts/${post.id}`}>
-            <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group">
+          <Card 
+            key={post.id} 
+            className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group"
+            onClick={() => setSelectedPostId(post.id)}
+          >
               {/* Post Image */}
               {firstImage && (
                 <div className="aspect-square relative overflow-hidden bg-muted">
@@ -192,9 +199,15 @@ export default function CommunityPosts({ communityId }: CommunityPostsProps) {
                 </div>
               </div>
             </Card>
-          </Link>
         );
       })}
-    </div>
+      </div>
+
+      <PostDetailDialog
+        postId={selectedPostId || ""}
+        open={!!selectedPostId}
+        onOpenChange={(open) => !open && setSelectedPostId(null)}
+      />
+    </>
   );
 }

@@ -76,21 +76,16 @@ export default function Communities() {
         <AppSidebar />
         <main className="flex-1 pb-20 md:pb-0">
           <div className="container mx-auto px-4 py-8 max-w-7xl">
-            {/* Communities Section */}
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                    Communities
-                  </h2>
-                  <p className="text-xs text-muted-foreground">
-                    Tap a community or start your own
-                  </p>
-                </div>
+            {/* Communities Story Strip - Compact */}
+            <div className="mb-6">
+              <div className="flex items-center gap-3 mb-3">
+                <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Communities
+                </h2>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="icon">
-                      <Plus className="w-4 h-4" />
+                    <Button variant="outline" size="sm" className="h-7 px-2">
+                      <Plus className="w-3 h-3" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -104,106 +99,68 @@ export default function Communities() {
                 </DropdownMenu>
               </div>
 
-              {/* Search */}
-              <div className="relative mb-6">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  placeholder="Search communities..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-
-              {/* Communities Grid - Compact */}
+              {/* Horizontal Scroll - More Compact */}
               {isLoading ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                <div className="flex gap-3 overflow-x-auto pb-2">
                   {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <Card key={i} className="h-40 animate-pulse bg-muted" />
+                    <Card key={i} className="h-24 w-24 flex-shrink-0 animate-pulse bg-muted rounded-full" />
                   ))}
                 </div>
               ) : communities && communities.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                   {communities.map((community: any) => {
                     const isMember = userMemberships?.includes(community.id);
                     const isPrivate = community.community_type === 'invite_only';
 
                     return (
-                      <Link key={community.id} to={`/communities/${community.slug}`}>
-                        <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer h-full">
-                          {/* Cover Image */}
-                          <div className="h-20 bg-gradient-to-br from-primary to-primary/60 relative">
-                            {community.cover_image_url && (
-                              <img
-                                src={community.cover_image_url}
-                                alt={community.name}
-                                className="w-full h-full object-cover"
-                              />
-                            )}
-                            {isPrivate && (
-                              <div className="absolute top-1 right-1 bg-black/50 backdrop-blur-sm px-1.5 py-0.5 rounded-full">
-                                <Lock className="w-3 h-3 text-white" />
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Content */}
-                          <div className="p-3">
-                            <div className="flex flex-col items-center text-center mb-2">
-                              {community.avatar_url ? (
+                      <Link key={community.id} to={`/communities/${community.slug}`} className="flex-shrink-0">
+                        <div className="w-20 text-center">
+                          <Card className="w-20 h-20 rounded-full overflow-hidden hover:shadow-lg transition-shadow cursor-pointer relative mb-2">
+                            {/* Avatar/Cover */}
+                            <div className="w-full h-full relative">
+                              {community.avatar_url || community.cover_image_url ? (
                                 <img
-                                  src={community.avatar_url}
+                                  src={community.avatar_url || community.cover_image_url}
                                   alt={community.name}
-                                  className="w-10 h-10 rounded-full object-cover mb-2 -mt-7 border-2 border-background"
+                                  className="w-full h-full object-cover"
                                 />
                               ) : (
-                                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-2 -mt-7 border-2 border-background">
-                                  <Users className="w-5 h-5 text-primary" />
+                                <div className="w-full h-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+                                  <Users className="w-8 h-8 text-white" />
                                 </div>
                               )}
-                              <h3 className="font-semibold text-sm line-clamp-1">
-                                {community.name}
-                              </h3>
-                              <p className="text-xs text-muted-foreground">
-                                {community.member_count || 0} members
-                              </p>
+                              {isPrivate && (
+                                <div className="absolute top-1 right-1 bg-black/50 backdrop-blur-sm p-0.5 rounded-full">
+                                  <Lock className="w-2.5 h-2.5 text-white" />
+                                </div>
+                              )}
+                              {isMember && (
+                                <div className="absolute bottom-1 inset-x-1 bg-primary/90 backdrop-blur-sm px-1 py-0.5 rounded-full">
+                                  <span className="text-[8px] text-primary-foreground font-medium">
+                                    Joined
+                                  </span>
+                                </div>
+                              )}
                             </div>
-
-                            {isMember && (
-                              <div className="text-center">
-                                <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                                  Joined
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </Card>
+                          </Card>
+                          <p className="text-[10px] font-medium line-clamp-2">
+                            {community.name}
+                          </p>
+                        </div>
                       </Link>
                     );
                   })}
                 </div>
-              ) : (
-                <Card className="p-8 text-center">
-                  <Users className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-                  <h3 className="text-lg font-semibold mb-2">No communities found</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    {searchQuery ? "Try a different search term" : "Be the first to create a community"}
-                  </p>
-                  <Button onClick={() => setShowCreateDialog(true)} size="sm">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create Community
-                  </Button>
-                </Card>
-              )}
+              ) : null}
             </div>
 
             {/* Feed Section */}
-            <div className="border-t pt-8">
+            <div className="border-t pt-6">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold mb-1">Community Feed</h2>
+                  <h2 className="text-2xl font-bold mb-1">Recommended Posts</h2>
                   <p className="text-muted-foreground text-sm">
-                    Latest posts from all communities
+                    Latest from all communities
                   </p>
                 </div>
                 {currentUser && (
