@@ -256,14 +256,22 @@ serve(async (req) => {
           }
 
           // Store detected items
+          console.log(`📦 Attempting to store ${items.length} items for video ${insertedVideo.id}`);
           for (const item of items) {
-            await supabase.from('tiktok_detected_items').insert({
+            console.log(`  → Storing item: ${item.name} (${item.category}), score: ${item.trendScore}, confidence: ${item.confidence}`);
+            const { error: itemError } = await supabase.from('tiktok_detected_items').insert({
               video_id: insertedVideo.id,
               item_name: item.name,
               category: item.category,
-              confidence: item.confidence,
-              trend_score: item.trendScore,
+              confidence: Math.round((item.confidence || 1) * 100), // Convert decimal to integer percentage
+              trend_score: Math.round(item.trendScore || 75),
             });
+            
+            if (itemError) {
+              console.error(`❌ Failed to store item ${item.name}:`, JSON.stringify(itemError));
+            } else {
+              console.log(`  ✓ Successfully stored item: ${item.name}`);
+            }
           }
 
           stored++;
