@@ -1,4 +1,4 @@
-import { Home, TrendingUp, Sparkles, User, LogOut, MessageCircle, Bell } from "lucide-react";
+import { Home, TrendingUp, Sparkles, User, LogOut, MessageCircle, Bell, Users } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import { useState } from "react";
@@ -24,6 +24,7 @@ const items = [
   { title: "Feed", url: "/", icon: Home },
   { title: "Analyzer", url: "/analyzer", icon: Sparkles },
   { title: "Trends", url: "/trends", icon: TrendingUp },
+  { title: "Communities", url: "/communities", icon: Users },
   { title: "Messages", url: "/messages", icon: MessageCircle },
   { title: "Profile", url: "/profile", icon: User },
 ];

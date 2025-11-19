@@ -12,7 +12,8 @@ import Feed from "./pages/Feed";
 import Messages from "./pages/Messages";
 import Analyzer from "./pages/Analyzer";
 import TrendsHub from "./pages/TrendsHub";
-
+import Communities from "./pages/Communities";
+import CommunityDetail from "./pages/CommunityDetail";
 import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -87,6 +88,22 @@ const App = () => (
                 <AppLayout>
                   <TrendsHub />
                 </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/communities"
+            element={
+              <ProtectedRoute>
+                <Communities />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/communities/:slug"
+            element={
+              <ProtectedRoute>
+                <CommunityDetail />
               </ProtectedRoute>
             }
           />
