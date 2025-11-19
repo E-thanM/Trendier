@@ -128,15 +128,22 @@ async function analyzeVideoWithLovableAI(video: YouTubeVideo, lovableApiKey: str
           model: 'google/gemini-2.5-flash',
           messages: [
             { 
-              role: 'system', 
-              content: 'You analyze fashion video titles and descriptions to determine if they show actual clothing/outfits. Return ONLY valid JSON: {"appropriate": boolean, "sexualContent": boolean, "items": [{"name": "string", "category": "string", "confidence": number, "trendScore": number}], "overallScore": number}' 
-            },
-            { 
               role: 'user', 
-              content: `Analyze this fashion video:\n\nTitle: "${video.title}"\nChannel: "${video.channelTitle}"\n\nCRITICAL ANALYSIS:\n1. Content Verification: Does the title clearly describe actual CLOTHING ITEMS or OUTFIT styling? (jeans, dresses, jackets, shoes, accessories, etc.)\n2. Sexual Content Check: Reject if title contains: "sexy", "hot body", "bikini", "lingerie", "revealing", "seductive", or implies sexual content\n3. Relevance Check: Must be about WEARING/STYLING clothes, not just fashion news, hauls without styling, or product reviews\n4. Extract 2-3 SPECIFIC clothing items mentioned (e.g., "black blazer", "wide leg jeans", "sneakers")\n5. Score 60-95 based on:\n   - High score (85-95): Viral trends, highly specific styling guides, current seasonal fashion\n   - Medium score (75-84): Popular outfit ideas, general styling tips, classic pieces\n   - Low score (60-74): Basic outfits, generic fashion advice, outdated trends\n\nIMPORTANT: Only approve videos that are clearly about styling/wearing specific clothing items. Reject:\n- Fashion news/gossip without outfit focus\n- Product hauls without styling demonstration\n- Body-focused content\n- Non-clothing topics\n- Clickbait without substance\n\nReturn JSON.` 
+              content: [
+                {
+                  type: 'text',
+                  text: `Analyze this fashion video thumbnail and title:\n\nTitle: "${video.title}"\nChannel: "${video.channelTitle}"\n\nVISUAL ANALYSIS INSTRUCTIONS:\n1. Examine the THUMBNAIL IMAGE to identify actual clothing items visible in the frame\n2. Verify the person is wearing real outfits/clothing (not just fashion news, clickbait, or non-fashion content)\n3. Sexual Content Check: Reject if image shows revealing/sexual clothing, suggestive poses, or explicit content\n4. Extract 2-3 SPECIFIC clothing items you SEE in the thumbnail (e.g., "oversized blazer", "high-waisted jeans", "white sneakers")\n5. Score 60-95 based on visual trendiness:\n   - High (85-95): Current trending styles, unique combinations, viral aesthetics\n   - Medium (75-84): Popular everyday outfits, solid styling\n   - Low (60-74): Basic/dated outfits\n\nIMPORTANT: Base your analysis on WHAT YOU SEE in the thumbnail image. Only approve if the thumbnail clearly shows styled clothing/outfits being worn.\n\nReturn ONLY valid JSON: {"appropriate": boolean, "sexualContent": boolean, "items": [{"name": "string", "category": "string", "confidence": number, "trendScore": number}], "overallScore": number}`
+                },
+                {
+                  type: 'image_url',
+                  image_url: {
+                    url: video.thumbnailUrl
+                  }
+                }
+              ]
             }
           ],
-          temperature: 0.2
+          temperature: 0.1
         }),
       }
     );
