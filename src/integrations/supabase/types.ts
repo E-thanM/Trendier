@@ -136,7 +136,7 @@ export type Database = {
         Row: {
           caption: string | null
           comments_count: number | null
-          community_id: string
+          community_id: string | null
           created_at: string
           id: string
           likes_count: number | null
@@ -148,7 +148,7 @@ export type Database = {
         Insert: {
           caption?: string | null
           comments_count?: number | null
-          community_id: string
+          community_id?: string | null
           created_at?: string
           id?: string
           likes_count?: number | null
@@ -160,7 +160,7 @@ export type Database = {
         Update: {
           caption?: string | null
           comments_count?: number | null
-          community_id?: string
+          community_id?: string | null
           created_at?: string
           id?: string
           likes_count?: number | null

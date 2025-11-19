@@ -21,9 +21,10 @@ import { SettingsSheet } from "@/components/SettingsSheet";
 import { useUnreadCounts } from "@/hooks/use-unread-counts";
 
 const items = [
-  { title: "Feed", url: "/", icon: Home },
+  { title: "Home", url: "/", icon: Home },
   { title: "Analyzer", url: "/analyzer", icon: Sparkles },
   { title: "Trends", url: "/trends", icon: TrendingUp },
+  { title: "Forums", url: "/feed", icon: MessageCircle },
   { title: "Communities", url: "/communities", icon: Users },
   { title: "Messages", url: "/messages", icon: MessageCircle },
   { title: "Profile", url: "/profile", icon: User },
