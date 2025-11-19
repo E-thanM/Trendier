@@ -9,6 +9,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useIsMobile } from "@/hooks/use-mobile";
 import Feed from "./pages/Feed";
+import Forums from "./pages/Forums";
 import Messages from "./pages/Messages";
 import Analyzer from "./pages/Analyzer";
 import TrendsHub from "./pages/TrendsHub";
@@ -57,6 +58,16 @@ const App = () => (
               <ProtectedRoute>
                 <AppLayout>
                   <Feed />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/feed"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <Forums />
                 </AppLayout>
               </ProtectedRoute>
             }

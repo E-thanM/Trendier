@@ -6,14 +6,14 @@ import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 
 interface CommunityPostsProps {
-  communityId: string;
+  communityId: string | null;
 }
 
 export default function CommunityPosts({ communityId }: CommunityPostsProps) {
   const { data: posts, isLoading } = useQuery({
     queryKey: ["community-posts", communityId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("community_posts")
         .select(`
           *,
@@ -21,9 +21,15 @@ export default function CommunityPosts({ communityId }: CommunityPostsProps) {
           post_images(id, image_url, display_order),
           post_likes(count),
           post_comments(count)
-        `)
-        .eq("community_id", communityId)
-        .order("created_at", { ascending: false });
+        `);
+      
+      if (communityId === null) {
+        query = query.is("community_id", null);
+      } else {
+        query = query.eq("community_id", communityId);
+      }
+      
+      const { data, error } = await query.order("created_at", { ascending: false });
 
       if (error) throw error;
       return data;

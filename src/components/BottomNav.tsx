@@ -1,4 +1,4 @@
-import { Home, MessageCircle, Sparkles, TrendingUp, User, Users } from "lucide-react";
+import { Home, MessageCircle, Sparkles, TrendingUp, User, Users, MessageSquare } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { Badge } from "@/components/ui/badge";
 import { useUnreadCounts } from "@/hooks/use-unread-counts";
@@ -49,11 +49,11 @@ export function BottomNav() {
         </NavLink>
         
         <NavLink 
-          to="/communities" 
+          to="/feed" 
           className="flex items-center justify-center p-2 rounded-lg transition-colors"
           activeClassName="text-primary bg-primary/10"
         >
-          <Users className="h-5 w-5" />
+          <MessageSquare className="h-5 w-5" />
         </NavLink>
         
         <button
@@ -86,18 +86,6 @@ export function BottomNav() {
               {unreadMessages}
             </Badge>
           )}
-        </button>
-        
-        <button
-          onClick={() => handleRestrictedNavigation("/profile", "your profile")}
-          className={cn(
-            "flex items-center justify-center p-2 rounded-lg transition-colors",
-            location.pathname === "/profile" 
-              ? "text-primary bg-primary/10" 
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <User className="h-5 w-5" />
         </button>
       </div>
     </nav>

@@ -18,7 +18,7 @@ import { Loader2, Upload, X, Image as ImageIcon } from "lucide-react";
 interface CreatePostDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  communityId: string;
+  communityId: string | null;
 }
 
 export default function CreatePostDialog({
@@ -71,14 +71,19 @@ export default function CreatePostDialog({
       }
 
       // Create post
+      const postData: any = {
+        user_id: user.id,
+        title,
+        caption,
+      };
+      
+      if (communityId) {
+        postData.community_id = communityId;
+      }
+      
       const { data: post, error: postError } = await supabase
         .from("community_posts")
-        .insert({
-          community_id: communityId,
-          user_id: user.id,
-          title,
-          caption,
-        })
+        .insert(postData)
         .select()
         .single();
 
@@ -147,7 +152,7 @@ export default function CreatePostDialog({
         <DialogHeader>
           <DialogTitle>Create a Post</DialogTitle>
           <DialogDescription>
-            Share your style with the community
+            {communityId ? "Share your style with the community" : "Share your style with everyone"}
           </DialogDescription>
         </DialogHeader>
 
