@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Plus, Search, Users, Lock, MoreVertical } from "lucide-react";
+import { Plus, Search, Users, Lock } from "lucide-react";
 import { Link } from "react-router-dom";
 import CreateCommunityDialog from "@/components/CreateCommunityDialog";
 import CreatePostDialog from "@/components/CreatePostDialog";
@@ -12,6 +12,12 @@ import CommunityPosts from "@/components/CommunityPosts";
 import { AppSidebar } from "@/components/AppSidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { BottomNav } from "@/components/BottomNav";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function Communities() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -71,18 +77,31 @@ export default function Communities() {
         <main className="flex-1 pb-20 md:pb-0">
           <div className="container mx-auto px-4 py-8 max-w-7xl">
             {/* Communities Section */}
-            <div className="mb-12">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h2 className="text-2xl font-bold mb-1">Communities</h2>
-                  <p className="text-muted-foreground text-sm">
-                    Discover and join fashion communities
+                  <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                    Communities
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    Tap a community or start your own
                   </p>
                 </div>
-                <Button onClick={() => setShowCreateDialog(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon">
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setCreatePostOpen(true)}>
+                      Create post
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowCreateDialog(true)}>
+                      Create community
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
 
               {/* Search */}
