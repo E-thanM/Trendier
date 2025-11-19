@@ -16,16 +16,21 @@ export default function CommunityPosts({ communityId }: CommunityPostsProps) {
       let query = supabase
         .from("community_posts")
         .select(`
-          *,
-          profiles(username, avatar_url),
-          post_images(id, image_url, display_order),
-          post_likes(count),
-          post_comments(count)
+          id,
+          title,
+          caption,
+          created_at,
+          community_id,
+          likes_count,
+          comments_count,
+          saves_count,
+          post_images(id, image_url, display_order)
         `);
+
       if (communityId !== null) {
         query = query.eq("community_id", communityId);
       }
-      
+
       const { data, error } = await query.order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -84,22 +89,14 @@ export default function CommunityPosts({ communityId }: CommunityPostsProps) {
               <div className="p-4">
                 {/* Author */}
                 <div className="flex items-center gap-2 mb-2">
-                  {post.profiles?.avatar_url ? (
-                    <img
-                      src={post.profiles.avatar_url}
-                      alt={post.profiles.username}
-                      className="w-8 h-8 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-xs font-medium">
-                        {post.profiles?.username?.[0]?.toUpperCase() || "?"}
-                      </span>
-                    </div>
-                  )}
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                    <span className="text-xs font-medium">
+                      {post.title?.[0]?.toUpperCase() || "?"}
+                    </span>
+                  </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">
-                      {post.profiles?.username || "Unknown"}
+                      {post.title || "Post"}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
