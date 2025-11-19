@@ -22,7 +22,6 @@ export default function Communities() {
         .from("communities")
         .select(`
           *,
-          community_members!inner(user_id),
           profiles!communities_created_by_fkey(username, avatar_url)
         `)
         .order("created_at", { ascending: false });
