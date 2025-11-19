@@ -1,4 +1,4 @@
-import { Home, MessageCircle, Sparkles, TrendingUp, User } from "lucide-react";
+import { Home, MessageCircle, Sparkles, TrendingUp, User, Users } from "lucide-react";
 import { NavLink } from "./NavLink";
 import { Badge } from "@/components/ui/badge";
 import { useUnreadCounts } from "@/hooks/use-unread-counts";
@@ -30,11 +30,11 @@ export function BottomNav() {
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-sm border-t border-border h-14">
-      <div className="flex items-center justify-around h-full px-4">
+      <div className="flex items-center justify-around h-full px-2">
         <NavLink 
           to="/" 
           end
-          className="flex items-center justify-center p-3 rounded-lg transition-colors"
+          className="flex items-center justify-center p-2 rounded-lg transition-colors"
           activeClassName="text-primary bg-primary/10"
         >
           <Home className="h-5 w-5" />
@@ -42,16 +42,24 @@ export function BottomNav() {
         
         <NavLink 
           to="/trends" 
-          className="flex items-center justify-center p-3 rounded-lg transition-colors"
+          className="flex items-center justify-center p-2 rounded-lg transition-colors"
           activeClassName="text-primary bg-primary/10"
         >
           <TrendingUp className="h-5 w-5" />
         </NavLink>
         
+        <NavLink 
+          to="/communities" 
+          className="flex items-center justify-center p-2 rounded-lg transition-colors"
+          activeClassName="text-primary bg-primary/10"
+        >
+          <Users className="h-5 w-5" />
+        </NavLink>
+        
         <button
           onClick={() => handleRestrictedNavigation("/analyzer", "the outfit analyzer")}
           className={cn(
-            "flex items-center justify-center p-3 rounded-lg transition-colors",
+            "flex items-center justify-center p-2 rounded-lg transition-colors",
             location.pathname === "/analyzer" 
               ? "text-primary bg-primary/10" 
               : "text-muted-foreground hover:text-foreground"
@@ -63,7 +71,7 @@ export function BottomNav() {
         <button
           onClick={() => handleRestrictedNavigation("/messages", "messages")}
           className={cn(
-            "flex items-center justify-center p-3 rounded-lg transition-colors relative",
+            "flex items-center justify-center p-2 rounded-lg transition-colors relative",
             location.pathname === "/messages" 
               ? "text-primary bg-primary/10" 
               : "text-muted-foreground hover:text-foreground"
@@ -83,7 +91,7 @@ export function BottomNav() {
         <button
           onClick={() => handleRestrictedNavigation("/profile", "your profile")}
           className={cn(
-            "flex items-center justify-center p-3 rounded-lg transition-colors",
+            "flex items-center justify-center p-2 rounded-lg transition-colors",
             location.pathname === "/profile" 
               ? "text-primary bg-primary/10" 
               : "text-muted-foreground hover:text-foreground"
