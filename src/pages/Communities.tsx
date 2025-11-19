@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Plus, Search, Users, Lock } from "lucide-react";
+import { Plus, Search, Users, Lock, MoreVertical } from "lucide-react";
 import { Link } from "react-router-dom";
 import CreateCommunityDialog from "@/components/CreateCommunityDialog";
 import CreatePostDialog from "@/components/CreatePostDialog";

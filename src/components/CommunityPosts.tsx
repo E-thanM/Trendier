@@ -22,10 +22,7 @@ export default function CommunityPosts({ communityId }: CommunityPostsProps) {
           post_likes(count),
           post_comments(count)
         `);
-      
-      if (communityId === null) {
-        query = query.is("community_id", null);
-      } else {
+      if (communityId !== null) {
         query = query.eq("community_id", communityId);
       }
       
