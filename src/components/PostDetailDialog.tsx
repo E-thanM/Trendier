@@ -9,7 +9,7 @@ import {
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Heart, MessageCircle, Bookmark, Send, Image as ImageIcon, X } from "lucide-react";
+import { Heart, MessageCircle, Bookmark, Send, Image as ImageIcon, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
@@ -26,6 +26,7 @@ export default function PostDetailDialog({ postId, open, onOpenChange }: PostDet
   const [commentText, setCommentText] = useState("");
   const [commentImage, setCommentImage] = useState<File | null>(null);
   const [commentImagePreview, setCommentImagePreview] = useState<string | null>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
@@ -178,27 +179,45 @@ export default function PostDetailDialog({ postId, open, onOpenChange }: PostDet
         <div className="space-y-4">
           {/* Images Carousel */}
           {post?.post_images && post.post_images.length > 0 && (
-            <Carousel className="w-full">
-              <CarouselContent>
-                {post.post_images.map((img: any) => (
-                  <CarouselItem key={img.id}>
-                    <div className="aspect-square bg-muted rounded-lg overflow-hidden">
-                      <img
-                        src={img.image_url}
-                        alt="Post"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
+            <div className="relative w-full">
+              <div className="aspect-square bg-muted rounded-lg overflow-hidden">
+                <img
+                  src={post.post_images[currentImageIndex]?.image_url}
+                  alt={`Post image ${currentImageIndex + 1}`}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              
               {post.post_images.length > 1 && (
                 <>
-                  <CarouselPrevious />
-                  <CarouselNext />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background/90 rounded-full shadow-lg"
+                    onClick={() => setCurrentImageIndex((prev) => 
+                      prev === 0 ? post.post_images.length - 1 : prev - 1
+                    )}
+                  >
+                    <ChevronLeft className="w-6 h-6" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background/90 rounded-full shadow-lg"
+                    onClick={() => setCurrentImageIndex((prev) => 
+                      prev === post.post_images.length - 1 ? 0 : prev + 1
+                    )}
+                  >
+                    <ChevronRight className="w-6 h-6" />
+                  </Button>
+                  
+                  {/* Image counter */}
+                  <div className="absolute bottom-4 right-4 bg-background/80 px-3 py-1 rounded-full text-xs font-medium">
+                    {currentImageIndex + 1} / {post.post_images.length}
+                  </div>
                 </>
               )}
-            </Carousel>
+            </div>
           )}
 
           {/* Post Content */}
