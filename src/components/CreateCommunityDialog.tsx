@@ -36,17 +36,43 @@ export default function CreateCommunityDialog({
   const createCommunity = useMutation({
     mutationFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      if (!user) throw new Error("You need to be logged in to create a community.");
+
+      const trimmedName = name.trim();
+      const trimmedDescription = description.trim();
+
+      if (!trimmedName) {
+        throw new Error("Community name cannot be empty.");
+      }
 
       // Generate slug from name
-      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      const slug = trimmedName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "");
+
+      // Ensure slug is unique
+      const { data: existingCommunity, error: slugCheckError } = await supabase
+        .from("communities")
+        .select("id")
+        .eq("slug", slug)
+        .maybeSingle();
+
+      if (slugCheckError && slugCheckError.code !== "PGRST116") {
+        // Ignore "No rows found" errors, surface others
+        throw slugCheckError;
+      }
+
+      if (existingCommunity) {
+        throw new Error("A community with this name already exists. Please choose another name.");
+      }
 
       // Create community
       const { data: community, error: communityError } = await supabase
         .from("communities")
         .insert({
-          name,
-          description,
+          name: trimmedName,
+          description: trimmedDescription || null,
           slug,
           community_type: communityType,
           created_by: user.id,
