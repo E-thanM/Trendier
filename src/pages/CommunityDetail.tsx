@@ -24,10 +24,7 @@ export default function CommunityDetail() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("communities")
-        .select(`
-          *,
-          profiles!communities_created_by_fkey(username, avatar_url)
-        `)
+        .select("*")
         .eq("slug", slug)
         .maybeSingle();
 
