@@ -29,10 +29,7 @@ export default function Communities() {
     queryFn: async () => {
       let query = supabase
         .from("communities")
-        .select(`
-          *,
-          profiles!communities_created_by_fkey(username, avatar_url)
-        `)
+        .select("*")
         .order("member_count", { ascending: false })
         .limit(20);
 
