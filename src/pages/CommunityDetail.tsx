@@ -241,7 +241,7 @@ export default function CommunityDetail() {
             </div>
 
             {/* Content Tabs */}
-            {isMember ? (
+            {isMember || !isPrivate ? (
               <Tabs defaultValue="posts" className="w-full">
                 <TabsList>
                   <TabsTrigger value="posts">Posts</TabsTrigger>
@@ -259,7 +259,7 @@ export default function CommunityDetail() {
             ) : (
               <div className="text-center py-12">
                 <p className="text-muted-foreground">
-                  Join this community to view and create posts
+                  This is a private community. You must be invited to view posts.
                 </p>
               </div>
             )}
