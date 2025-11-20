@@ -997,6 +997,14 @@ export type Database = {
         Args: { user_id_1: string; user_id_2: string }
         Returns: string
       }
+      is_community_admin: {
+        Args: { community_uuid: string; user_uuid: string }
+        Returns: boolean
+      }
+      is_community_member: {
+        Args: { community_uuid: string; user_uuid: string }
+        Returns: boolean
+      }
       test_conversation_creation: {
         Args: never
         Returns: {
