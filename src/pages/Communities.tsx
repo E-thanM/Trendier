@@ -34,10 +34,10 @@ export default function Communities() {
           profiles!communities_created_by_fkey(username, avatar_url)
         `)
         .order("member_count", { ascending: false })
-        .limit(6);
+        .limit(20);
 
       if (searchQuery) {
-        query = query.ilike("name", `%${searchQuery}%`);
+        query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
       }
 
       const { data, error } = await query;
@@ -76,6 +76,19 @@ export default function Communities() {
         <AppSidebar />
         <main className="flex-1 pb-20 md:pb-0">
           <div className="container mx-auto px-4 py-8 max-w-7xl">
+            {/* Search Bar */}
+            <div className="mb-6">
+              <div className="relative max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search communities or posts..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
             {/* Communities Story Strip - Compact */}
             <div className="mb-6">
               <div className="flex items-center gap-3 mb-3">
