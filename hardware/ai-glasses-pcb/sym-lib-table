@@ -1,0 +1,3 @@
+(sym_lib_table
+  (lib (name "AI_Glasses")(type "KiCad")(uri "${KIPRJMOD}/AI_Glasses.kicad_sym")(options "")(descr "Project symbols"))
+)

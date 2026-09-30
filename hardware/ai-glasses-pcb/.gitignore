@@ -1,0 +1,7 @@
+*-drc.rpt
+*.kicad_prl
+*-backups/
+fp-info-cache
+_autosave-*
+*.bak
+scripts/__pycache__/
