@@ -133,12 +133,9 @@ def add_track(board, net, layer, a, b, width, locked=True):
 
 
 def vsys_trunk(board, net):
-    """Amp supply: a 1.2 mm In2 trunk + In2 VSYS pour the length of the strip,
-    with a pair of vias at each end (L2 GND plane sits directly above it)."""
-    for x, y in D.VSYS_TRUNK_VIAS:
-        add_via(board, net, x, y)
-    (x0, y0), (x1, y1) = D.VSYS_TRUNK_VIAS[0], D.VSYS_TRUNK_VIAS[-1]
-    add_track(board, net, pcbnew.In2_Cu, (x0, y0), (x1, y1), 1.2)
+    """Amp supply: an In2 VSYS pour the length of the strip (L2 GND plane sits
+    directly above it). It reserves In2 in the strip for VSYS during routing;
+    finish.py later drops vias from the routed VSYS trace into it."""
     add_zone(board, pcbnew.In2_Cu, net,
              [(D.VSYS_POUR_X[0], -1), (D.VSYS_POUR_X[1], -1),
               (D.VSYS_POUR_X[1], D.FRONT_H + 1), (D.VSYS_POUR_X[0], D.FRONT_H + 1)],

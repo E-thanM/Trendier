@@ -100,10 +100,61 @@ def trim_silk(board):
     return removed
 
 
+def stitch_trace(board, net="VSYS", x_range=None, spacing=4.0, via_d=0.5, drill=0.25):
+    """Drop vias onto the routed trace of `net` (inside x_range, local mm) so
+    it is paralleled by that net's In2 pour."""
+    ox = D.OFFSET[0]
+    x0, x1 = x_range or D.VSYS_POUR_X
+    pads = [PadGeom(p) for p in board.GetPads()]
+    edges = board_edges(board)
+    other = []
+    for t in board.GetTracks():
+        if t.GetNetname() == net:
+            continue
+        if isinstance(t, pcbnew.PCB_VIA):
+            x, y = to_mm(t.GetPosition())
+            other.append((x, y, x, y, t.GetWidth() / 2e6))
+        else:
+            other.append((*to_mm(t.GetStart()), *to_mm(t.GetEnd()), t.GetWidth() / 2e6))
+    allvias = [to_mm(t.GetPosition()) for t in board.GetTracks() if isinstance(t, pcbnew.PCB_VIA)]
+    placed = []
+    ni = board.FindNet(net)
+    for t in list(board.GetTracks()):
+        if t.GetNetname() != net or isinstance(t, pcbnew.PCB_VIA):
+            continue
+        ax, ay = to_mm(t.GetStart())
+        bx, by = to_mm(t.GetEnd())
+        n = max(1, int(math.hypot(bx - ax, by - ay) / 0.25))
+        for i in range(n + 1):
+            x, y = ax + (bx - ax) * i / n, ay + (by - ay) * i / n
+            if not (ox + x0 <= x <= ox + x1):
+                continue
+            if any(math.hypot(x - px, y - py) < spacing for px, py in placed):
+                continue
+            if any(math.hypot(x - px, y - py) < via_d + 0.3 for px, py in allvias):
+                continue
+            if min(seg_dist(x, y, *e) for e in edges) < 0.7:
+                continue
+            if any(p.net != net and p.layers and p.dist(x, y) < via_d / 2 + CLR for p in pads):
+                continue
+            if any(p.hole_r and math.hypot(x - p.cx, y - p.cy) < p.hole_r + drill / 2 + 0.3
+                   for p in pads):
+                continue
+            if any(seg_dist(x, y, oax, oay, obx, oby) < via_d / 2 + hw + CLR
+                   for oax, oay, obx, oby, hw in other):
+                continue
+            v = pcbnew.PCB_VIA(board)
+            v.SetPosition(pcbnew.VECTOR2I(MM(x), MM(y)))
+            v.SetWidth(MM(via_d))
+            v.SetDrill(MM(drill))
+            v.SetViaType(pcbnew.VIATYPE_THROUGH)
+            v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu)
+            v.SetNet(ni)
+            board.Add(v)
+            placed.append((x, y))
+            allvias.append((x, y))
+    return len(placed)
+
+
 def finish(board):
-    res = []
-    vias = [t for t in board.GetTracks() if isinstance(t, pcbnew.PCB_VIA)
-            and t.GetNetname() == "VSYS" and t.IsLocked()]
-    for v in vias:
-        res.append(join_via(board, v))
-    return res, trim_silk(board)
+    return stitch_trace(board), trim_silk(board)

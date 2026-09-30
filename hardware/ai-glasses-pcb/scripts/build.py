@@ -142,7 +142,7 @@ def main(passes=80):
 
     # 2) ground pours on L1/L3/L4 + stitching + fix-up of left-over GND pads
     b = pcbnew.LoadBoard(path)
-    print("trunk joins / silk trimmed:", finish.finish(b))
+    print("VSYS vias into In2 pour / silk items trimmed:", finish.finish(b))
     add_pours(b)
     print("stitching vias:", stitch.stitch(b))
     pcbnew.ZONE_FILLER(b).Fill(b.Zones())

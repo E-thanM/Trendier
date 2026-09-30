@@ -13,7 +13,7 @@ import design as D
 MM = pcbnew.FromMM
 VIA_D, VIA_DRILL = 0.5, 0.25
 TRACK_W = 0.3
-CLR = 0.2          # a little more than the 0.15 rule
+CLR = 0.16         # GND class clearance is 0.15
 EDGE = 0.6         # via centre to board edge
 STUB_CLR = 0.17
 
