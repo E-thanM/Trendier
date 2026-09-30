@@ -192,7 +192,7 @@ def build():
     fs = copy.deepcopy(flag)
     fs[1] = "power:PWR_FLAG"
     lib_syms["power:PWR_FLAG"] = fs
-    fx, fy = snap(PAPER[1] - 130), snap(PAPER[2] - 70)
+    fx, fy = snap(PAPER[1] - 130), snap(PAPER[2] - 55)
     items.append([S("text"), "Power flags (tell ERC these nets are driven)",
                   [S("at"), fmt(fx - 5), fmt(fy - 12), 0],
                   [S("effects"), [S("font"), [S("size"), 1.8, 1.8]], [S("justify"), S("left"), S("bottom")]],
@@ -225,7 +225,7 @@ def build():
         "Charge current = 1000 V / R4 = 196 mA (R4 = 5.1k). Change R4 to suit the battery (<= 1C).",
     ]
     for i, n in enumerate(notes):
-        items.append([S("text"), n, [S("at"), fmt(margin), fmt(PAPER[2] - 34 + i * 4.5), 0],
+        items.append([S("text"), n, [S("at"), fmt(margin + col_w), fmt(PAPER[2] - 100 + i * 4.5), 0],
                       [S("effects"), [S("font"), [S("size"), 1.8, 1.8]], [S("justify"), S("left"), S("bottom")]],
                       [S("uuid"), uid(f"note/{i}")]])
 
@@ -233,7 +233,7 @@ def build():
            [S("uuid"), D.ROOT_UUID], [S("paper"), PAPER[0]],
            [S("title_block"), [S("title"), "AI Glasses - Temple PCB"], [S("date"), "2026-09-30"],
             [S("rev"), "1.0"], [S("company"), "Trendier"],
-            [S("comment"), 1, "ESP32-S3-WROOM-1 + DVP camera + I2S mic + I2S amp/bone transducer + Li-Po charger"],
+            [S("comment"), 1, "ESP32-S3, DVP camera, I2S mic + amp, bone transducer, Li-Po"],
             [S("comment"), 2, "Generated from scripts/design.py - edit that file and regenerate"]],
            [S("lib_symbols")] + list(lib_syms.values())]
     sch += items

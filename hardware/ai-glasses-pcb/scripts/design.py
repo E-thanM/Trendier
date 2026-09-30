@@ -185,10 +185,10 @@ part("U1", "RF_Module:ESP32-S3-WROOM-1", "RF_Module:ESP32-S3-WROOM-1",
      "ESP32-S3-WROOM-1-N16R8", ESP, (12.8, 11.0, 90, "F"),
      "Espressif ESP32-S3-WROOM-1-N16R8", "mcu",
      "Wi-Fi/BLE MCU, 16 MB flash, 8 MB octal PSRAM")
-C("C12", "22uF", "+3V3", "GND", (9.0, 16.8, 90, "B"), "mcu", C0805)
-C("C13", "100nF", "+3V3", "GND", (11.0, 17.2, 90, "B"), "mcu")
-R("R6", "10k", "+3V3", "EN", (12.6, 17.2, 90, "B"), "mcu")
-C("C14", "1uF", "EN", "GND", (14.2, 17.2, 90, "B"), "mcu")
+C("C12", "22uF", "+3V3", "GND", (9.0, 14.5, 90, "B"), "mcu", C0805)
+C("C13", "100nF", "+3V3", "GND", (11.0, 14.8, 90, "B"), "mcu")
+R("R6", "10k", "+3V3", "EN", (12.6, 14.8, 90, "B"), "mcu")
+C("C14", "1uF", "EN", "GND", (14.2, 14.8, 90, "B"), "mcu")
 R("R7", "10k", "+3V3", "BOOT", (23.8, 5.6, 90, "B"), "mcu")
 part("SW1", "Switch:SW_Push", "Button_Switch_SMD:SW_SPST_B3U-1000P", "BOOT",
      {"1": "BOOT", "2": "GND"}, (20.0, 3.0, 0, "B"), "Omron B3U-1000P", "mcu",
@@ -196,21 +196,21 @@ part("SW1", "Switch:SW_Push", "Button_Switch_SMD:SW_SPST_B3U-1000P", "BOOT",
 part("SW2", "Switch:SW_Push", "Button_Switch_SMD:SW_SPST_B3U-1000P", "RESET",
      {"1": "EN", "2": "GND"}, (13.5, 3.0, 0, "B"), "Omron B3U-1000P", "mcu",
      "Reset button (EN)")
-R("R9", "1M", "VBAT", "VBAT_SENSE", (16.2, 15.8, 0, "B"), "mcu")
-R("R10", "1M", "VBAT_SENSE", "GND", (16.2, 17.2, 0, "B"), "mcu")
-C("C15", "100nF", "VBAT_SENSE", "GND", (16.2, 18.6, 0, "B"), "mcu")
+R("R9", "1M", "VBAT", "VBAT_SENSE", (17.4, 11.0, 0, "B"), "mcu")
+R("R10", "1M", "VBAT_SENSE", "GND", (17.4, 12.4, 0, "B"), "mcu")
+C("C15", "100nF", "VBAT_SENSE", "GND", (17.4, 13.8, 0, "B"), "mcu")
 part("D3", "Device:LED", LED0603, "GREEN",
-     {"1": "GND", "2": "LED_STATUS_A"}, (20.2, 18.6, 0, "B"), "", "mcu",
+     {"1": "GND", "2": "LED_STATUS_A"}, (21.6, 11.0, 0, "B"), "", "mcu",
      "Status LED")
-R("R8", "1k", "LED_STATUS", "LED_STATUS_A", (20.2, 16.9, 0, "B"), "mcu")
+R("R8", "1k", "LED_STATUS", "LED_STATUS_A", (21.6, 12.8, 0, "B"), "mcu")
 part("TP1", "Connector:TestPoint", "TestPoint:TestPoint_Pad_D1.0mm", "TX",
-     {"1": "UART_TX"}, (8.2, 5.2, 0, "B"), "", "mcu", "UART0 TX test pad")
+     {"1": "UART_TX"}, (8.2, 5.0, 0, "B"), "", "mcu", "UART0 TX test pad")
 part("TP2", "Connector:TestPoint", "TestPoint:TestPoint_Pad_D1.0mm", "RX",
-     {"1": "UART_RX"}, (8.2, 7.6, 0, "B"), "", "mcu", "UART0 RX test pad")
+     {"1": "UART_RX"}, (8.2, 7.2, 0, "B"), "", "mcu", "UART0 RX test pad")
 part("TP3", "Connector:TestPoint", "TestPoint:TestPoint_Pad_D1.0mm", "GND",
-     {"1": "GND"}, (8.2, 10.0, 0, "B"), "", "mcu", "GND test pad")
+     {"1": "GND"}, (8.2, 9.4, 0, "B"), "", "mcu", "GND test pad")
 part("TP4", "Connector:TestPoint", "TestPoint:TestPoint_Pad_D1.0mm", "3V3",
-     {"1": "+3V3"}, (8.2, 12.4, 0, "B"), "", "mcu", "3V3 test pad")
+     {"1": "+3V3"}, (8.2, 11.6, 0, "B"), "", "mcu", "3V3 test pad")
 
 # ======================================================= Camera (DVP, 24-pin FPC)
 # Standard OV2640/OV5640 24-pin 0.5 mm FPC pin-out (ESP32-CAM / ESP-EYE style).
