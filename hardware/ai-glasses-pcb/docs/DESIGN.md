@@ -81,7 +81,7 @@ USB-C VBUS ─┬─ USBLC6 ─ ESD
 VBAT ── DMG3415 P-FET ──┴─ VSYS ─┬─ AP2112K-3.3 ── +3V3 ─┬─ ESP32-S3, mic, SCCB pull-ups, cam DOVDD
                                  │                       ├─ TLV70028 ── +2V8_CAM (AVDD)
                                  │                       └─ TLV70012 ── +1V2_CAM (DVDD)
-                                 └─ (0.3 mm trace down the strip, ~0.19 Ω) ── MAX98357A VDD
+                                 └─ (2 mm trunk + B.Cu pour down the strip, ~35 mΩ) ── MAX98357A VDD
 VBAT ── 1M/1M divider ── IO4 (ADC1_CH3)
 ```
 
@@ -112,8 +112,8 @@ pwdn=2, reset=1`.
 |---|---|
 | L1 F.Cu | components, signals, GND pour |
 | L2 In1.Cu | solid GND plane (reference for every signal) |
-| L3 In2.Cu | signals (I2S to the amp runs here in the strip) + GND pour |
-| L4 B.Cu | components (power, buttons, LEDs), signals, GND pour |
+| L3 In2.Cu | signals (three of the I2S lines run here in the strip) + GND pour |
+| L4 B.Cu | components (power, buttons, LEDs), signals, GND pour; in the strip a VSYS pour + AMP_DIN |
 
 - Minimum track/space: 0.15 / 0.15 mm.
 - Power traces: 0.3 mm (plus the pours).
@@ -121,12 +121,11 @@ pwdn=2, reset=1`.
 - Board-edge copper clearance ≥ 0.25 mm; routed copper is kept 0.5 mm away.
 - These are inside standard JLCPCB / PCBWay 4-layer capabilities.
 - Every SMD GND pad has its own via to L2 (or a stub to a stitched exposed
-  pad). About 115 extra GND stitching vias tie the L1/L3/L4 pours to the L2
-  plane, so every signal has an adjacent ground return, including down the
-  strip.
-- VSYS to the amp is a 0.3 mm trace (~0.19 Ω end to end), so the drop is
-  ~50 mV at typical audio current and ~0.1 V at 0.6 A peaks. That's well
-  inside the MAX98357A's 2.5–5.5 V supply range.
+  pad). Grids and edge rows of GND stitching vias (~14.5 per cm² on both the
+  front section and the rear pad) tie the L1/L3/L4 pours to the L2 plane,
+  so every signal has an adjacent ground return.
+- VSYS to the amp is ≥ 0.6 mm, with a 2 mm trunk plus a B.Cu pour down the
+  strip (~35 mΩ end to end, so ~20 mV drop at 0.6 A peaks).
 - **Antenna:** copper is kept out of all 4 layers under the WROOM-1 antenna
   (x < 6.8 mm), and the antenna sits at the board's front edge. Don't put
   metal (hinge, screws, battery) within ~15 mm of it.
@@ -155,6 +154,11 @@ Requirements: KiCad 7+, Java 17+, xvfb-run on a headless machine, and
 
 - **Three-way netlist match:** design.py = schematic netlist (exported by
   KiCad) = PCB pad nets.
+- **Schematic wiring** (`check_wiring.py`): every wire joins a pin to a
+  label, nothing dangles, every no-connect flag sits on an unconnected pin.
+- **Schematic ↔ PCB links:** every symbol's UUID, value and footprint match
+  its footprint on the board, so *Update PCB from Schematic* has nothing to
+  change.
 - **No unlabelled nets.** The only unconnected pins are the intentional NC
   pins.
 - **Every symbol pin is assigned** a net or an explicit NC.
@@ -176,9 +180,9 @@ Requirements: KiCad 7+, Java 17+, xvfb-run on a headless machine, and
   - no copper inside the antenna keep-out;
   - the mic acoustic port isn't covered by any bottom-side part.
 
-The latest run (`VERIFICATION.txt`): **623 checks passed, 0 failed**.
+The latest run (`VERIFICATION.txt`): **625 checks passed, 0 failed**.
 - KiCad DRC: 0 errors, 0 warnings, 0 unconnected.
-- 55 parts, 47 nets, 580 track segments, 215 vias.
+- 55 parts, 46 nets, 590 track segments, 286 vias.
 
 Note that autorouting results vary a little between router runs. If you
 re-run `build.py`, run `check_design.py` again before ordering.

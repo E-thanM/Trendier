@@ -74,6 +74,33 @@ def pcb_nets(board):
     return nets
 
 
+def sym_fp_links():
+    """Mismatches between schematic symbols and board footprints (the data
+    'Update PCB from Schematic' compares)."""
+    d = sexpdata.loads(open(SCH).read())
+    sch = {}
+    for s in K.children(d, "symbol"):
+        pr = {p[1]: p[2] for p in K.children(s, "property")}
+        if not pr["Reference"].startswith("#"):
+            sch[pr["Reference"]] = (K.child(s, "uuid")[1], pr["Value"], pr["Footprint"])
+    board = pcbnew.LoadBoard(PCB)
+    bad = []
+    seen = set()
+    for f in board.GetFootprints():
+        r = f.GetReference()
+        seen.add(r)
+        if r not in sch:
+            bad.append((r, "no symbol"))
+            continue
+        uid, val, fp = sch[r]
+        fpid = f.GetFPID()
+        if (f.GetPath().AsString() != "/" + uid or f.GetValue() != val or
+                f"{fpid.GetLibNickname()}:{fpid.GetLibItemName()}" != fp):
+            bad.append(r)
+    bad += [(r, "no footprint") for r in set(sch) - seen]
+    return bad
+
+
 def compare(a, b, an, bn):
     ok = True
     for n in sorted(set(a) | set(b)):
@@ -248,6 +275,11 @@ def main():
     check(sn.pop("__nc__", set()) == nc,
           f"schematic unconnected pins are exactly the {len(nc)} intentional NC pins")
     compare(dn, sn, "design", "schematic")
+    r = subprocess.run([sys.executable, os.path.join(HERE, "check_wiring.py"), SCH],
+                       capture_output=True, text=True)
+    check(r.returncode == 0, "schematic wiring: " + r.stdout.strip().splitlines()[-1])
+    links = sym_fp_links()
+    check(not links, f"every schematic symbol linked to its PCB footprint (uuid, value, footprint) {links or ''}")
     erc(dn)
     electrical(dn)
     pcb_checks()

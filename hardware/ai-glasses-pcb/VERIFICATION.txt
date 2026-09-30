@@ -1,6 +1,8 @@
 PASS no unlabelled / auto-named nets in the schematic
 PASS schematic unconnected pins are exactly the 20 intentional NC pins
 PASS design and schematic have identical connectivity (46 nets)
+PASS schematic wiring: WIRING OK: every wire pin->label, no dangling labels/wires, every NC flag on an unconnected pin, every visible pin accounted for
+PASS every schematic symbol linked to its PCB footprint (uuid, value, footprint) 
 PASS J1: every symbol pin has an explicit net or NC (17 pins)
 PASS R1: every symbol pin has an explicit net or NC (2 pins)
 PASS R2: every symbol pin has an explicit net or NC (2 pins)
@@ -622,5 +624,5 @@ PASS no In2.Cu pour within 0.5 mm of the mic port
 PASS no B.Cu pour within 0.5 mm of the mic port
 PASS no B.Cu pour within 0.5 mm of the mic port
 PASS Edge.Cuts forms exactly one closed outline
-623 checks passed
+625 checks passed
 RESULT: ALL CHECKS PASSED
