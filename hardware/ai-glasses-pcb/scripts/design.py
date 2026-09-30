@@ -263,7 +263,7 @@ part("LS1", "Device:Speaker", "AI_Glasses:BoneTransducer_SolderPads",
 # ---------------------------------------------------------------- net classes
 NETCLASSES = {
     # name: (track, clearance, via_d, via_drill, nets)
-    "Default": (0.15, 0.15, 0.5, 0.25, None),
+    "Default": (0.15, 0.127, 0.5, 0.25, None),
     # 0.3 mm keeps power routable into 0.5 mm-pitch QFN/FPC pads; the
     # long VSYS run down the strip is reinforced by an In2 copper pour.
     "Power": (0.3, 0.15, 0.5, 0.25, ["VBUS", "VBAT", "VSYS", "+3V3"]),

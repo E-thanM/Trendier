@@ -9,6 +9,7 @@ from fanout import PadGeom, board_edges, point_in_board, seg_dist, to_mm
 
 MM = pcbnew.FromMM
 CLR = 0.2
+MAX_JOIN = 8.0
 
 
 def _obstacles(board, net, layer):
@@ -41,7 +42,7 @@ def join_via(board, via, net="VSYS", width=0.5):
         for i in range(21):
             tx, ty = ax + (bx - ax) * i / 20, ay + (by - ay) * i / 20
             d = math.hypot(tx - vx, ty - vy)
-            if best and d >= best[0]:
+            if d > MAX_JOIN or (best and d >= best[0]):
                 continue
             if clear_path(board, net, layer, vx, vy, tx, ty, width, pads):
                 best = (d, layer, tx, ty)
@@ -60,9 +61,13 @@ def join_via(board, via, net="VSYS", width=0.5):
 
 def clear_path(board, net, layer, ax, ay, bx, by, w, pads):
     obst = _obstacles(board, net, layer)
+    edges = board_edges(board)
     n = max(2, int(math.hypot(bx - ax, by - ay) / 0.05))
     for i in range(n + 1):
         x, y = ax + (bx - ax) * i / n, ay + (by - ay) * i / n
+        if (not point_in_board(x, y, edges)
+                or min(seg_dist(x, y, *e) for e in edges) < w / 2 + 0.3):
+            return False
         for p in pads:
             if p.net != net and layer in p.layers and p.dist(x, y) < w / 2 + CLR:
                 return False
