@@ -76,6 +76,7 @@ def add_pours(board):
     gnd = board.FindNet("GND")
     for layer in (pcbnew.F_Cu, pcbnew.In2_Cu, pcbnew.B_Cu):
         gen_pcb.add_zone(board, layer, gnd, gen_pcb.BIG, priority=0)
+    gen_pcb.vsys_pour(board, board.FindNet("VSYS"))
 
 
 def route(board_path, passes=40):

@@ -132,10 +132,11 @@ def add_track(board, net, layer, a, b, width, locked=True):
     return t
 
 
-def vsys_trunk(board, net):
-    """Amp supply: an In2 VSYS pour the length of the strip (L2 GND plane sits
-    directly above it). It reserves In2 in the strip for VSYS during routing;
-    finish.py later drops vias from the routed VSYS trace into it."""
+def vsys_pour(board, net):
+    """Amp supply reinforcement: an In2 VSYS pour the length of the strip
+    (the L2 GND plane sits directly above it). Added after routing so it
+    fills around whatever the router put on In2; finish.py stitches the
+    routed VSYS trace into it."""
     add_zone(board, pcbnew.In2_Cu, net,
              [(D.VSYS_POUR_X[0], -1), (D.VSYS_POUR_X[1], -1),
               (D.VSYS_POUR_X[1], D.FRONT_H + 1), (D.VSYS_POUR_X[0], D.FRONT_H + 1)],
@@ -206,7 +207,6 @@ def build():
 
     antenna_keepout(board)
     add_zone(board, pcbnew.In1_Cu, nets["GND"], BIG, priority=0)
-    vsys_trunk(board, nets["VSYS"])
 
     # silkscreen annotations
     def silk(text, x, y, layer=pcbnew.F_SilkS, size=0.8, rot=0):
