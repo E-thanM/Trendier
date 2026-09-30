@@ -114,13 +114,13 @@ part("J3", "Connector_Generic_MountingPin:Conn_01x02_MountingPin",
      (33.5, 18.8, 0, "B"), "JST SM02B-SRSS-TB", "power",
      "Battery connector (JST-SH 1 mm). Pin1 = +, Pin2 = -")
 part("D1", "Device:D_Schottky", "Diode_SMD:D_SOD-323", "B5819WS",
-     {"1": "VSYS", "2": "VBUS"}, (41.5, 1.8, 0, "B"), "B5819WS", "power",
+     {"1": "VSYS", "2": "VBUS"}, (41.5, 1.8, 180, "B"), "B5819WS", "power",
      "USB -> system power path")
 part("Q1", "Device:Q_PMOS_GSD", SOT23, "DMG3415U",
-     {"1": "VBUS", "2": "VSYS", "3": "VBAT"}, (41.5, 5.4, 0, "B"),
+     {"1": "VBUS", "2": "VSYS", "3": "VBAT"}, (41.5, 5.4, 180, "B"),
      "Diodes DMG3415U-7", "power",
      "Battery -> system ideal-diode switch (off when USB present)")
-R("R3", "100k", "VBUS", "GND", (44.9, 4.6, 90, "B"), "power")
+R("R3", "100k", "VBUS", "GND", (38.0, 6.3, 90, "B"), "power")
 
 # ======================================================= Regulators
 part("U3", "Regulator_Linear:AP2112K-3.3", SOT235, "AP2112K-3.3",
