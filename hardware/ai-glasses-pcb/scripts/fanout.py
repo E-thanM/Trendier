@@ -29,6 +29,12 @@ class PadGeom:
         sz = pad.GetSize()
         self.hw, self.hh = sz.x / 2e6, sz.y / 2e6
         self.ang = math.radians(pad.GetOrientationDegrees())
+        if pad.GetShape() == pcbnew.PAD_SHAPE_CUSTOM:
+            # custom pads (e.g. the mic's GND ring): use the real outline bbox
+            bb = pad.GetBoundingBox()
+            self.cx, self.cy = bb.GetCenter().x / 1e6, bb.GetCenter().y / 1e6
+            self.hw, self.hh = bb.GetWidth() / 2e6, bb.GetHeight() / 2e6
+            self.ang = 0.0
         self.net = pad.GetNetname()
         self.circle = pad.GetShape() == pcbnew.PAD_SHAPE_CIRCLE
         self.layers = {l for l in (pcbnew.F_Cu, pcbnew.In1_Cu, pcbnew.In2_Cu, pcbnew.B_Cu)

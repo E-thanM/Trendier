@@ -44,8 +44,6 @@ MID_Y = FRONT_H / 2                         # 11 (front/rear centre line)
 STRIP_Y0, STRIP_Y1 = 0.0, STRIP_W           # strip hugs the top edge
 STRIP_MID = STRIP_W / 2
 
-# VSYS pour down the strip on In2
-VSYS_POUR_X = (STRIP_X0 - 0.5, REAR_X0 + 4.0)
 
 ANTENNA_KEEPOUT_X = 6.8     # module antenna ends at x=6.05; keep all copper out
 

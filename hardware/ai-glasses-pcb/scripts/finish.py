@@ -1,5 +1,5 @@
-"""Post-route clean-up: tie the VSYS trunk into the routed VSYS net and trim
-footprint silkscreen that hangs past the board edge."""
+"""Post-route clean-up helpers: trim off-board silkscreen, remove dangling
+vias, widen a net where clearance allows, stitch a trace into a pour."""
 import math
 
 import pcbnew
@@ -104,7 +104,7 @@ def stitch_trace(board, net="VSYS", x_range=None, spacing=4.0, via_d=0.5, drill=
     """Drop vias onto the routed trace of `net` (inside x_range, local mm) so
     it is paralleled by that net's In2 pour."""
     ox = D.OFFSET[0]
-    x0, x1 = x_range or D.VSYS_POUR_X
+    x0, x1 = x_range
     pads = [PadGeom(p) for p in board.GetPads()]
     edges = board_edges(board)
     other = []
@@ -156,5 +156,56 @@ def stitch_trace(board, net="VSYS", x_range=None, spacing=4.0, via_d=0.5, drill=
     return len(placed)
 
 
-def finish(board):
-    return stitch_trace(board), trim_silk(board)
+def remove_dangling_vias(board):
+    """Delete unlocked vias KiCad reports as dangling (stitch vias the pour
+    didn't reach); they carry no connection."""
+    import os
+    import re
+    import tempfile
+    rpt = os.path.join(tempfile.mkdtemp(), "d.rpt")
+    pcbnew.WriteDRCReport(board, rpt, pcbnew.EDA_UNITS_MILLIMETRES, True)
+    spots = set()
+    for m in re.finditer(r"\[via_dangling\].*\n.*\n\s*@\(([\d.]+) mm, ([\d.]+) mm\)", open(rpt).read()):
+        spots.add((round(float(m.group(1)), 3), round(float(m.group(2)), 3)))
+    n = 0
+    for t in list(board.GetTracks()):
+        if isinstance(t, pcbnew.PCB_VIA) and not t.IsLocked():
+            x, y = to_mm(t.GetPosition())
+            if (round(x, 3), round(y, 3)) in spots:
+                board.Remove(t)
+                n += 1
+    return n
+
+
+def widen_net(board, net, width, x_range):
+    """Widen a net's track segments inside x_range (local mm) where DRC
+    allows; each widened segment is re-checked and reverted on conflict."""
+    import os
+    import re
+    import tempfile
+    ox = D.OFFSET[0]
+    segs = [t for t in board.GetTracks() if t.GetNetname() == net
+            and not isinstance(t, pcbnew.PCB_VIA)
+            and ox + x_range[0] <= to_mm(t.GetStart())[0] <= ox + x_range[1]
+            and t.GetWidth() < MM(width)]
+    old = {id(t): t.GetWidth() for t in segs}
+    for t in segs:
+        t.SetWidth(MM(width))
+    for _ in range(6):
+        pcbnew.ZONE_FILLER(board).Fill(board.Zones())
+        rpt = os.path.join(tempfile.mkdtemp(), "w.rpt")
+        pcbnew.WriteDRCReport(board, rpt, pcbnew.EDA_UNITS_MILLIMETRES, False)
+        txt = open(rpt).read()
+        bad = []
+        for block in re.split(r"\n(?=\[)", txt):
+            if "Severity: error" in block and f"[{net}]" in block and "Track" in block:
+                for m in re.finditer(r"@\(([\d.]+) mm, ([\d.]+) mm\): Track \[" + re.escape(net), block):
+                    bad.append((float(m.group(1)), float(m.group(2))))
+        if not bad:
+            break
+        for t in segs:
+            s, e = to_mm(t.GetStart()), to_mm(t.GetEnd())
+            for x, y in bad:
+                if seg_dist(x, y, *s, *e) < 0.05 and t.GetWidth() != old[id(t)]:
+                    t.SetWidth(old[id(t)])
+    return sum(1 for t in segs if t.GetWidth() == MM(width)), len(segs)

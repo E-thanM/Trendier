@@ -20,6 +20,7 @@ import fanout
 import gen_pcb
 import import_ses
 import stitch
+import patch_route
 import finish
 
 MM = pcbnew.FromMM
@@ -76,7 +77,6 @@ def add_pours(board):
     gnd = board.FindNet("GND")
     for layer in (pcbnew.F_Cu, pcbnew.In2_Cu, pcbnew.B_Cu):
         gen_pcb.add_zone(board, layer, gnd, gen_pcb.BIG, priority=0)
-    gen_pcb.vsys_pour(board, board.FindNet("VSYS"))
 
 
 def route(board_path, passes=40):
@@ -91,9 +91,17 @@ def route(board_path, passes=40):
     if not os.environ.get("DISPLAY") and shutil.which("xvfb-run"):
         cmd = ["xvfb-run", "-a"] + cmd
     log = open(os.path.join(tmp, "freerouting.log"), "w")
-    subprocess.run(cmd, stdout=log, stderr=subprocess.STDOUT, timeout=900,
-                   check=True)
-    return ses, tmp
+    proc = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT,
+                            start_new_session=True)
+    try:
+        proc.wait(timeout=600)
+    except subprocess.TimeoutExpired:
+        import signal
+        os.killpg(proc.pid, signal.SIGKILL)
+        proc.wait()
+        print("    freerouting hung - skipping this attempt")
+        return None, tmp
+    return (ses if os.path.exists(ses) else None), tmp
 
 
 def key(pad):
@@ -129,6 +137,10 @@ def place_and_route(passes):
     # autoroute; if signals remain open, continue routing from the result
     for attempt in range(3):
         ses, tmp = route(path, passes=passes)
+        if ses is None:
+            if open_sig is None:
+                open_sig = ["(router failed)"] * 999
+            break
         b = pcbnew.LoadBoard(path)
         ntrk, nvia = import_ses.import_ses(b, ses, clear_existing=True)
         print(f"  route pass {attempt}: {ntrk} segments, {nvia} vias")
@@ -147,9 +159,11 @@ def main():
     best = None
     # Freerouting is deterministic for a given input; different pass budgets
     # give different results, so try a few and keep the first complete one.
-    for passes in (80, 100, 60, 120, 140):
+    for passes in (80, 60, 100, 70, 90, 50, 110, 120, 140):
         print(f"== autorouting with {passes} passes")
         path, open_sig = place_and_route(passes)
+        if open_sig and open_sig[0] == "(router failed)":
+            continue
         if best is None or len(open_sig) < best[0]:
             best = (len(open_sig), passes)
             shutil.copy(path, path + ".best")
@@ -157,10 +171,17 @@ def main():
             break
     shutil.move(path + ".best", path)
     print("using result from", best[1], "passes; open signal pads:", best[0])
+    if best[0]:
+        b = pcbnew.LoadBoard(path)
+        pcbnew.ZONE_FILLER(b).Fill(b.Zones())
+        nets = sorted({p.GetNetname() for p in unconnected_pads(b) if p.GetNetname() != "GND"})
+        b = pcbnew.LoadBoard(path)
+        print("fallback router:", patch_route.patch(b, nets))
+        pcbnew.SaveBoard(path, b)
 
     # 2) ground pours on L1/L3/L4 + stitching + fix-up of left-over GND pads
     b = pcbnew.LoadBoard(path)
-    print("VSYS vias into In2 pour / silk items trimmed:", finish.finish(b))
+    print("silk items trimmed:", finish.trim_silk(b))
     add_pours(b)
     print("stitching vias:", stitch.stitch(b))
     pcbnew.ZONE_FILLER(b).Fill(b.Zones())
@@ -169,6 +190,8 @@ def main():
         print("post-route GND fan-out for", label(open_gnd), "->",
               fanout.fanout(b, only={key(p) for p in open_gnd}))
         pcbnew.ZONE_FILLER(b).Fill(b.Zones())
+    print("dangling vias removed:", finish.remove_dangling_vias(b))
+    pcbnew.ZONE_FILLER(b).Fill(b.Zones())
     pcbnew.SaveBoard(path, b)
     print("still open:", label(unconnected_pads(pcbnew.LoadBoard(path))))
     return path

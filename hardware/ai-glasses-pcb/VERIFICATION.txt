@@ -1,0 +1,615 @@
+PASS no unlabelled / auto-named nets in the schematic
+PASS schematic unconnected pins are exactly the 20 intentional NC pins
+PASS design and schematic have identical connectivity (46 nets)
+PASS J1: every symbol pin has an explicit net or NC (17 pins)
+PASS R1: every symbol pin has an explicit net or NC (2 pins)
+PASS R2: every symbol pin has an explicit net or NC (2 pins)
+PASS U8: every symbol pin has an explicit net or NC (6 pins)
+PASS C1: every symbol pin has an explicit net or NC (2 pins)
+PASS U2: every symbol pin has an explicit net or NC (5 pins)
+PASS R4: every symbol pin has an explicit net or NC (2 pins)
+PASS D2: every symbol pin has an explicit net or NC (2 pins)
+PASS R5: every symbol pin has an explicit net or NC (2 pins)
+PASS C2: every symbol pin has an explicit net or NC (2 pins)
+PASS J3: every symbol pin has an explicit net or NC (3 pins)
+PASS D1: every symbol pin has an explicit net or NC (2 pins)
+PASS Q1: every symbol pin has an explicit net or NC (3 pins)
+PASS R3: every symbol pin has an explicit net or NC (2 pins)
+PASS U3: every symbol pin has an explicit net or NC (5 pins)
+PASS C3: every symbol pin has an explicit net or NC (2 pins)
+PASS C4: every symbol pin has an explicit net or NC (2 pins)
+PASS U4: every symbol pin has an explicit net or NC (5 pins)
+PASS C5: every symbol pin has an explicit net or NC (2 pins)
+PASS C6: every symbol pin has an explicit net or NC (2 pins)
+PASS U5: every symbol pin has an explicit net or NC (5 pins)
+PASS C7: every symbol pin has an explicit net or NC (2 pins)
+PASS C8: every symbol pin has an explicit net or NC (2 pins)
+PASS U1: every symbol pin has an explicit net or NC (41 pins)
+PASS C12: every symbol pin has an explicit net or NC (2 pins)
+PASS C13: every symbol pin has an explicit net or NC (2 pins)
+PASS R6: every symbol pin has an explicit net or NC (2 pins)
+PASS C14: every symbol pin has an explicit net or NC (2 pins)
+PASS R7: every symbol pin has an explicit net or NC (2 pins)
+PASS SW1: every symbol pin has an explicit net or NC (2 pins)
+PASS SW2: every symbol pin has an explicit net or NC (2 pins)
+PASS R9: every symbol pin has an explicit net or NC (2 pins)
+PASS R10: every symbol pin has an explicit net or NC (2 pins)
+PASS C15: every symbol pin has an explicit net or NC (2 pins)
+PASS D3: every symbol pin has an explicit net or NC (2 pins)
+PASS R8: every symbol pin has an explicit net or NC (2 pins)
+PASS TP1: every symbol pin has an explicit net or NC (1 pins)
+PASS TP2: every symbol pin has an explicit net or NC (1 pins)
+PASS TP3: every symbol pin has an explicit net or NC (1 pins)
+PASS TP4: every symbol pin has an explicit net or NC (1 pins)
+PASS J2: every symbol pin has an explicit net or NC (25 pins)
+PASS R11: every symbol pin has an explicit net or NC (2 pins)
+PASS R12: every symbol pin has an explicit net or NC (2 pins)
+PASS R13: every symbol pin has an explicit net or NC (2 pins)
+PASS R14: every symbol pin has an explicit net or NC (2 pins)
+PASS C9: every symbol pin has an explicit net or NC (2 pins)
+PASS C10: every symbol pin has an explicit net or NC (2 pins)
+PASS C11: every symbol pin has an explicit net or NC (2 pins)
+PASS U6: every symbol pin has an explicit net or NC (6 pins)
+PASS C16: every symbol pin has an explicit net or NC (2 pins)
+PASS R15: every symbol pin has an explicit net or NC (2 pins)
+PASS U7: every symbol pin has an explicit net or NC (17 pins)
+PASS C17: every symbol pin has an explicit net or NC (2 pins)
+PASS C18: every symbol pin has an explicit net or NC (2 pins)
+PASS LS1: every symbol pin has an explicit net or NC (2 pins)
+PASS net GND has 52 connections
+PASS net VBUS has 11 connections
+PASS net CC1 has 2 connections
+PASS net CC2 has 2 connections
+PASS net USB_DP has 5 connections
+PASS net USB_DM has 5 connections
+PASS net CHG_STAT has 2 connections
+PASS net VBAT has 5 connections
+PASS net CHG_PROG has 2 connections
+PASS net CHG_LED_K has 2 connections
+PASS net VSYS has 9 connections
+PASS net +3V3 has 21 connections
+PASS net +2V8_CAM has 4 connections
+PASS net +1V2_CAM has 4 connections
+PASS net EN has 4 connections
+PASS net VBAT_SENSE has 4 connections
+PASS net MIC_SCK has 2 connections
+PASS net MIC_WS has 2 connections
+PASS net MIC_SD has 3 connections
+PASS net AMP_BCLK has 2 connections
+PASS net AMP_LRCLK has 2 connections
+PASS net AMP_DIN has 2 connections
+PASS net AMP_SD has 2 connections
+PASS net LED_STATUS has 2 connections
+PASS net CAM_D0 has 2 connections
+PASS net CAM_D1 has 2 connections
+PASS net CAM_D2 has 2 connections
+PASS net CAM_D3 has 2 connections
+PASS net CAM_D4 has 2 connections
+PASS net CAM_D5 has 2 connections
+PASS net CAM_D6 has 2 connections
+PASS net CAM_D7 has 2 connections
+PASS net CAM_PCLK has 2 connections
+PASS net BOOT has 3 connections
+PASS net CAM_VSYNC has 2 connections
+PASS net CAM_HREF has 2 connections
+PASS net CAM_XCLK has 2 connections
+PASS net CAM_SIOD has 3 connections
+PASS net CAM_SIOC has 3 connections
+PASS net UART_RX has 2 connections
+PASS net UART_TX has 2 connections
+PASS net CAM_PWDN has 3 connections
+PASS net CAM_RESET has 3 connections
+PASS net LED_STATUS_A has 2 connections
+PASS net SPK_P has 2 connections
+PASS net SPK_N has 2 connections
+PASS no ESP32 GPIO tied directly to VBUS
+PASS no ESP32 GPIO tied directly to VBAT
+PASS no ESP32 GPIO tied directly to VSYS
+PASS no ESP32 GPIO tied directly to +2V8_CAM
+PASS no ESP32 GPIO tied directly to +1V2_CAM
+PASS ESP32 pin 28 (IO35-37, octal PSRAM) left unconnected
+PASS ESP32 pin 29 (IO35-37, octal PSRAM) left unconnected
+PASS ESP32 pin 30 (IO35-37, octal PSRAM) left unconnected
+PASS strapping pin IO3 left floating (default boot mode)
+PASS strapping pin IO46 left floating (default boot mode)
+PASS strapping pin IO45 left floating (default boot mode)
+PASS native USB on IO19/IO20
+PASS VBAT_SENSE <= 2.1 V at a full cell
+PASS charge current 196 mA
+PASS +3V3 decoupled by 7 capacitors
+PASS VSYS decoupled by 3 capacitors
+PASS VBUS decoupled by 1 capacitors
+PASS VBAT decoupled by 1 capacitors
+PASS +2V8_CAM decoupled by 2 capacitors
+PASS +1V2_CAM decoupled by 2 capacitors
+PASS USB-C CC1/CC2 5.1k pull-downs
+PASS mic SD -> ESP32 IO7
+PASS ESP32 IO17 -> amp DIN
+PASS USBLC6 flow-through on D+
+PASS P-FET power path G=VBUS S=VSYS D=VBAT
+PASS Schottky anode on VBUS, cathode on VSYS
+PASS design and pcb have identical connectivity (46 nets)
+PASS DRC errors: 0 []
+PASS unconnected items: 0
+INFO DRC warnings: 0 []
+PASS C8.1 inside outline
+PASS C8.1 outside antenna keep-out
+PASS C8.2 inside outline
+PASS C8.2 outside antenna keep-out
+PASS C18.1 inside outline
+PASS C18.1 outside antenna keep-out
+PASS C18.2 inside outline
+PASS C18.2 outside antenna keep-out
+PASS C11.1 inside outline
+PASS C11.1 outside antenna keep-out
+PASS C11.2 inside outline
+PASS C11.2 outside antenna keep-out
+PASS U8.1 inside outline
+PASS U8.1 outside antenna keep-out
+PASS U8.2 inside outline
+PASS U8.2 outside antenna keep-out
+PASS U8.3 inside outline
+PASS U8.3 outside antenna keep-out
+PASS U8.4 inside outline
+PASS U8.4 outside antenna keep-out
+PASS U8.5 inside outline
+PASS U8.5 outside antenna keep-out
+PASS U8.6 inside outline
+PASS U8.6 outside antenna keep-out
+PASS U1. inside outline
+PASS U1. inside outline
+PASS U1. inside outline
+PASS U1. inside outline
+PASS U1. inside outline
+PASS U1. inside outline
+PASS U1. inside outline
+PASS U1. inside outline
+PASS U1. inside outline
+PASS U1.1 inside outline
+PASS U1.2 inside outline
+PASS U1.3 inside outline
+PASS U1.4 inside outline
+PASS U1.5 inside outline
+PASS U1.6 inside outline
+PASS U1.7 inside outline
+PASS U1.8 inside outline
+PASS U1.9 inside outline
+PASS U1.10 inside outline
+PASS U1.11 inside outline
+PASS U1.12 inside outline
+PASS U1.13 inside outline
+PASS U1.14 inside outline
+PASS U1.15 inside outline
+PASS U1.16 inside outline
+PASS U1.17 inside outline
+PASS U1.18 inside outline
+PASS U1.19 inside outline
+PASS U1.20 inside outline
+PASS U1.21 inside outline
+PASS U1.22 inside outline
+PASS U1.23 inside outline
+PASS U1.24 inside outline
+PASS U1.25 inside outline
+PASS U1.26 inside outline
+PASS U1.27 inside outline
+PASS U1.28 inside outline
+PASS U1.29 inside outline
+PASS U1.30 inside outline
+PASS U1.31 inside outline
+PASS U1.32 inside outline
+PASS U1.33 inside outline
+PASS U1.34 inside outline
+PASS U1.35 inside outline
+PASS U1.36 inside outline
+PASS U1.37 inside outline
+PASS U1.38 inside outline
+PASS U1.39 inside outline
+PASS U1.40 inside outline
+PASS U1.41 inside outline
+PASS U1.41 inside outline
+PASS U1.41 inside outline
+PASS U1.41 inside outline
+PASS U1.41 inside outline
+PASS U1.41 inside outline
+PASS U1.41 inside outline
+PASS U1.41 inside outline
+PASS U1.41 inside outline
+PASS U1.41 inside outline
+PASS U1.41 inside outline
+PASS U1.41 inside outline
+PASS U1.41 inside outline
+PASS U4.1 inside outline
+PASS U4.1 outside antenna keep-out
+PASS U4.2 inside outline
+PASS U4.2 outside antenna keep-out
+PASS U4.3 inside outline
+PASS U4.3 outside antenna keep-out
+PASS U4.4 inside outline
+PASS U4.4 outside antenna keep-out
+PASS U4.5 inside outline
+PASS U4.5 outside antenna keep-out
+PASS R12.1 inside outline
+PASS R12.1 outside antenna keep-out
+PASS R12.2 inside outline
+PASS R12.2 outside antenna keep-out
+PASS C16.1 inside outline
+PASS C16.1 outside antenna keep-out
+PASS C16.2 inside outline
+PASS C16.2 outside antenna keep-out
+PASS R2.1 inside outline
+PASS R2.1 outside antenna keep-out
+PASS R2.2 inside outline
+PASS R2.2 outside antenna keep-out
+PASS R1.1 inside outline
+PASS R1.1 outside antenna keep-out
+PASS R1.2 inside outline
+PASS R1.2 outside antenna keep-out
+PASS LS1.1 inside outline
+PASS LS1.1 outside antenna keep-out
+PASS LS1.2 inside outline
+PASS LS1.2 outside antenna keep-out
+PASS U5.1 inside outline
+PASS U5.1 outside antenna keep-out
+PASS U5.2 inside outline
+PASS U5.2 outside antenna keep-out
+PASS U5.3 inside outline
+PASS U5.3 outside antenna keep-out
+PASS U5.4 inside outline
+PASS U5.4 outside antenna keep-out
+PASS U5.5 inside outline
+PASS U5.5 outside antenna keep-out
+PASS U6. inside outline
+PASS U6.1 inside outline
+PASS U6.1 outside antenna keep-out
+PASS U6.2 inside outline
+PASS U6.2 outside antenna keep-out
+PASS U6.3 inside outline
+PASS U6.3 outside antenna keep-out
+PASS U6.4 inside outline
+PASS U6.4 outside antenna keep-out
+PASS U6.5 inside outline
+PASS U6.5 outside antenna keep-out
+PASS U6.6 inside outline
+PASS U6.6 outside antenna keep-out
+PASS R11.1 inside outline
+PASS R11.1 outside antenna keep-out
+PASS R11.2 inside outline
+PASS R11.2 outside antenna keep-out
+PASS C17.1 inside outline
+PASS C17.1 outside antenna keep-out
+PASS C17.2 inside outline
+PASS C17.2 outside antenna keep-out
+PASS C9.1 inside outline
+PASS C9.1 outside antenna keep-out
+PASS C9.2 inside outline
+PASS C9.2 outside antenna keep-out
+PASS J2.1 inside outline
+PASS J2.1 outside antenna keep-out
+PASS J2.2 inside outline
+PASS J2.2 outside antenna keep-out
+PASS J2.3 inside outline
+PASS J2.3 outside antenna keep-out
+PASS J2.4 inside outline
+PASS J2.4 outside antenna keep-out
+PASS J2.5 inside outline
+PASS J2.5 outside antenna keep-out
+PASS J2.6 inside outline
+PASS J2.6 outside antenna keep-out
+PASS J2.7 inside outline
+PASS J2.7 outside antenna keep-out
+PASS J2.8 inside outline
+PASS J2.8 outside antenna keep-out
+PASS J2.9 inside outline
+PASS J2.9 outside antenna keep-out
+PASS J2.10 inside outline
+PASS J2.10 outside antenna keep-out
+PASS J2.11 inside outline
+PASS J2.11 outside antenna keep-out
+PASS J2.12 inside outline
+PASS J2.12 outside antenna keep-out
+PASS J2.13 inside outline
+PASS J2.13 outside antenna keep-out
+PASS J2.14 inside outline
+PASS J2.14 outside antenna keep-out
+PASS J2.15 inside outline
+PASS J2.15 outside antenna keep-out
+PASS J2.16 inside outline
+PASS J2.16 outside antenna keep-out
+PASS J2.17 inside outline
+PASS J2.17 outside antenna keep-out
+PASS J2.18 inside outline
+PASS J2.18 outside antenna keep-out
+PASS J2.19 inside outline
+PASS J2.19 outside antenna keep-out
+PASS J2.20 inside outline
+PASS J2.20 outside antenna keep-out
+PASS J2.21 inside outline
+PASS J2.21 outside antenna keep-out
+PASS J2.22 inside outline
+PASS J2.22 outside antenna keep-out
+PASS J2.23 inside outline
+PASS J2.23 outside antenna keep-out
+PASS J2.24 inside outline
+PASS J2.24 outside antenna keep-out
+PASS J2.MP inside outline
+PASS J2.MP outside antenna keep-out
+PASS J2.MP inside outline
+PASS J2.MP outside antenna keep-out
+PASS J1. inside outline
+PASS J1. inside outline
+PASS J1.A1 inside outline
+PASS J1.A1 outside antenna keep-out
+PASS J1.A4 inside outline
+PASS J1.A4 outside antenna keep-out
+PASS J1.A5 inside outline
+PASS J1.A5 outside antenna keep-out
+PASS J1.A6 inside outline
+PASS J1.A6 outside antenna keep-out
+PASS J1.A7 inside outline
+PASS J1.A7 outside antenna keep-out
+PASS J1.A8 inside outline
+PASS J1.A8 outside antenna keep-out
+PASS J1.A9 inside outline
+PASS J1.A9 outside antenna keep-out
+PASS J1.A12 inside outline
+PASS J1.A12 outside antenna keep-out
+PASS J1.B1 inside outline
+PASS J1.B1 outside antenna keep-out
+PASS J1.B4 inside outline
+PASS J1.B4 outside antenna keep-out
+PASS J1.B5 inside outline
+PASS J1.B5 outside antenna keep-out
+PASS J1.B6 inside outline
+PASS J1.B6 outside antenna keep-out
+PASS J1.B7 inside outline
+PASS J1.B7 outside antenna keep-out
+PASS J1.B8 inside outline
+PASS J1.B8 outside antenna keep-out
+PASS J1.B9 inside outline
+PASS J1.B9 outside antenna keep-out
+PASS J1.B12 inside outline
+PASS J1.B12 outside antenna keep-out
+PASS J1.S1 inside outline
+PASS J1.S1 outside antenna keep-out
+PASS J1.S1 inside outline
+PASS J1.S1 outside antenna keep-out
+PASS J1.S1 inside outline
+PASS J1.S1 outside antenna keep-out
+PASS J1.S1 inside outline
+PASS J1.S1 outside antenna keep-out
+PASS R15.1 inside outline
+PASS R15.1 outside antenna keep-out
+PASS R15.2 inside outline
+PASS R15.2 outside antenna keep-out
+PASS C1.1 inside outline
+PASS C1.1 outside antenna keep-out
+PASS C1.2 inside outline
+PASS C1.2 outside antenna keep-out
+PASS C10.1 inside outline
+PASS C10.1 outside antenna keep-out
+PASS C10.2 inside outline
+PASS C10.2 outside antenna keep-out
+PASS C5.1 inside outline
+PASS C5.1 outside antenna keep-out
+PASS C5.2 inside outline
+PASS C5.2 outside antenna keep-out
+PASS U7. inside outline
+PASS U7. outside antenna keep-out
+PASS U7. inside outline
+PASS U7. outside antenna keep-out
+PASS U7. inside outline
+PASS U7. outside antenna keep-out
+PASS U7. inside outline
+PASS U7. outside antenna keep-out
+PASS U7.1 inside outline
+PASS U7.1 outside antenna keep-out
+PASS U7.2 inside outline
+PASS U7.2 outside antenna keep-out
+PASS U7.3 inside outline
+PASS U7.3 outside antenna keep-out
+PASS U7.4 inside outline
+PASS U7.4 outside antenna keep-out
+PASS U7.5 inside outline
+PASS U7.5 outside antenna keep-out
+PASS U7.6 inside outline
+PASS U7.6 outside antenna keep-out
+PASS U7.7 inside outline
+PASS U7.7 outside antenna keep-out
+PASS U7.8 inside outline
+PASS U7.8 outside antenna keep-out
+PASS U7.9 inside outline
+PASS U7.9 outside antenna keep-out
+PASS U7.10 inside outline
+PASS U7.10 outside antenna keep-out
+PASS U7.11 inside outline
+PASS U7.11 outside antenna keep-out
+PASS U7.12 inside outline
+PASS U7.12 outside antenna keep-out
+PASS U7.13 inside outline
+PASS U7.13 outside antenna keep-out
+PASS U7.14 inside outline
+PASS U7.14 outside antenna keep-out
+PASS U7.15 inside outline
+PASS U7.15 outside antenna keep-out
+PASS U7.16 inside outline
+PASS U7.16 outside antenna keep-out
+PASS U7.17 inside outline
+PASS U7.17 outside antenna keep-out
+PASS U7.17 inside outline
+PASS U7.17 outside antenna keep-out
+PASS U7.17 inside outline
+PASS U7.17 outside antenna keep-out
+PASS U7.17 inside outline
+PASS U7.17 outside antenna keep-out
+PASS U7.17 inside outline
+PASS U7.17 outside antenna keep-out
+PASS U7.17 inside outline
+PASS U7.17 outside antenna keep-out
+PASS R14.1 inside outline
+PASS R14.1 outside antenna keep-out
+PASS R14.2 inside outline
+PASS R14.2 outside antenna keep-out
+PASS C6.1 inside outline
+PASS C6.1 outside antenna keep-out
+PASS C6.2 inside outline
+PASS C6.2 outside antenna keep-out
+PASS R13.1 inside outline
+PASS R13.1 outside antenna keep-out
+PASS R13.2 inside outline
+PASS R13.2 outside antenna keep-out
+PASS C7.1 inside outline
+PASS C7.1 outside antenna keep-out
+PASS C7.2 inside outline
+PASS C7.2 outside antenna keep-out
+PASS R4.1 inside outline
+PASS R4.1 outside antenna keep-out
+PASS R4.2 inside outline
+PASS R4.2 outside antenna keep-out
+PASS C4.1 inside outline
+PASS C4.1 outside antenna keep-out
+PASS C4.2 inside outline
+PASS C4.2 outside antenna keep-out
+PASS C14.1 inside outline
+PASS C14.1 outside antenna keep-out
+PASS C14.2 inside outline
+PASS C14.2 outside antenna keep-out
+PASS R7.1 inside outline
+PASS R7.1 outside antenna keep-out
+PASS R7.2 inside outline
+PASS R7.2 outside antenna keep-out
+PASS TP3.1 inside outline
+PASS TP3.1 outside antenna keep-out
+PASS J3.1 inside outline
+PASS J3.1 outside antenna keep-out
+PASS J3.2 inside outline
+PASS J3.2 outside antenna keep-out
+PASS J3.MP inside outline
+PASS J3.MP outside antenna keep-out
+PASS J3.MP inside outline
+PASS J3.MP outside antenna keep-out
+PASS R6.1 inside outline
+PASS R6.1 outside antenna keep-out
+PASS R6.2 inside outline
+PASS R6.2 outside antenna keep-out
+PASS TP1.1 inside outline
+PASS TP1.1 outside antenna keep-out
+PASS Q1.1 inside outline
+PASS Q1.1 outside antenna keep-out
+PASS Q1.2 inside outline
+PASS Q1.2 outside antenna keep-out
+PASS Q1.3 inside outline
+PASS Q1.3 outside antenna keep-out
+PASS C12.1 inside outline
+PASS C12.1 outside antenna keep-out
+PASS C12.2 inside outline
+PASS C12.2 outside antenna keep-out
+PASS D3.1 inside outline
+PASS D3.1 outside antenna keep-out
+PASS D3.2 inside outline
+PASS D3.2 outside antenna keep-out
+PASS SW2.1 inside outline
+PASS SW2.1 outside antenna keep-out
+PASS SW2.2 inside outline
+PASS SW2.2 outside antenna keep-out
+PASS U2.1 inside outline
+PASS U2.1 outside antenna keep-out
+PASS U2.2 inside outline
+PASS U2.2 outside antenna keep-out
+PASS U2.3 inside outline
+PASS U2.3 outside antenna keep-out
+PASS U2.4 inside outline
+PASS U2.4 outside antenna keep-out
+PASS U2.5 inside outline
+PASS U2.5 outside antenna keep-out
+PASS R5.1 inside outline
+PASS R5.1 outside antenna keep-out
+PASS R5.2 inside outline
+PASS R5.2 outside antenna keep-out
+PASS C13.1 inside outline
+PASS C13.1 outside antenna keep-out
+PASS C13.2 inside outline
+PASS C13.2 outside antenna keep-out
+PASS C2.1 inside outline
+PASS C2.1 outside antenna keep-out
+PASS C2.2 inside outline
+PASS C2.2 outside antenna keep-out
+PASS SW1.1 inside outline
+PASS SW1.1 outside antenna keep-out
+PASS SW1.2 inside outline
+PASS SW1.2 outside antenna keep-out
+PASS C15.1 inside outline
+PASS C15.1 outside antenna keep-out
+PASS C15.2 inside outline
+PASS C15.2 outside antenna keep-out
+PASS R10.1 inside outline
+PASS R10.1 outside antenna keep-out
+PASS R10.2 inside outline
+PASS R10.2 outside antenna keep-out
+PASS R8.1 inside outline
+PASS R8.1 outside antenna keep-out
+PASS R8.2 inside outline
+PASS R8.2 outside antenna keep-out
+PASS TP4.1 inside outline
+PASS TP4.1 outside antenna keep-out
+PASS R9.1 inside outline
+PASS R9.1 outside antenna keep-out
+PASS R9.2 inside outline
+PASS R9.2 outside antenna keep-out
+PASS D2.1 inside outline
+PASS D2.1 outside antenna keep-out
+PASS D2.2 inside outline
+PASS D2.2 outside antenna keep-out
+PASS D1.1 inside outline
+PASS D1.1 outside antenna keep-out
+PASS D1.2 inside outline
+PASS D1.2 outside antenna keep-out
+PASS TP2.1 inside outline
+PASS TP2.1 outside antenna keep-out
+PASS R3.1 inside outline
+PASS R3.1 outside antenna keep-out
+PASS R3.2 inside outline
+PASS R3.2 outside antenna keep-out
+PASS C3.1 inside outline
+PASS C3.1 outside antenna keep-out
+PASS C3.2 inside outline
+PASS C3.2 outside antenna keep-out
+PASS U3.1 inside outline
+PASS U3.1 outside antenna keep-out
+PASS U3.2 inside outline
+PASS U3.2 outside antenna keep-out
+PASS U3.3 inside outline
+PASS U3.3 outside antenna keep-out
+PASS U3.4 inside outline
+PASS U3.4 outside antenna keep-out
+PASS U3.5 inside outline
+PASS U3.5 outside antenna keep-out
+PASS mic port not covered by R4
+PASS mic port not covered by C4
+PASS mic port not covered by C14
+PASS mic port not covered by R7
+PASS mic port not covered by TP3
+PASS mic port not covered by J3
+PASS mic port not covered by R6
+PASS mic port not covered by TP1
+PASS mic port not covered by Q1
+PASS mic port not covered by C12
+PASS mic port not covered by D3
+PASS mic port not covered by SW2
+PASS mic port not covered by U2
+PASS mic port not covered by R5
+PASS mic port not covered by C13
+PASS mic port not covered by C2
+PASS mic port not covered by SW1
+PASS mic port not covered by C15
+PASS mic port not covered by R10
+PASS mic port not covered by R8
+PASS mic port not covered by TP4
+PASS mic port not covered by R9
+PASS mic port not covered by D2
+PASS mic port not covered by D1
+PASS mic port not covered by TP2
+PASS mic port not covered by R3
+PASS mic port not covered by C3
+PASS mic port not covered by U3
+612 checks passed
+RESULT: ALL CHECKS PASSED

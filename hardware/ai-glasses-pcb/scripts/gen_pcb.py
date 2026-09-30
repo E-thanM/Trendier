@@ -132,17 +132,6 @@ def add_track(board, net, layer, a, b, width, locked=True):
     return t
 
 
-def vsys_pour(board, net):
-    """Amp supply reinforcement: an In2 VSYS pour the length of the strip
-    (the L2 GND plane sits directly above it). Added after routing so it
-    fills around whatever the router put on In2; finish.py stitches the
-    routed VSYS trace into it."""
-    add_zone(board, pcbnew.In2_Cu, net,
-             [(D.VSYS_POUR_X[0], -1), (D.VSYS_POUR_X[1], -1),
-              (D.VSYS_POUR_X[1], D.FRONT_H + 1), (D.VSYS_POUR_X[0], D.FRONT_H + 1)],
-             priority=1)
-
-
 def build():
     project_files.write(PROJ)
     path = os.path.join(PROJ, project_files.NAME + ".kicad_pcb")

@@ -1,0 +1,34 @@
+Qty,References,Value,Footprint,Part / MPN,Side,Notes
+2,C1 C2,4.7uF,C_0603_1608Metric,"X5R/X7R MLCC, >= 10 V",Bottom/Top,
+2,C12 C17,22uF,C_0805_2012Metric,"X5R/X7R MLCC, >= 10 V",Bottom/Top,
+7,C9 C10 C11 C13 C15 C16 C18,100nF,C_0402_1005Metric,"X5R/X7R MLCC, >= 10 V",Bottom/Top,
+2,C3 C4,10uF,C_0603_1608Metric,"X5R/X7R MLCC, >= 10 V",Bottom,
+5,C5 C6 C7 C8 C14,1uF,C_0402_1005Metric,"X5R/X7R MLCC, >= 10 V",Bottom/Top,
+1,D1,B5819WS,D_SOD-323,B5819WS,Bottom,USB -> system power path
+1,D2,RED,LED_0603_1608Metric,0603 LED,Bottom,Charging indicator
+1,D3,GREEN,LED_0603_1608Metric,0603 LED,Bottom,Status LED
+1,J1,USB-C,USB_C_Receptacle_GCT_USB4105-xx-A_16P_TopMnt_Horizontal,GCT USB4105-GF-A,Top,"USB-C 2.0 receptacle, charging + native USB programming"
+1,J2,CAMERA DVP,Hirose_FH12-24S-0.5SH_1x24-1MP_P0.50mm_Horizontal,Hirose FH12-24S-0.5SH(55),Top,24-pin 0.5 mm FPC for OV2640 / OV5640 DVP camera
+1,J3,LiPo 1S,JST_SH_SM02B-SRSS-TB_1x02-1MP_P1.00mm_Horizontal,JST SM02B-SRSS-TB,Bottom,"Battery connector (JST-SH 1 mm). Pin1 = +, Pin2 = -"
+1,LS1,BONE TRANSDUCER,BoneTransducer_SolderPads,"8 ohm bone-conduction exciter (e.g. 13x13 mm, 1 W)",Top,Bone conduction transducer solder pads
+1,Q1,DMG3415U,SOT-23,Diodes DMG3415U-7,Bottom,Battery -> system ideal-diode switch (off when USB present)
+3,R1 R2 R4,5.1k,R_0402_1005Metric,"Yageo RC0402FR-07 series (1%, 1/16 W)",Bottom/Top,
+2,R11 R12,4.7k,R_0402_1005Metric,"Yageo RC0402FR-07 series (1%, 1/16 W)",Top,
+2,R3 R15,100k,R_0402_1005Metric,"Yageo RC0402FR-07 series (1%, 1/16 W)",Bottom/Top,
+2,R5 R8,1k,R_0402_1005Metric,"Yageo RC0402FR-07 series (1%, 1/16 W)",Bottom,
+4,R6 R7 R13 R14,10k,R_0402_1005Metric,"Yageo RC0402FR-07 series (1%, 1/16 W)",Bottom/Top,
+2,R9 R10,1M,R_0402_1005Metric,"Yageo RC0402FR-07 series (1%, 1/16 W)",Bottom,
+1,SW1,BOOT,SW_SPST_B3U-1000P,Omron B3U-1000P,Bottom,Boot / user button (IO0)
+1,SW2,RESET,SW_SPST_B3U-1000P,Omron B3U-1000P,Bottom,Reset button (EN)
+1,TP1,TX,TestPoint_Pad_D1.0mm,(bare pad - not assembled),Bottom,UART0 TX test pad
+1,TP2,RX,TestPoint_Pad_D1.0mm,(bare pad - not assembled),Bottom,UART0 RX test pad
+1,TP3,GND,TestPoint_Pad_D1.0mm,(bare pad - not assembled),Bottom,GND test pad
+1,TP4,3V3,TestPoint_Pad_D1.0mm,(bare pad - not assembled),Bottom,3V3 test pad
+1,U1,ESP32-S3-WROOM-1-N16R8,ESP32-S3-WROOM-1,Espressif ESP32-S3-WROOM-1-N16R8,Top,"Wi-Fi/BLE MCU, 16 MB flash, 8 MB octal PSRAM"
+1,U2,MCP73831-2-OT,SOT-23-5,Microchip MCP73831T-2ACI/OT,Bottom,"Single-cell Li-Po charger, 196 mA (R4)"
+1,U3,AP2112K-3.3,SOT-23-5,Diodes AP2112K-3.3TRG1,Bottom,3.3 V / 600 mA main LDO
+1,U4,TLV70028DDCR,SOT-23-5,TI TLV70028DDCR,Top,Camera AVDD 2.8 V LDO
+1,U5,TLV70012DDCR,SOT-23-5,TI TLV70012DDCR,Top,Camera DVDD 1.2 V LDO
+1,U6,ICS-43434,InvenSense_ICS-43434-6_3.5x2.65mm,TDK InvenSense ICS-43434,Top,"I2S MEMS microphone, bottom port (hole through PCB)"
+1,U7,MAX98357A,TQFN-16-1EP_3x3mm_P0.5mm_EP1.23x1.23mm_ThermalVias,Analog Devices MAX98357AETE+T,Top,"3.2 W I2S class-D amplifier, gain 12 dB (GAIN_SLOT to GND)"
+1,U8,USBLC6-2SC6,SOT-23-6,STMicro USBLC6-2SC6,Top,USB ESD protection

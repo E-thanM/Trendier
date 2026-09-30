@@ -18,7 +18,7 @@ Dimensions come from typical adult head and ear measurements:
 
 | Quantity (adult, typical) | Value used | Where it's used |
 |---|---|---|
-| Temple length (frame sizes 135–150 mm) | board ≈ 116 mm | fits a 140–145 mm temple with ~6 mm hinge housing in front and a ~20 mm plastic tip behind |
+| Temple length (frame sizes 135–150 mm) | board 116 × 22 mm | fits a 140–145 mm temple with ~6 mm hinge housing in front and a ~20 mm plastic tip behind |
 | Hinge → ear bend ("length to bend"), ≈ 95–105 mm | strip ends 100 mm from hinge | strip crosses the ear root; the rear pad starts where the arm drops behind the ear |
 | Temple height where it rests on the ear (typ. 5–9 mm) | strip 6.5 mm wide | arm can be ~8–9 mm tall over the ear |
 | Space behind the auricle over the mastoid (~20–25 mm) | rear pad 22 × 22 mm | amp + transducer sit on the mastoid, a good bone-conduction site |
@@ -81,7 +81,7 @@ USB-C VBUS ─┬─ USBLC6 ─ ESD
 VBAT ── DMG3415 P-FET ──┴─ VSYS ─┬─ AP2112K-3.3 ── +3V3 ─┬─ ESP32-S3, mic, SCCB pull-ups, cam DOVDD
                                  │                       ├─ TLV70028 ── +2V8_CAM (AVDD)
                                  │                       └─ TLV70012 ── +1V2_CAM (DVDD)
-                                 └─ (In2 trunk down the strip) ── MAX98357A VDD
+                                 └─ (0.3 mm trace down the strip, ~0.19 Ω) ── MAX98357A VDD
 VBAT ── 1M/1M divider ── IO4 (ADC1_CH3)
 ```
 
@@ -112,7 +112,7 @@ pwdn=2, reset=1`.
 |---|---|
 | L1 F.Cu | components, signals, GND pour |
 | L2 In1.Cu | solid GND plane (reference for every signal) |
-| L3 In2.Cu | signals in the front; 1.2 mm VSYS trunk + VSYS pour down the strip; GND pour elsewhere |
+| L3 In2.Cu | signals (I2S to the amp runs here in the strip) + GND pour |
 | L4 B.Cu | components (power, buttons, LEDs), signals, GND pour |
 
 - Minimum track/space: 0.15 / 0.15 mm.
@@ -120,8 +120,13 @@ pwdn=2, reset=1`.
 - Vias: 0.5 mm with 0.25 mm drill, through-hole.
 - Board-edge copper clearance ≥ 0.25 mm; routed copper is kept 0.5 mm away.
 - These are inside standard JLCPCB / PCBWay 4-layer capabilities.
-- Every SMD GND pad has its own via to L2. About 130 extra GND stitching vias
-  tie the pours together.
+- Every SMD GND pad has its own via to L2 (or a stub to a stitched exposed
+  pad). About 115 extra GND stitching vias tie the L1/L3/L4 pours to the L2
+  plane, so every signal has an adjacent ground return, including down the
+  strip.
+- VSYS to the amp is a 0.3 mm trace (~0.19 Ω end to end), so the drop is
+  ~50 mV at typical audio current and ~0.1 V at 0.6 A peaks. That's well
+  inside the MAX98357A's 2.5–5.5 V supply range.
 - **Antenna:** copper is kept out of all 4 layers under the WROOM-1 antenna
   (x < 6.8 mm), and the antenna sits at the board's front edge. Don't put
   metal (hinge, screws, battery) within ~15 mm of it.
@@ -134,7 +139,8 @@ every pin-to-net assignment and the placement.
 ```
 cd scripts
 python3 gen_sch.py      # schematic
-python3 build.py        # board: place, GND fan-out, Freerouting autoroute, pours, stitching
+python3 build.py        # board: place, GND fan-out, Freerouting autoroute (retries several
+                        # pass budgets, fallback A* router for leftovers), pours, stitching
 python3 check_design.py # verification (below)
 python3 outputs.py      # Gerbers, drill, pick-and-place, BOM, PDFs -> ../fab
 ./render.sh             # images in docs/img
@@ -170,7 +176,12 @@ Requirements: KiCad 7+, Java 17+, xvfb-run on a headless machine, and
   - no copper inside the antenna keep-out;
   - the mic acoustic port isn't covered by any bottom-side part.
 
-See `VERIFICATION.txt` for the latest run.
+The latest run (`VERIFICATION.txt`): **612 checks passed, 0 failed**.
+- KiCad DRC: 0 errors, 0 warnings, 0 unconnected.
+- 55 parts, 47 nets, 580 track segments, 215 vias.
+
+Note that autorouting results vary a little between router runs. If you
+re-run `build.py`, run `check_design.py` again before ordering.
 
 ## 8. Before ordering / bring-up checklist
 
@@ -190,4 +201,7 @@ See `VERIFICATION.txt` for the latest run.
    (VBAT_SENSE), or swap in a buck-boost for longer runtime.
 6. **Mechanical.** Import `ai_glasses.kicad_pcb` (File → Export → STEP) into
    your CAD to check fit in the temple housing. Tallest parts: USB-C 3.2 mm,
-   ESP32 module 3.1 mm, FPC 2.0 mm (top); JST-SH 2.9 mm (bottom).
+   ESP32 module 3.1 mm, FPC 2.0 mm (top); JST-SH 2.9 mm (bottom). The
+   battery connector sits on the bottom edge next to USB-C. The battery
+   itself can live in the rear (behind-ear) part of the frame, which also
+   balances the weight of the front.
