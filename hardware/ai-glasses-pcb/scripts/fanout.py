@@ -171,10 +171,12 @@ def fanout(board, net="GND", only=None):
         best = None
         for step in range(0, 20):
             r = max(p.hw, p.hh) * 0.5 + VIA_D / 2 + 0.25 + step * 0.1
-            for k in range(24):
-                # search angles closest to "away from the part centre" first
-                off = ((k + 1) // 2) * (1 if k % 2 else -1) * math.pi / 12
-                a = base + off
+            # "away from the part centre" first, then straight out along the
+            # axes (needed for fine-pitch rows), then a 15 degree sweep
+            cands = [base] + [math.pi / 2 * q for q in range(4)] + [
+                base + ((k + 1) // 2) * (1 if k % 2 else -1) * math.pi / 12
+                for k in range(1, 24)]
+            for a in cands:
                 x, y = p.cx + r * math.cos(a), p.cy + r * math.sin(a)
                 if via_ok(x, y, p) and stub_ok(layer, p.cx, p.cy, x, y, p):
                     best = (x, y)

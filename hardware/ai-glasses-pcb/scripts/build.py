@@ -118,27 +118,44 @@ def label(pads):
                   for p in pads)
 
 
-def main(passes=80):
+def place_and_route(passes):
     path = gen_pcb.build()
     b = pcbnew.LoadBoard(path)
     placed, failed = fanout.fanout(b)
     print(f"GND fan-out: {placed} stubs/vias, left to router: {failed}")
     pcbnew.SaveBoard(path, b)
-
-    # 1) autoroute; if signals remain open, continue routing from the result
+    open_sig = None
+    # autoroute; if signals remain open, continue routing from the result
     for attempt in range(3):
         ses, tmp = route(path, passes=passes)
         b = pcbnew.LoadBoard(path)
         ntrk, nvia = import_ses.import_ses(b, ses, clear_existing=True)
-        print(f"route pass {attempt}: {ntrk} segments, {nvia} vias")
+        print(f"  route pass {attempt}: {ntrk} segments, {nvia} vias")
         pcbnew.SaveBoard(path, b)
         shutil.copy(ses, os.path.join(os.path.dirname(path), "ai_glasses.ses"))
         b = pcbnew.LoadBoard(path)
         pcbnew.ZONE_FILLER(b).Fill(b.Zones())
         open_sig = [p for p in unconnected_pads(b) if p.GetNetname() != "GND"]
-        print("  open signal pads:", label(open_sig))
+        print("    open signal pads:", label(open_sig))
         if not open_sig:
             break
+    return path, open_sig
+
+
+def main():
+    best = None
+    # Freerouting is deterministic for a given input; different pass budgets
+    # give different results, so try a few and keep the first complete one.
+    for passes in (80, 100, 60, 120, 140):
+        print(f"== autorouting with {passes} passes")
+        path, open_sig = place_and_route(passes)
+        if best is None or len(open_sig) < best[0]:
+            best = (len(open_sig), passes)
+            shutil.copy(path, path + ".best")
+        if not open_sig:
+            break
+    shutil.move(path + ".best", path)
+    print("using result from", best[1], "passes; open signal pads:", best[0])
 
     # 2) ground pours on L1/L3/L4 + stitching + fix-up of left-over GND pads
     b = pcbnew.LoadBoard(path)
