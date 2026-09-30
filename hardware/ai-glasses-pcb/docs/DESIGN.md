@@ -176,14 +176,35 @@ Requirements: KiCad 7+, Java 17+, xvfb-run on a headless machine, and
   - no copper inside the antenna keep-out;
   - the mic acoustic port isn't covered by any bottom-side part.
 
-The latest run (`VERIFICATION.txt`): **612 checks passed, 0 failed**.
+The latest run (`VERIFICATION.txt`): **623 checks passed, 0 failed**.
 - KiCad DRC: 0 errors, 0 warnings, 0 unconnected.
 - 55 parts, 47 nets, 580 track segments, 215 vias.
 
 Note that autorouting results vary a little between router runs. If you
 re-run `build.py`, run `check_design.py` again before ordering.
 
-## 8. Before ordering / bring-up checklist
+## 8. Layout review (2026-09-30)
+
+Baseline and final reports are in `reports/`. KiCad 7's CLI has no
+`drc`/`erc` subcommands, so DRC was run with the same engine through
+`pcbnew.WriteDRCReport`, and ERC was run with `check_design.py` plus KiCad's
+netlister.
+
+| Item | Change |
+|---|---|
+| Antenna | Already clear: no copper on any layer under the WROOM-1 antenna. The all-layer rule area `ANTENNA_KEEPOUT` stays. |
+| Stray graphics | Edge.Cuts is one closed outline. The lines left of the board are the ESP32 footprint's F.Courtyard (Espressif's 15 mm antenna clearance), not board edges. The courtyards of J1/J2/J3 run past the edge by design. All left in place (non-fabricated layers). |
+| Amp supply | VSYS is now 0.6 mm from source to amp. In the strip it's a 2 mm B.Cu trunk plus a B.Cu VSYS pour (178 mm²), about 35 mΩ total instead of ~190 mΩ. It narrows to 0.25–0.3 mm only for the last ~1.5 mm into U7's 0.5 mm-pitch VDD pins. C18 (100 nF) sits right under pins 7/8, and C17 (22 µF) is next to it. |
+| Ground stitching | Front half raised from 6.4 to 14.6 GND vias/cm² (edge row + 1.2 mm grid), matching the rear pad's 14.9. |
+| Outline | The inside corner at the strip/rear pad has a 1.5 mm fillet. The taper ends have 2 mm fillets and the rear pad's skin-side corner 1 mm. A custom rule (`ai_glasses.kicad_dru`) enforces tracks/vias ≥ 0.5 mm from the edge; the minimum is now 0.55 mm. |
+| Microphone | U6 (ICS-43434) is the only mic; it's bottom-port. The acoustic port was enlarged from 0.5 to 0.6 mm (datasheet minimum is 0.5 mm, and this adds margin for drill tolerance). The `MIC_PORT_KEEPOUT` rule area keeps In1/In2/B.Cu copper ≥ 0.5 mm from the port. F.Cu keeps the datasheet GND seal ring. |
+| USB | Re-routed as a coupled pair (0.2 / 0.15 mm, F.Cu over the In1 plane): J1 → U8 (flow-through) → ESP32. Path lengths are 22.22 / 22.26 mm, a 0.03 mm mismatch (it was 19 mm). The U8 → ESP32 run is over 100 % solid ground; a custom rule keeps other nets' vias out of that corridor. |
+| Silkscreen | No silk overlaps pads or the edge (DRC silk checks are clean). Added battery polarity marks (+ / −) at J3. |
+
+`scripts/apply_fixes.py` re-applies all of this to a freshly autorouted
+board (`build.py` alone would not).
+
+## 9. Before ordering / bring-up checklist
 
 1. **Camera FPC orientation.** The FH12-24S is a bottom-contact connector,
    and pin 1 is marked on the silkscreen side. Check your camera ribbon's

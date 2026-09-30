@@ -34,6 +34,9 @@ STRIP_L, STRIP_W = 32.0, 6.5
 REAR_L = 22.0
 HINGE_TO_BOARD = 6.0          # board front edge behind the hinge axis
 CORNER_R = 2.0
+FILLET_NECK = 1.5        # inside corner where the strip meets the rear pad
+FILLET_TAPER = 2.0       # both ends of the bottom-edge taper
+FILLET_REAR_OUT = 1.0    # rear pad corner that sits against the skin
 BOARD_THICKNESS = 1.0
 
 STRIP_X0 = FRONT_W + TAPER1                 # 62
@@ -250,8 +253,8 @@ part("U7", "Audio:MAX98357A",
          "16": "AMP_BCLK", "17": "GND"},
      (REAR_X0 + 6.0, 5.0, 0, "F"), "Analog Devices MAX98357AETE+T", "audio",
      "3.2 W I2S class-D amplifier, gain 12 dB (GAIN_SLOT to GND)")
-C("C17", "22uF", "VSYS", "GND", (REAR_X0 + 5.2, 9.9, 0, "F"), "audio", C0805)
-C("C18", "100nF", "VSYS", "GND", (REAR_X0 + 8.4, 9.9, 0, "F"), "audio")
+C("C17", "22uF", "VSYS", "GND", (REAR_X0 + 6.5, 9.45, 180, "F"), "audio", C0805)
+C("C18", "100nF", "VSYS", "GND", (REAR_X0 + 6.5, 7.75, 180, "F"), "audio")   # right under U7 VDD pins 7/8
 part("LS1", "Device:Speaker", "AI_Glasses:BoneTransducer_SolderPads",
      "BONE TRANSDUCER", {"1": "SPK_P", "2": "SPK_N"}, (REAR_X0 + 14.5, 12.0, 0, "F"),
      "8 ohm bone-conduction exciter (e.g. 13x13 mm, 1 W)", "audio",

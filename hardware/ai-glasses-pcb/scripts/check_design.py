@@ -184,7 +184,59 @@ def pcb_checks():
             bb = fp.GetBoundingBox(False, False)
             bb.Inflate(pcbnew.FromMM(0.5))
             check(not bb.Contains(hp), f"mic port not covered by {fp.GetReference()}")
+    review_checks(board)
     return board
+
+
+def review_checks(board):
+    """Checks added with the layout review (USB pair, amp supply, mic port)."""
+    import math
+    from fanout import to_mm
+    import usb_pair
+    ox, oy = D.OFFSET
+    # USB pair: signal-path length match and routed on F.Cu only
+    dp, dm = usb_pair.lengths(board)
+    check(abs(dp - dm) < 0.5, f"USB D+/D- path length mismatch {abs(dp - dm):.2f} mm (< 0.5 mm)")
+    layers = {t.GetLayerName() for t in board.GetTracks()
+              if t.GetNetname() in ("USB_DP", "USB_DM") and not isinstance(t, pcbnew.PCB_VIA)}
+    check(layers == {"F.Cu"}, f"USB pair routed on F.Cu over the In1 plane ({sorted(layers)})")
+    # amp supply: >= 0.5 mm except the neck into U7's 0.25 mm VDD pins
+    u7 = board.FindFootprintByReference("U7")
+    vdd = [to_mm(p.GetPosition()) for p in u7.Pads() if p.GetNumber() in ("7", "8")]
+    thin = []
+    for t in board.GetTracks():
+        if t.GetNetname() != "VSYS" or isinstance(t, pcbnew.PCB_VIA) or t.GetWidth() >= pcbnew.FromMM(0.5):
+            continue
+        s, e = to_mm(t.GetStart()), to_mm(t.GetEnd())
+        if max(min(math.dist(s, v), math.dist(e, v)) for v in vdd) > 1.6:
+            thin.append((round(s[0] - ox, 2), round(s[1] - oy, 2)))
+    check(not thin, f"VSYS >= 0.5 mm wide outside the U7 pin neck (narrow at {thin})")
+    # decoupling right at the amp
+    c18 = [to_mm(p.GetPosition()) for p in board.FindFootprintByReference("C18").Pads()
+           if p.GetNetname() == "VSYS"][0]
+    d = min(math.dist(c18, v) for v in vdd)
+    check(d < 1.5, f"C18 100 nF VSYS pad {d:.2f} mm from U7 VDD pins (< 1.5 mm)")
+    c17 = [to_mm(p.GetPosition()) for p in board.FindFootprintByReference("C17").Pads()
+           if p.GetNetname() == "VSYS"][0]
+    d = min(math.dist(c17, v) for v in vdd)
+    check(d < 4.0, f"C17 22 uF VSYS pad {d:.2f} mm from U7 VDD pins (< 4 mm)")
+    # microphone acoustic port: >= 0.6 mm and no copper on In1/In2/B.Cu within 0.5 mm
+    mic = board.FindFootprintByReference("U6")
+    hole = [p for p in mic.Pads() if p.GetAttribute() == pcbnew.PAD_ATTRIB_NPTH][0]
+    check(hole.GetDrillSize().x >= pcbnew.FromMM(0.6), "mic port drill >= 0.6 mm (datasheet min 0.5)")
+    hp = hole.GetPosition()
+    r = pcbnew.FromMM(hole.GetDrillSize().x / 2e6 + 0.5)
+    for z in board.Zones():
+        if z.GetIsRuleArea():
+            continue
+        for l in (pcbnew.In1_Cu, pcbnew.In2_Cu, pcbnew.B_Cu):
+            if z.IsOnLayer(l):
+                check(not z.GetFilledPolysList(l).Collide(hp, r - pcbnew.FromMM(0.01)),
+                      f"no {pcbnew.LayerName(l)} pour within 0.5 mm of the mic port")
+    # outline: one closed contour
+    polys = pcbnew.SHAPE_POLY_SET()
+    check(board.GetBoardPolygonOutlines(polys) and polys.OutlineCount() == 1,
+          "Edge.Cuts forms exactly one closed outline")
 
 
 def main():

@@ -1,0 +1,41 @@
+== 1. antenna keep-out (x < 6.80 mm local, all copper layers)
+  copper inside keep-out: none
+  rule area USB_VIA_KEEPOUT  layers=F.Cu,In1.Cu,In2.Cu,B.Cu x 22.03..25.65  tracks=False vias=False pour=False
+  rule area USB_VIA_KEEPOUT  layers=F.Cu,In1.Cu,In2.Cu,B.Cu x 30.19..32.66  tracks=False vias=False pour=False
+  rule area ANTENNA_KEEPOUT  layers=F.Cu,In1.Cu,In2.Cu,B.Cu x -1.00..6.80  tracks=True vias=True pour=True
+  rule area USB_VIA_KEEPOUT  layers=F.Cu,In1.Cu,In2.Cu,B.Cu x 30.85..32.35  tracks=False vias=False pour=False
+  rule area USB_VIA_KEEPOUT  layers=F.Cu,In1.Cu,In2.Cu,B.Cu x 23.84..27.36  tracks=False vias=False pour=False
+  rule area USB_VIA_KEEPOUT  layers=F.Cu,In1.Cu,In2.Cu,B.Cu x 31.20..32.70  tracks=False vias=False pour=False
+  rule area USB_VIA_KEEPOUT  layers=F.Cu,In1.Cu,In2.Cu,B.Cu x 31.20..33.05  tracks=False vias=False pour=False
+  rule area USB_VIA_KEEPOUT  layers=F.Cu,In1.Cu,In2.Cu,B.Cu x 23.30..32.00  tracks=False vias=False pour=False
+  rule area USB_VIA_KEEPOUT  layers=F.Cu,In1.Cu,In2.Cu,B.Cu x 30.54..33.01  tracks=False vias=False pour=False
+  rule area USB_VIA_KEEPOUT  layers=F.Cu,In1.Cu,In2.Cu,B.Cu x 30.85..33.05  tracks=False vias=False pour=False
+  rule area USB_VIA_KEEPOUT  layers=F.Cu,In1.Cu,In2.Cu,B.Cu x 22.03..23.53  tracks=False vias=False pour=False
+  rule area USB_VIA_KEEPOUT  layers=F.Cu,In1.Cu,In2.Cu,B.Cu x 23.30..24.80  tracks=False vias=False pour=False
+  rule area USB_VIA_KEEPOUT  layers=F.Cu,In1.Cu,In2.Cu,B.Cu x 25.55..32.35  tracks=False vias=False pour=False
+  rule area MIC_PORT_KEEPOUT layers=In1.Cu,In2.Cu,B.Cu x 28.80..30.40  tracks=True vias=True pour=True
+  footprint U1 rule area layers=F.Cu,In1.Cu,B.Cu x -14.95..6.05
+== 2. graphics outside the outline / Edge.Cuts integrity
+  board outline closed: True  outlines: 1  holes: 0
+  Edge.Cuts items: 16  (segments+arcs)
+  outline bbox: 116.10 x 22.10 mm
+  U1 footprint graphic outside outline: layer F.Courtyard  x -15.0..6.1 y 35.0..35.0
+  U1 footprint graphic outside outline: layer F.Courtyard  x 6.0..6.1 y 20.7..35.0
+  U1 footprint graphic outside outline: layer F.Courtyard  x 6.0..6.1 y -13.0..1.3
+  U1 footprint graphic outside outline: layer F.Courtyard  x -15.0..-14.9 y -13.0..35.0
+  U1 footprint graphic outside outline: layer F.Courtyard  x -15.0..6.1 y -13.0..-13.0
+  J2 footprint graphic outside outline: layer F.Courtyard  x 46.0..46.1 y -0.5..7.5
+  J2 footprint graphic outside outline: layer F.Courtyard  x 27.9..46.1 y -0.5..-0.4
+  J2 footprint graphic outside outline: layer F.Courtyard  x 27.9..28.0 y -0.5..7.5
+  J1 footprint graphic outside outline: layer F.Courtyard  x 36.7..47.3 y 13.5..22.5
+  J3 footprint graphic outside outline: layer B.Courtyard  x 30.6..36.4 y 22.1..22.1
+  J3 footprint graphic outside outline: layer B.Courtyard  x 36.4..36.4 y 15.5..22.1
+  J3 footprint graphic outside outline: layer B.Courtyard  x 30.6..30.6 y 15.5..22.1
+== 5. copper-to-edge distances
+  min track/via-to-edge (other): 0.549 mm  ('CAM_SIOD', (15.83, 0.62), 'PCB_TRACK')
+  min track/via-to-edge (strip): 0.534 mm  ('AMP_DIN', (61.09, 6.61), 'PCB_TRACK')
+== 7. USB pair
+  USB_DP: total copper length 25.00 mm, vias 0, layers ['F.Cu']
+  USB_DM: total copper length 25.48 mm, vias 0, layers ['F.Cu']
+== 3. amp supply (VSYS) widths by layer
+   {('F.Cu', 0.3): 0.8, ('F.Cu', 0.6): 2.2, ('F.Cu', 0.25): 1.6, ('B.Cu', 0.6): 28.1, ('B.Cu', 2.0): 39.2}

@@ -1,0 +1,3 @@
+INFO DRC warnings: 0 []
+612 checks passed
+RESULT: ALL CHECKS PASSED

@@ -18,11 +18,17 @@ MM = pcbnew.FromMM
 RES = 0.05
 LAYERS = [pcbnew.F_Cu, pcbnew.In2_Cu, pcbnew.B_Cu]
 VIA_D, VIA_DRILL = 0.5, 0.25
-EDGE_KEEP = 0.45
+EDGE_KEEP = 0.45     # via-centre/grid keep; tracks add their half width (see route_net)
+TRACK_EDGE = 0.5     # matches ai_glasses.kicad_dru
 VIA_COST = 40.0
 
 
+WIDTH_OVERRIDE = {}     # net -> track width (mm) for this run
+
+
 def netclass_of(net):
+    if net in WIDTH_OVERRIDE:
+        return WIDTH_OVERRIDE[net], 0.15
     for name, (tw, clr, *_rest, nets) in D.NETCLASSES.items():
         if nets and net in nets:
             return tw, clr
@@ -51,8 +57,35 @@ class Grid:
         dmin = np.full_like(self.X, 1e9)
         for ax, ay, bx, by in self.edges:
             dmin = np.minimum(dmin, self._segdist(ax, ay, bx, by, 0))
+        self.edge_dist = np.where(inside, dmin, -1.0)
         self.edge_ok = inside & (dmin >= EDGE_KEEP)
         self.edge_ok &= self.X >= D.OFFSET[0] + D.ANTENNA_KEEPOUT_X + 0.3
+        # rule areas (keep-outs): per-layer track block + via block
+        self.rule_track = {l: np.zeros_like(inside) for l in LAYERS}
+        self.rule_via = np.zeros_like(inside)
+        self.usb_via = np.zeros_like(inside)     # non-GND vias only (kicad_dru rule)
+        for z in board.Zones():
+            if not z.GetIsRuleArea():
+                continue
+            o = z.Outline()
+            pts = [(o.CVertex(k).x / 1e6, o.CVertex(k).y / 1e6) for k in range(o.TotalVertices())]
+            m = np.zeros_like(inside)
+            for (ax, ay), (bx, by) in zip(pts, pts[1:] + pts[:1]):
+                cond = (ay > self.Y) != (by > self.Y)
+                with np.errstate(divide="ignore", invalid="ignore"):
+                    xi = ax + (self.Y - ay) * (bx - ax) / (by - ay)
+                m ^= cond & (self.X < xi)
+            # grow by a track/via margin so copper edges also stay out
+            for (ax, ay), (bx, by) in zip(pts, pts[1:] + pts[:1]):
+                m |= self._segdist(ax, ay, bx, by, 0) < 0.45
+            if z.GetDoNotAllowTracks():
+                for l in LAYERS:
+                    if z.IsOnLayer(l):
+                        self.rule_track[l] |= m
+            if z.GetDoNotAllowVias():
+                self.rule_via |= m
+            if z.GetZoneName() == "USB_VIA_KEEPOUT":
+                self.usb_via |= m
 
     def _segdist(self, ax, ay, bx, by, hw, sl=None):
         X, Y = (self.X, self.Y) if sl is None else (self.X[sl], self.Y[sl])
@@ -144,10 +177,17 @@ def bbox(kind, geo, m):
 def route_net(board, g, net, items):
     tw, clr = netclass_of(net)
     ly = len(LAYERS)
-    free = np.repeat(g.edge_ok[None], ly, axis=0)
-    via_ok = g.edge_ok.copy()
+    edge_ok = g.edge_ok & (g.edge_dist >= TRACK_EDGE + tw / 2 + 0.02)
+    free = np.stack([edge_ok & ~g.rule_track[l] for l in LAYERS])
+    via_ok = g.edge_ok & (g.edge_dist >= TRACK_EDGE + VIA_D / 2 + 0.02) & ~g.rule_via
+    if net != "GND":
+        via_ok &= ~g.usb_via
     own = [np.zeros_like(g.edge_ok) for _ in LAYERS]
     for inet, layers, kind, geo in items:
+        if inet == net and kind == "pad":
+            mv = VIA_D / 2 + 0.15
+            sl = g.window(*bbox(kind, geo, mv))
+            via_ok[sl] &= dist_field(g, kind, geo, sl) >= mv
         if inet == net:
             m = 0.0
             sl = g.window(*bbox(kind, geo, m))
@@ -218,7 +258,7 @@ def route_net(board, g, net, items):
             ni, nj = i + di, j + dj
             if 0 <= ni < g.ny and 0 <= nj < g.nx and free[li][ni, nj]:
                 nbrs.append(((li, ni, nj), w))
-        if via_ok[i, j] or any((l2, i, j) in start for l2 in range(ly)):
+        if via_ok[i, j]:
             for l2 in range(ly):
                 if l2 != li and free[l2][i, j] and via_ok[i, j]:
                     nbrs.append(((l2, i, j), VIA_COST))
@@ -230,11 +270,27 @@ def route_net(board, g, net, items):
                 heapq.heappush(openh, (nc + h(nxt[1], nxt[2]), nc, nxt))
     if end is None:
         return False
+    global FREE
+    FREE = free
     path = [end]
     while path[-1] in came:
         path.append(came[path[-1]])
     path.reverse()
     emit(board, g, net, tw, path)
+    return True
+
+
+FREE = None
+
+
+def clear_line(free_l, a, b):
+    (_, i0, j0), (_, i1, j1) = a, b
+    n = max(abs(i1 - i0), abs(j1 - j0)) * 2
+    for s in range(n + 1):
+        i = round(i0 + (i1 - i0) * s / n)
+        j = round(j0 + (j1 - j0) * s / n)
+        if not free_l[i, j]:
+            return False
     return True
 
 
@@ -260,14 +316,16 @@ def emit(board, g, net, tw, path):
     for run in runs:
         if len(run) < 2:
             continue
-        # collapse collinear steps
+        # string-pulling: jump to the furthest cell with a clear straight line
+        free_l = FREE[run[0][0]]
         pts = [run[0]]
-        for k in range(1, len(run) - 1):
-            d1 = (run[k][1] - pts[-1][1], run[k][2] - pts[-1][2])
-            d2 = (run[k + 1][1] - run[k][1], run[k + 1][2] - run[k][2])
-            if d1[0] * d2[1] - d1[1] * d2[0] != 0:
-                pts.append(run[k])
-        pts.append(run[-1])
+        k = 0
+        while k < len(run) - 1:
+            m = len(run) - 1
+            while m > k + 1 and not clear_line(free_l, run[k], run[m]):
+                m -= 1
+            pts.append(run[m])
+            k = m
         layer = LAYERS[run[0][0]]
         for a, b in zip(pts, pts[1:]):
             t = pcbnew.PCB_TRACK(board)

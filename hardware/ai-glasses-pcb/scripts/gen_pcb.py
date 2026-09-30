@@ -24,44 +24,65 @@ def fp_path(lib):
     return os.path.join(FPDIR, lib + ".pretty")
 
 
-def add_outline(board):
-    """Edge.Cuts: straight segments + true arcs at the rounded corners."""
+def outline_vertices():
+    """Board outline corners (local mm, clockwise on screen) with the fillet
+    radius used at each one."""
     r = D.CORNER_R
+    return [
+        ((0, 0), r),                                  # front-top
+        ((D.REAR_X1, 0), r),                          # rear-top
+        ((D.REAR_X1, D.FRONT_H), r),                  # rear-bottom
+        ((D.REAR_X0, D.FRONT_H), D.FILLET_REAR_OUT),  # rear pad, front-bottom corner
+        ((D.REAR_X0, D.STRIP_Y1), D.FILLET_NECK),     # inside corner strip -> rear pad
+        ((D.STRIP_X0, D.STRIP_Y1), D.FILLET_TAPER),   # taper -> strip (inside)
+        ((D.FRONT_W, D.FRONT_H), D.FILLET_TAPER),     # front bottom -> taper
+        ((0, D.FRONT_H), r),                          # front-bottom
+    ]
 
-    def seg(a, b):
+
+def fillet_geometry(verts):
+    """-> list of ('seg', a, b) / ('arc', start, mid, end) primitives."""
+    n = len(verts)
+    corners = []
+    for i, (p, r) in enumerate(verts):
+        a, b = verts[i - 1][0], verts[(i + 1) % n][0]
+        u1 = (a[0] - p[0], a[1] - p[1]); l1 = math.hypot(*u1); u1 = (u1[0] / l1, u1[1] / l1)
+        u2 = (b[0] - p[0], b[1] - p[1]); l2 = math.hypot(*u2); u2 = (u2[0] / l2, u2[1] / l2)
+        th = math.acos(max(-1.0, min(1.0, u1[0] * u2[0] + u1[1] * u2[1])))
+        if r <= 0 or th > math.pi - 1e-6:
+            corners.append((p, p, None))
+            continue
+        d = r / math.tan(th / 2)
+        t1 = (p[0] + u1[0] * d, p[1] + u1[1] * d)
+        t2 = (p[0] + u2[0] * d, p[1] + u2[1] * d)
+        bis = (u1[0] + u2[0], u1[1] + u2[1]); lb = math.hypot(*bis); bis = (bis[0] / lb, bis[1] / lb)
+        c = (p[0] + bis[0] * r / math.sin(th / 2), p[1] + bis[1] * r / math.sin(th / 2))
+        mid = (c[0] - bis[0] * r, c[1] - bis[1] * r)
+        corners.append((t1, t2, mid))
+    prims = []
+    for i in range(n):
+        t1, t2, mid = corners[i]
+        if mid is not None:
+            prims.append(("arc", t1, mid, t2))
+        nxt = corners[(i + 1) % n][0]
+        prims.append(("seg", t2, nxt))
+    return prims
+
+
+def add_outline(board):
+    """Edge.Cuts: straight segments + true arcs, every corner filleted."""
+    for kind, *pts in fillet_geometry(outline_vertices()):
         s = pcbnew.PCB_SHAPE(board)
-        s.SetShape(pcbnew.SHAPE_T_SEGMENT)
-        s.SetStart(P(*a))
-        s.SetEnd(P(*b))
+        if kind == "seg":
+            s.SetShape(pcbnew.SHAPE_T_SEGMENT)
+            s.SetStart(P(*pts[0]))
+            s.SetEnd(P(*pts[1]))
+        else:
+            s.SetShape(pcbnew.SHAPE_T_ARC)
+            s.SetArcGeometry(P(*pts[0]), P(*pts[1]), P(*pts[2]))
         s.SetLayer(pcbnew.Edge_Cuts)
         s.SetWidth(MM(0.1))
         board.Add(s)
-
-    def arc(c, start, mid, end):
-        s = pcbnew.PCB_SHAPE(board)
-        s.SetShape(pcbnew.SHAPE_T_ARC)
-        s.SetArcGeometry(P(*start), P(*mid), P(*end))
-        s.SetLayer(pcbnew.Edge_Cuts)
-        s.SetWidth(MM(0.1))
-        board.Add(s)
-
-    k = r * (1 - math.cos(math.radians(45)))
-    W, H = D.REAR_X1, D.FRONT_H
-    # top edge: straight from the front to the rear
-    arc(None, (0, r), (k, k), (r, 0))
-    seg((r, 0), (W - r, 0))
-    arc(None, (W - r, 0), (W - k, k), (W, r))
-    seg((W, r), (W, H - r))
-    arc(None, (W, H - r), (W - k, H - k), (W - r, H))
-    seg((W - r, H), (D.REAR_X0, H))
-    # rear pad drops straight down onto the strip
-    seg((D.REAR_X0, H), (D.REAR_X0, D.STRIP_Y1))
-    seg((D.REAR_X0, D.STRIP_Y1), (D.STRIP_X0, D.STRIP_Y1))
-    # bottom-edge taper up from the front section into the strip
-    seg((D.STRIP_X0, D.STRIP_Y1), (D.FRONT_W, H))
-    seg((D.FRONT_W, H), (r, H))
-    arc(None, (r, H), (k, H - k), (0, H - r))
-    seg((0, H - r), (0, r))
 
 
 def add_zone(board, layer, net, pts, priority=0, rule_area=False):

@@ -1,0 +1,13 @@
+(version 1)
+
+# Routed copper (tracks, arcs, vias) keeps at least 0.5 mm from the board
+# edge. Pads and pours use the board-setup edge clearance (0.25 mm).
+(rule "track_via_edge_clearance"
+    (condition "A.Type == 'Track' || A.Type == 'Arc' || A.Type == 'Via'")
+    (constraint edge_clearance (min 0.5mm)))
+
+# No other net's via may punch an antipad into the In1 GND plane under the
+# USB D+/D- pair (U8 -> ESP32 run). GND vias are fine (same net as the plane).
+(rule "usb_reference_plane"
+    (condition "A.Type == 'Via' && A.NetName != 'GND' && A.intersectsArea('USB_VIA_KEEPOUT')")
+    (constraint disallow via))
